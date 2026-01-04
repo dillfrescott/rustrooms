@@ -3516,10 +3516,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             row.remove();
                         };
                     } else {
-                        // This is a second audio track, likely screen audio
-                        // The existing code for screen audio was here, now it's moved and enhanced.
-                        
-                        // Load persisted screenshare volume
                         const savedScreenVol = getVolumeSettings(userId, 'screen');
 
                         const screenAud = document.createElement('audio');
@@ -3536,10 +3532,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         row.className = 'vol-row';
                         row.id = `vol-row-screen-${userId}`;
                         row.innerHTML = `
-                            <div class="text-[10px] text-zinc-400 mb-1 flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
-                                Screen Audio
-                            </div>
                             <div class="flex items-center gap-2">
                                 <button class="text-white hover:text-blue-400" onclick="toggleMute('${userId}', 'screen')" id="mute-screen-${userId}">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="14" rx="2" ry="2"></rect><line x1="12" y1="22" x2="12" y2="16"></line><path d="M5 12h14"></path><path d="M12 12v4"></path></svg>
