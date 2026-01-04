@@ -3855,6 +3855,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             checkEmpty();
 
             // Redirect to root
+            sessionStorage.removeItem('rustrooms_setup_done');
             window.location.href = '/';
         }
 
