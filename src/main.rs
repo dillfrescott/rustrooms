@@ -720,9 +720,241 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             pointer-events: none;
             z-index: 1;
         }
+
+        /* Sidebar Styling */
+        #roomSidebar {
+            position: fixed;
+            left: -320px;
+            top: 0;
+            bottom: 0;
+            width: 320px;
+            z-index: 100;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(15, 15, 20, 0.8);
+            backdrop-filter: blur(24px) saturate(160%);
+            -webkit-backdrop-filter: blur(24px) saturate(160%);
+            border-right: 1px solid var(--border-medium);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #roomSidebar.open {
+            transform: translateX(320px);
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .room-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .room-item:hover {
+            border-color: var(--accent);
+            background: var(--bg-tertiary);
+        }
+
+        .room-item.active {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .room-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .user-count {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--bg-primary);
+            padding: 2px 8px;
+            border-radius: 99px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .room-users {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .mini-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-subtle);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mini-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .mini-avatar-placeholder {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+
+        .sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 90;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Custom Modal Styling */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-medium);
+            backdrop-filter: blur(24px) saturate(160%);
+            -webkit-backdrop-filter: blur(24px) saturate(160%);
+            border-radius: 24px;
+            width: 90%;
+            max-width: 400px;
+            padding: 32px;
+            transform: scale(0.95);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.open .modal-content {
+            transform: scale(1);
+        }
+
+        .room-user-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .room-user-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .room-user-name {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
     </style>
 </head>
 <body class="flex flex-col overflow-hidden" style="background-color: var(--bg-primary);">
+
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    
+    <div id="roomSidebar">
+        <div class="sidebar-header">
+            <h2 id="sidebarTitle" class="text-xl font-bold text-white">Channels</h2>
+            <button onclick="toggleSidebar()" class="text-zinc-400 hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="sidebar-content">
+            <div id="sidebarActions">
+                <button onclick="createNewChannel()" class="w-full btn-primary py-3 mb-6 flex items-center justify-center gap-2 font-semibold">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Create New Channel
+                </button>
+            </div>
+            <div id="roomListContainer">
+                <!-- Data will be injected here -->
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <div id="nameModal" class="modal-overlay">
+        <div class="modal-content text-center space-y-6">
+            <h3 id="modalTitle" class="text-2xl font-bold text-white">Name Channel</h3>
+            <div class="space-y-4">
+                <input type="text" id="modalInput" placeholder="Enter name..." class="w-full rounded-xl px-4 py-3 text-white transition-all bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none">
+                <div class="flex gap-3">
+                    <button onclick="closeNameModal()" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
+                    <button id="modalSubmit" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="alertModal" class="modal-overlay">
+        <div class="modal-content text-center space-y-6">
+            <h3 id="alertTitle" class="text-2xl font-bold text-white">Alert</h3>
+            <p id="alertMessage" class="text-zinc-300"></p>
+            <button onclick="closeCustomAlert()" class="btn-primary w-full py-3 text-white rounded-xl font-medium transition-all">OK</button>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-content text-center space-y-6">
+            <h3 id="confirmTitle" class="text-2xl font-bold text-white">Confirm</h3>
+            <p id="confirmMessage" class="text-zinc-300"></p>
+            <div class="flex gap-3">
+                <button onclick="closeCustomConfirm()" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
+                <button id="confirmSubmit" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all">Confirm</button>
+            </div>
+        </div>
+    </div>
 
     <div id="welcomeOverlay" class="fixed inset-0 z-[70] flex flex-col items-center justify-center p-4" style="display: none; background: linear-gradient(180deg, var(--bg-primary) 0%, #0d0d18 100%);">
         <canvas id="particleCanvas"></canvas>
@@ -902,12 +1134,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
     <div id="appLayout" class="hidden flex-col h-full w-full">
         <div class="flex-none p-4 md:p-5 z-40 flex justify-between items-center">
-            <div class="status-pill px-4 py-2 rounded-full flex items-center gap-2">
-                <div id="connectionDot" class="connection-dot"></div>
-                <span id="statusText" class="text-xs md:text-sm font-medium" style="color: var(--text-primary);">Waiting...</span>
-                <button id="btnReconnect" onclick="retryConnection()" class="hidden ml-2 p-1.5 rounded-full transition-all" style="color: var(--text-muted);" title="Retry Connection">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+            <div class="flex items-center gap-3">
+                <button id="sidebarToggle" onclick="toggleSidebar()" class="control-btn shadow-xl hidden !w-12 !h-12 md:!w-14 md:!h-14" title="Channels (R)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </button>
+                <div class="status-pill px-4 py-2 rounded-full flex items-center gap-2">
+                    <div id="connectionDot" class="connection-dot"></div>
+                    <span id="statusText" class="text-xs md:text-sm font-medium" style="color: var(--text-primary);">Waiting...</span>
+                    <button id="btnReconnect" onclick="retryConnection()" class="hidden ml-2 p-1.5 rounded-full transition-all" style="color: var(--text-muted);" title="Retry Connection">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                    </button>
+                </div>
             </div>
 
             <div id="btnCopy" class="status-pill px-4 py-2 rounded-full cursor-pointer transition-all flex items-center gap-2 hover:border-opacity-30" onclick="copyLink()">
@@ -1116,9 +1353,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         })();
     </script>
     <script>
-        const roomId = window.location.pathname.split('/')[1];
+        let parts = window.location.pathname.split('/').filter(p => p !== '');
+        let roomId = parts[0] || '';
+        let channelId = parts[1] || (roomId ? 'General' : '');
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws/${roomId}`;
+        let wsUrl = roomId ? `${wsProtocol}//${window.location.host}/ws/${roomId}/${channelId}` : '';
         
         let ws;
         let localStream;
@@ -1128,6 +1367,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let peerScreenStatus = {};
         let userNickname = "Guest";
         let userAvatar = null;
+        let sidebarOpen = false;
+        let globalRoomList = {};
         let isConfigured = false;
         let audioContext;
         let wakeLock = null;
@@ -1431,24 +1672,28 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      if (localStream && localStream._originalStream) {
                          localStream._originalStream.getTracks().forEach(t => t.stop());
                      }
-                     if (localStream) localStream._originalStream = stream;
-
-                     if (currentAudioTrack) {
-                         currentAudioTrack.stop();
-                         localStream.removeTrack(currentAudioTrack);
-                     }
-                     localStream.addTrack(newTrack);
-                     
-                     for (const userId in peers) {
-                        const pc = peers[userId];
-                        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
-                        if (sender) {
-                             sender.replaceTrack(newTrack);
-                        } else {
-                             pc.addTrack(newTrack, localStream);
-                             negotiate(userId, pc);
-                        }
-                     }
+                      if (localStream) {
+                          if (currentAudioTrack) {
+                              currentAudioTrack.stop();
+                              localStream.removeTrack(currentAudioTrack);
+                          }
+                          localStream.addTrack(newTrack);
+                      } else {
+                          localStream = new MediaStream([newTrack]);
+                          if (localVideo) localVideo.srcObject = localStream;
+                      }
+                      localStream._originalStream = stream;
+                      
+                      for (const userId in peers) {
+                         const pc = peers[userId];
+                         const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+                         if (sender) {
+                              sender.replaceTrack(newTrack);
+                         } else {
+                              pc.addTrack(newTrack, localStream);
+                              negotiate(userId, pc);
+                         }
+                      }
                      
                      setupAudioMonitor(localStream, 'local');
                      setupVolumeMeter(localStream, 'settingsMicBar');
@@ -1472,27 +1717,32 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      const stream = await navigator.mediaDevices.getUserMedia(constraints);
                      const newTrack = stream.getVideoTracks()[0];
                      
-                     localStream.addTrack(newTrack);
-                     
-                     if (!screenStream) {
-                        for (const userId in peers) {
-                           const pc = peers[userId];
-                           const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                           if (sender) {
-                               sender.replaceTrack(newTrack);
-                           } else {
-                               pc.addTrack(newTrack, localStream);
-                               negotiate(userId, pc);
-                           }
-                        }
-                        
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({
-                                type: 'cam-toggle',
-                                data: { enabled: true }
-                            }));
-                        }
-                     }
+                      if (localStream) {
+                          localStream.addTrack(newTrack);
+                      } else {
+                          localStream = new MediaStream([newTrack]);
+                          if (localVideo) localVideo.srcObject = localStream;
+                      }
+                      
+                      if (!screenStream) {
+                         for (const userId in peers) {
+                            const pc = peers[userId];
+                            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                            if (sender) {
+                                sender.replaceTrack(newTrack);
+                            } else {
+                                pc.addTrack(newTrack, localStream);
+                                negotiate(userId, pc);
+                            }
+                         }
+                         
+                         if (ws && ws.readyState === WebSocket.OPEN) {
+                             ws.send(JSON.stringify({
+                                 type: 'cam-toggle',
+                                 data: { enabled: true }
+                             }));
+                         }
+                      }
 
                  } catch (e) {
                      console.error("Video switch failed", e);
@@ -1550,16 +1800,28 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function loadPreferences() {
-            const stored = localStorage.getItem('iroh_profile');
+            const stored = localStorage.getItem('rustrooms_profile');
             if (stored) {
                 try {
                     const data = JSON.parse(stored);
-                    if (data.nickname) nicknameInput.value = data.nickname;
+                    if (data.nickname) {
+                        userNickname = data.nickname;
+                        if (nicknameInput) nicknameInput.value = userNickname;
+                        if (document.getElementById('settingsNicknameInput')) document.getElementById('settingsNicknameInput').value = userNickname;
+                    }
                     if (data.avatar) {
                         userAvatar = data.avatar;
-                        avatarPreview.src = userAvatar;
-                        avatarPreview.classList.remove('hidden');
-                        avatarPlaceholder.classList.add('hidden');
+                        if (avatarPreview) {
+                            avatarPreview.src = userAvatar;
+                            avatarPreview.classList.remove('hidden');
+                            avatarPlaceholder.classList.add('hidden');
+                        }
+                        if (document.getElementById('settingsAvatarPreview')) {
+                            const sap = document.getElementById('settingsAvatarPreview');
+                            sap.src = userAvatar;
+                            sap.classList.remove('hidden');
+                            document.getElementById('settingsAvatarPlaceholder').classList.add('hidden');
+                        }
                     }
                     if (data.audioOutputId) {
                         currentAudioOutputId = data.audioOutputId;
@@ -1569,7 +1831,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function savePreferences() {
-            localStorage.setItem('iroh_profile', JSON.stringify({
+            localStorage.setItem('rustrooms_profile', JSON.stringify({
                 nickname: userNickname,
                 avatar: userAvatar,
                 audioOutputId: currentAudioOutputId
@@ -1978,6 +2240,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 configOverlay.style.display = 'none';
                 appLayout.classList.remove('hidden');
                 appLayout.classList.add('flex');
+                document.getElementById('sidebarToggle').classList.remove('hidden');
             }, 300);
 
             localVideo.srcObject = localStream;
@@ -2012,6 +2275,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             connectWs();
+            
+            // Mark setup as done
+            // Mark setup as done (Session based now)
+            sessionStorage.setItem('rustrooms_setup_done', 'true');
 
             // Monitor network connectivity changes (airplane mode, network loss)
             window.addEventListener('offline', () => {
@@ -2138,6 +2405,332 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
+        function toggleSidebar() {
+            const sidebar = document.getElementById('roomSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        }
+
+        function showNameModal(title, placeholder, callback) {
+            const modal = document.getElementById('nameModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalInput = document.getElementById('modalInput');
+            const modalSubmit = document.getElementById('modalSubmit');
+
+            modalTitle.innerText = title;
+            modalInput.placeholder = placeholder;
+            modalInput.value = '';
+            modal.classList.add('open');
+            setTimeout(() => modalInput.focus(), 100);
+
+            modalSubmit.onclick = () => {
+                const name = modalInput.value.trim();
+                callback(name);
+                closeNameModal();
+            };
+
+            const handleEnter = (e) => {
+                if (e.key === 'Enter') {
+                    modalSubmit.click();
+                    modalInput.removeEventListener('keydown', handleEnter);
+                }
+            };
+            modalInput.addEventListener('keydown', handleEnter);
+        }
+
+        function closeNameModal() {
+            const modal = document.getElementById('nameModal');
+            modal.classList.remove('open');
+        }
+
+        function showCustomAlert(title, message) {
+            document.getElementById('alertTitle').innerText = title;
+            document.getElementById('alertMessage').innerText = message;
+            document.getElementById('alertModal').classList.add('open');
+        }
+
+        function closeCustomAlert() {
+            document.getElementById('alertModal').classList.remove('open');
+        }
+
+        function showCustomConfirm(title, message, onConfirm) {
+            document.getElementById('confirmTitle').innerText = title;
+            document.getElementById('confirmMessage').innerText = message;
+            const modal = document.getElementById('confirmModal');
+            const submitBtn = document.getElementById('confirmSubmit');
+            
+            // Remove old onclick to prevent stacking
+            const newBtn = submitBtn.cloneNode(true);
+            submitBtn.parentNode.replaceChild(newBtn, submitBtn);
+            
+            newBtn.onclick = () => {
+                onConfirm();
+                closeCustomConfirm();
+            };
+            
+            modal.classList.add('open');
+        }
+
+        function closeCustomConfirm() {
+            document.getElementById('confirmModal').classList.remove('open');
+        }
+
+        let roomDragState = {
+            draggedRid: null
+        };
+
+        function handleRoomDragStart(e, rid) {
+            roomDragState.draggedRid = rid;
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.closest('.room-item').classList.add('opacity-50');
+        }
+
+        function handleRoomDragEnd(e) {
+            e.target.closest('.room-item').classList.remove('opacity-50');
+            document.querySelectorAll('.room-item').forEach(el => el.classList.remove('border-t-2', 'border-blue-500'));
+        }
+
+        function handleRoomDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const roomItem = e.target.closest('.room-item');
+            if (roomItem && roomItem.dataset.rid !== roomDragState.draggedRid) {
+                roomItem.classList.add('border-t-2', 'border-blue-500');
+            }
+        }
+
+        function handleRoomDragLeave(e) {
+            const roomItem = e.target.closest('.room-item');
+            if (roomItem) {
+                roomItem.classList.remove('border-t-2', 'border-blue-500');
+            }
+        }
+
+        function handleRoomDrop(e, targetRid) {
+            e.preventDefault();
+            const draggedRid = roomDragState.draggedRid;
+            if (draggedRid === targetRid) return;
+
+            let order = JSON.parse(localStorage.getItem('rustrooms_room_order_' + roomId) || '[]');
+            const currentRids = Object.keys(globalRoomList);
+            if (order.length === 0) order = currentRids.sort();
+            
+            const fromIndex = order.indexOf(draggedRid);
+            const toIndex = order.indexOf(targetRid);
+
+            if (fromIndex !== -1 && toIndex !== -1) {
+                order.splice(fromIndex, 1);
+                order.splice(toIndex, 0, draggedRid);
+                localStorage.setItem('rustrooms_room_order_' + roomId, JSON.stringify(order));
+                updateRoomListUI();
+            }
+        }
+
+        async function createNewRoom() {
+            showNameModal("Start New Room", "Enter room name (optional)", (name) => {
+                window.location.href = `/${name ? encodeURIComponent(name) : crypto.randomUUID()}/General`;
+            });
+        }
+
+        async function createNewChannel() {
+            showNameModal("Create New Channel", "Enter channel name", (name) => {
+                if (!name) return;
+                performChannelSwitch(roomId, encodeURIComponent(name));
+            });
+        }
+
+        async function performChannelSwitch(newRoomId, newChannelId) {
+            // Cleanup existing connection
+            if (ws) {
+                // Prevent auto-reconnect logic from firing during intentional switch
+                ws.onclose = null;
+                ws.close();
+            }
+            stopHeartbeat();
+            
+            // Clear peers
+            for (const userId in peers) {
+                removePeer(userId);
+            }
+            peers = {};
+            peerCamStatus = {};
+            peerScreenStatus = {};
+            remoteGrid.innerHTML = '';
+            
+            // Update state
+            roomId = newRoomId;
+            channelId = newChannelId;
+            
+            // Update URL
+            const newUrl = `/${roomId}/${channelId}`;
+            if (window.location.pathname !== newUrl) {
+                history.pushState({ roomId, channelId }, "", newUrl);
+            }
+            
+            // Re-connect
+            wsUrl = `${wsProtocol}//${window.location.host}/ws/${roomId}/${channelId}`;
+            updateStatus('connecting', 'Connecting...');
+            
+            // Update UI
+            if (typeof updateRoomListUI === 'function') updateRoomListUI();
+            
+            // Re-establish connection
+            reconnectionAttempts = 0;
+            isReconnecting = false;
+            connectWs();
+        }
+
+        function switchChannel(newChannelId) {
+            if (newChannelId === channelId) return;
+            performChannelSwitch(roomId, newChannelId);
+        }
+
+        function switchRoom(newRoomId) {
+            if (newRoomId === roomId) return;
+            performChannelSwitch(newRoomId, 'General');
+        }
+        
+        window.onpopstate = function(event) {
+            const parts = window.location.pathname.split('/').filter(p => p !== '');
+            const newRoomId = parts[0] || '';
+            const newChannelId = parts[1] || (newRoomId ? 'general' : '');
+            
+            if (newRoomId && (newRoomId !== roomId || newChannelId !== channelId)) {
+                performChannelSwitch(newRoomId, newChannelId);
+            } else if (!newRoomId) {
+                window.location.reload(); // Fallback for root
+            }
+        };
+
+        function deleteRoom(targetRoomId, event) {
+            if (event) event.stopPropagation();
+            
+            if (targetRoomId.toLowerCase() === 'general') {
+                showCustomAlert("Action Not Allowed", "Cannot delete the General room.");
+                return;
+            }
+
+            // Check if room is empty
+            const roomData = globalRoomList[targetRoomId];
+            if (roomData && roomData.users && Object.keys(roomData.users).length > 0) {
+                showCustomAlert("Room Not Empty", "You cannot delete a room that still has users in it.");
+                return;
+            }
+
+            showCustomConfirm("Delete Channel", "Are you sure you want to delete this channel?", () => {
+                 if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'delete-channel',
+                        data: {
+                            channelId: targetRoomId
+                        }
+                    }));
+                }
+            });
+        }
+
+        function renameRoom(targetRoomId, event) {
+            if (event) event.stopPropagation();
+            
+            if (targetRoomId.toLowerCase() === 'general') {
+                showCustomAlert("Action Not Allowed", "Cannot rename the General room.");
+                return;
+            }
+
+            showNameModal("Rename Channel", "Enter new name", (newName) => {
+                if (!newName) return;
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'rename-channel',
+                        data: { channelId: targetRoomId, newName: newName }
+                    }));
+                }
+            });
+        }
+
+        function updateRoomListUI() {
+            const container = document.getElementById('roomListContainer');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            let order = JSON.parse(localStorage.getItem('rustrooms_room_order_' + roomId) || '[]');
+            const currentRids = Object.keys(globalRoomList);
+            
+            // Re-sync order with current rooms
+            order = order.filter(rid => currentRids.includes(rid));
+            currentRids.forEach(rid => {
+                if (!order.includes(rid)) order.push(rid);
+            });
+            
+            order.forEach(rid => {
+                const roomInfo = globalRoomList[rid];
+                if (!roomInfo) return;
+                const isActive = (rid === channelId);
+                
+                const roomEl = document.createElement('div');
+                roomEl.className = `room-item ${isActive ? 'active' : ''}`;
+                roomEl.draggable = true;
+                roomEl.dataset.rid = rid;
+                
+                roomEl.onclick = () => switchChannel(rid);
+                
+                roomEl.ondragstart = (e) => handleRoomDragStart(e, rid);
+                roomEl.ondragend = (e) => handleRoomDragEnd(e);
+                roomEl.ondragover = (e) => handleRoomDragOver(e);
+                roomEl.ondragleave = (e) => handleRoomDragLeave(e);
+                roomEl.ondrop = (e) => handleRoomDrop(e, rid);
+                
+                let usersHtml = '';
+                const users = roomInfo.users || {};
+                const userIds = Object.keys(users);
+                
+                userIds.forEach(uid => {
+                    const u = users[uid];
+                    usersHtml += `
+                        <div class="room-user-row">
+                            <div class="mini-avatar">
+                                ${u.avatar ? `<img src="${u.avatar}">` : `<div class="mini-avatar-placeholder">${u.nickname.charAt(0).toUpperCase()}</div>`}
+                            </div>
+                            <span class="room-user-name">${u.nickname}</span>
+                        </div>
+                    `;
+                });
+                
+                roomEl.innerHTML = `
+                    <div class="room-name pointer-events-none">
+                        <span class="truncate pr-2">${roomInfo.name}</span>
+                        <div class="flex items-center gap-2">
+                             <div class="user-count">${userIds.length}</div>
+                             ${rid.toLowerCase() !== 'general' ? `
+                                <div class="flex gap-1 pointer-events-auto">
+                                    <button onclick="renameRoom('${rid}', event)" class="p-1 text-zinc-500 hover:text-blue-500 transition-colors" title="Rename Channel">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    </button>
+                                    <button onclick="deleteRoom('${rid}', event)" class="p-1 text-zinc-500 hover:text-red-500 transition-colors" title="Delete Channel">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                    </button>
+                                </div>
+                             ` : ''}
+                        </div>
+                    </div>
+                    <div class="room-users flex flex-col gap-1 mt-2 pointer-events-none">
+                        ${usersHtml}
+                        ${userIds.length === 0 ? '<span class="text-[10px] text-zinc-600 italic px-2">Empty</span>' : ''}
+                    </div>
+                `;
+                
+                container.appendChild(roomEl);
+            });
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'r' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+                toggleSidebar();
+            }
+        });
+
         async function createRoom() {
             try {
                 const res = await fetch('/new');
@@ -2152,7 +2745,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     
                     setTimeout(() => input.focus(), 100);
                 } else if (res.ok) {
-                    window.location.href = res.url;
+                    window.location.href = `/${crypto.randomUUID()}/General`;
                 } else {
                     alert("Error creating room");
                 }
@@ -2170,7 +2763,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             try {
                 const res = await fetch('/new?password=' + encodeURIComponent(password));
                  if (res.ok) {
-                     window.location.href = res.url;
+                     window.location.href = `/${crypto.randomUUID()}/General`;
                  } else if (res.status === 401) {
                      input.classList.add('ring-2', 'ring-red-500', 'border-red-500');
                      setTimeout(() => input.classList.remove('ring-2', 'ring-red-500', 'border-red-500'), 500);
@@ -2186,9 +2779,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         if (roomId) {
-            configOverlay.classList.remove('hidden');
-            configOverlay.classList.remove('opacity-0');
-            loadDevices();
+            loadPreferences();
+            const setupDone = sessionStorage.getItem('rustrooms_setup_done') === 'true';
+            if (setupDone && roomId) {
+                // Auto-join if setup was already done once
+                loadDevices().then(() => joinRoom());
+            } else {
+                configOverlay.classList.remove('hidden');
+                configOverlay.classList.remove('opacity-0');
+                loadDevices();
+            }
         } else {
             welcomeOverlay.style.display = 'flex';
         }
@@ -2230,6 +2830,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             const msg = JSON.parse(event.data);
                             
                             switch (msg.type) {
+                                case 'room-list':
+                                    globalRoomList = msg.data;
+                                    if (typeof updateRoomListUI === 'function') updateRoomListUI();
+                                    break;
+                                case 'room-deleted':
+                                    alert("The room has been deleted.");
+                                    window.location.href = "/";
+                                    break;
                                 case 'user-joined':
                                     playNotificationSound('join');
                                     // Check for existing peer OR DOM element to prevent duplicates
@@ -2303,6 +2911,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar);
                                     } else {
                                         initPeer(msg.userId, false, msg.data.nickname, msg.data.avatar);
+                                    }
+                                    break;
+                                case 'rename-channel':
+                                    if (roomId === msg.data.roomId && channelId === msg.data.oldName) {
+                                        performChannelSwitch(roomId, msg.data.newName);
                                     }
                                     break;
                                 case 'signal':
@@ -2810,6 +3423,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     vid.autoplay = true;
                     vid.playsInline = true; 
                     attachSinkId(vid, currentAudioOutputId);
+                    vid.autoplay = true;
+                    vid.playsInline = true; 
+                    attachSinkId(vid, currentAudioOutputId);
+                    
+                    // Load persisted volume
+                    const savedVol = getVolumeSettings(userId, 'main');
+                    vid.volume = savedVol;
+                    
                     vid.srcObject = new MediaStream();
                     
                     const avatarLayer = document.createElement('div');
@@ -2880,7 +3501,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             <button class="text-white hover:text-blue-400" onclick="toggleMute('${userId}', 'main')" id="mute-main-${userId}">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                             </button>
-                            <input type="range" min="0" max="1" step="0.05" value="1" oninput="setVolume('${userId}', 'main', this.value)">
+                            <input type="range" min="0" max="1" step="0.05" value="${savedVol}" oninput="setVolume('${userId}', 'main', this.value)">
                         `;
                         volControls.insertBefore(row, volControls.firstChild);
                         
@@ -2888,28 +3509,44 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             row.remove();
                         };
                     } else {
+                        // This is a second audio track, likely screen audio
+                        // The existing code for screen audio was here, now it's moved and enhanced.
+                        
+                        // Load persisted screenshare volume
+                        const savedScreenVol = getVolumeSettings(userId, 'screen');
+
+                        const screenAud = document.createElement('audio');
+                        screenAud.id = `aud-screen-${userId}`;
+                        screenAud.autoplay = true;
+                        attachSinkId(screenAud, currentAudioOutputId);
+                        screenAud.volume = savedScreenVol; // Set volume from persisted settings
+                        
                         const screenStream = new MediaStream([event.track]);
-                        const audEl = new Audio();
-                        audEl.srcObject = screenStream;
-                        audEl.id = `aud-screen-${userId}`;
-                        audEl.autoplay = true;
-                        attachSinkId(audEl, currentAudioOutputId);
-                        container.appendChild(audEl);
+                        screenAud.srcObject = screenStream;
+                        container.appendChild(screenAud);
                         
                         const row = document.createElement('div');
                         row.className = 'vol-row';
                         row.id = `vol-row-screen-${userId}`;
                         row.innerHTML = `
-                             <button class="text-white hover:text-purple-400" onclick="toggleMute('${userId}', 'screen')" id="mute-screen-${userId}" title="Screen Audio">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="14" rx="2" ry="2"></rect><line x1="12" y1="22" x2="12" y2="16"></line><path d="M5 12h14"></path><path d="M12 12v4"></path></svg>
-                            </button>
-                            <input type="range" min="0" max="1" step="0.05" value="1" oninput="setVolume('${userId}', 'screen', this.value)">
+                            <div class="text-[10px] text-zinc-400 mb-1 flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+                                Screen Audio
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button class="text-white hover:text-blue-400" onclick="toggleMute('${userId}', 'screen')" id="mute-screen-${userId}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="14" rx="2" ry="2"></rect><line x1="12" y1="22" x2="12" y2="16"></line><path d="M5 12h14"></path><path d="M12 12v4"></path></svg>
+                                </button>
+                                <input type="range" min="0" max="1" step="0.05" value="${savedScreenVol}" oninput="setVolume('${userId}', 'screen', this.value)">
+                            </div>
                         `;
                         volControls.appendChild(row);
                         
+                        setupAudioMonitor(screenStream, `wrapper-${userId}`); // Use setupAudioMonitor for screen audio
+                        
                         event.track.onended = () => {
-                            audEl.remove();
-                            row.remove();
+                            screenAud.remove(); // Remove the screen audio element
+                            row.remove(); // Remove its volume control row
                         };
                     }
                 }
@@ -3125,7 +3762,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
             if (el) {
                 el.volume = val;
+                saveVolumeSettings(userId, type, val);
             }
+        }
+        
+        function saveVolumeSettings(userId, type, val) {
+            sessionStorage.setItem(`rustrooms_vol_${userId}_${type}`, val);
+        }
+
+        function getVolumeSettings(userId, type) {
+            const val = sessionStorage.getItem(`rustrooms_vol_${userId}_${type}`);
+            return val ? parseFloat(val) : 1.0;
         }
 
         function leaveRoom() {
@@ -3771,6 +4418,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+struct UserStatus {
+    nickname: String,
+    avatar: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct RoomStatus {
+    name: String,
+    users: HashMap<String, UserStatus>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct SignalMessage {
     #[serde(rename = "type")]
     msg_type: String,     
@@ -3781,7 +4440,8 @@ struct SignalMessage {
 }
 
 type UserTx = tokio::sync::mpsc::Sender<Result<Message, axum::Error>>;
-type RoomMap = Arc<Mutex<HashMap<String, HashMap<String, UserTx>>>>;
+type ChannelMap = HashMap<String, HashMap<String, (UserTx, UserStatus)>>;
+type RoomMap = Arc<Mutex<HashMap<String, ChannelMap>>>;
 
 #[derive(Clone)]
 struct AppState {
@@ -3798,12 +4458,13 @@ async fn main() {
         .route("/", get(index))
         .route("/new", get(new_room))
         .route("/{room_id}", get(index))
+        .route("/{room_id}/{channel_id}", get(index))
         .route("/rnnoise.js", get(rnnoise_js))
         .route("/rnnoise_processor.js", get(rnnoise_processor_js))
         .route("/manifest.json", get(manifest_json))
         .route("/service-worker.js", get(service_worker_js))
         .route("/icon.svg", get(icon_svg))
-        .route("/ws/{room_id}", get(ws_handler))
+        .route("/ws/{room_id}/{channel_id}", get(ws_handler))
         .with_state(state);
 
     let port = 3000;
@@ -3842,7 +4503,7 @@ async fn new_room(
         Uuid::new_v4().to_string()
     };
 
-    Ok(Redirect::to(&format!("/{}", room_id)))
+    Ok(Redirect::to(&format!("/{}/General", room_id)))
 }
 
 async fn index(State(_state): State<AppState>) -> impl IntoResponse {
@@ -3861,7 +4522,7 @@ async fn index(State(_state): State<AppState>) -> impl IntoResponse {
 }
 
 async fn ws_handler(
-    Path(room_id): Path<String>,
+    Path((room_id, channel_id)): Path<(String, String)>,
     Query(_params): Query<HashMap<String, String>>,
     ws: WebSocketUpgrade,
     headers: axum::http::HeaderMap,
@@ -3876,12 +4537,46 @@ async fn ws_handler(
     }
 
     ws.max_message_size(8 * 1024 * 1024)
-        .on_upgrade(move |socket| handle_socket(socket, room_id, state.rooms))
+        .on_upgrade(move |socket| handle_socket(socket, room_id, channel_id, state.rooms))
 }
 
-async fn handle_socket(socket: WebSocket, room_id: String, rooms: RoomMap) {
+async fn broadcast_channel_list(rooms: &RoomMap, room_id: &str) {
+    let rooms_lock = rooms.lock().await;
+    let room = match rooms_lock.get(room_id) {
+        Some(r) => r,
+        None => return,
+    };
+
+    let mut channel_list = HashMap::new();
+
+    for (cid, users) in room.iter() {
+        let mut user_map = HashMap::new();
+        for (user_id, (_, status)) in users.iter() {
+            user_map.insert(user_id.clone(), status.clone());
+        }
+        channel_list.insert(cid.clone(), RoomStatus {
+            name: cid.clone(),
+            users: user_map,
+        });
+    }
+
+    let msg = serde_json::to_string(&SignalMessage {
+        msg_type: "room-list".into(), // Keep same type for frontend compatibility
+        user_id: None,
+        target: None,
+        data: Some(serde_json::to_value(channel_list).unwrap()),
+    }).unwrap();
+
+    for users in room.values() {
+        for (tx, _) in users.values() {
+            let _ = tx.try_send(Ok(Message::Text(msg.clone().into())));
+        }
+    }
+}
+
+async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, rooms: RoomMap) {
     let (mut user_ws_tx, mut user_ws_rx) = socket.split();
-    let (tx, mut rx) = tokio::sync::mpsc::channel(2000);
+    let (tx, mut rx) = tokio::sync::mpsc::channel(5000);
     
     let mut user_id = String::new(); 
     let mut is_joined = false;
@@ -3900,7 +4595,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, rooms: RoomMap) {
         if let Ok(msg) = result {
             if let Message::Text(text) = msg {
                 if let Ok(parsed) = serde_json::from_str::<SignalMessage>(&text) {
-                    // Handle ping/pong for keep-alive (works even before join)
                     if parsed.msg_type == "ping" {
                         let pong_msg = serde_json::to_string(&SignalMessage {
                             msg_type: "pong".into(),
@@ -3914,7 +4608,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, rooms: RoomMap) {
 
                     if !is_joined {
                         if parsed.msg_type == "join" {
-                            // Extract userId from data if provided, otherwise generate new UUID
                             user_id = if let Some(ref data) = parsed.data {
                                 data.get("userId")
                                     .and_then(|v| v.as_str())
@@ -3923,16 +4616,30 @@ async fn handle_socket(socket: WebSocket, room_id: String, rooms: RoomMap) {
                             } else {
                                 Uuid::new_v4().to_string()
                             };
+
+                            let nickname = parsed.data.as_ref()
+                                .and_then(|d| d.get("nickname"))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("Guest")
+                                .to_string();
+
+                            let mut avatar = parsed.data.as_ref()
+                                .and_then(|d| d.get("avatar"))
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string());
+
+                            if let Some(ref a) = avatar {
+                                if a.len() > 7_000_000 {
+                                    avatar = None;
+                                }
+                            }
                              
                              {
                                 let mut rooms_lock = rooms.lock().await;
                                 let room = rooms_lock.entry(room_id.clone()).or_insert_with(HashMap::new);
+                                let channel = room.entry(channel_id.clone()).or_insert_with(HashMap::new);
                                 
-                                // Check if user ID already exists (reconnection)
-                                if room.contains_key(&user_id) {
-                                    eprintln!("[{}] User {} already exists in room, removing old connection for reconnection", room_id, user_id);
-                                    
-                                    // Notify other users that the old connection left
+                                if channel.contains_key(&user_id) {
                                     let leave_msg = serde_json::to_string(&SignalMessage {
                                         msg_type: "user-left".into(),
                                         user_id: Some(user_id.clone()),
@@ -3940,17 +4647,15 @@ async fn handle_socket(socket: WebSocket, room_id: String, rooms: RoomMap) {
                                         data: None,
                                     }).unwrap();
                                     
-                                    for (uid, tx) in room.iter() {
+                                    for (uid, (tx, _)) in channel.iter() {
                                         if *uid != user_id {
                                             let _ = tx.try_send(Ok(Message::Text(leave_msg.clone().into())));
                                         }
                                     }
-                                    
-                                    // Remove old connection
-                                    room.remove(&user_id);
+                                    channel.remove(&user_id);
                                 }
                                 
-                                room.insert(user_id.clone(), tx.clone());
+                                channel.insert(user_id.clone(), (tx.clone(), UserStatus { nickname, avatar }));
                              }
                              is_joined = true;
                               
@@ -3961,7 +4666,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, rooms: RoomMap) {
                                          map.remove("avatar");
                                      }
                                  }
-                                 // Remove userId from data before notifying others (don't expose internal IDs)
                                  map.remove("userId");
                              }
 
@@ -3972,83 +4676,168 @@ async fn handle_socket(socket: WebSocket, room_id: String, rooms: RoomMap) {
                                 data: notify_data,
                             }).unwrap();
 
-                            let rooms_lock = rooms.lock().await;
-                            if let Some(room) = rooms_lock.get(&room_id) {
-                                for (uid, tx) in room.iter() {
-                                    if *uid != user_id {
-                                        if let Err(_) = tx.try_send(Ok(Message::Text(notify_msg.clone().into()))) {
-                                            eprintln!("[{}] Failed to send user-joined notification to {} (channel full)", room_id, uid);
+                            {
+                                let rooms_lock = rooms.lock().await;
+                                if let Some(room) = rooms_lock.get(&room_id) {
+                                    if let Some(channel) = room.get(&channel_id) {
+                                        for (uid, (tx, _)) in channel.iter() {
+                                            if *uid != user_id {
+                                                let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
+                                            }
                                         }
                                     }
                                 }
                             }
+                            broadcast_channel_list(&rooms, &room_id).await;
                         }
                     } else {
-                        let rooms_lock = rooms.lock().await;
-                        if let Some(room) = rooms_lock.get(&room_id) {
-                            if parsed.msg_type == "update-user" {
-                                let mut notify_data = parsed.data.clone();
-                                if let Some(serde_json::Value::Object(ref mut map)) = notify_data {
-                                    if let Some(serde_json::Value::String(avatar)) = map.get("avatar") {
-                                        if avatar.len() > 7_000_000 {
-                                            map.remove("avatar");
+                        if parsed.msg_type == "update-user" {
+                            let mut notify_data = parsed.data.clone();
+                            let mut nickname = "Guest".to_string();
+                            let mut avatar = None;
+
+                            if let Some(serde_json::Value::Object(ref mut map)) = notify_data {
+                                if let Some(serde_json::Value::String(n)) = map.get("nickname") {
+                                    nickname = n.clone();
+                                }
+                                if let Some(serde_json::Value::String(a)) = map.get("avatar") {
+                                    if a.len() > 7_000_000 {
+                                        map.remove("avatar");
+                                    } else {
+                                        avatar = Some(a.clone());
+                                    }
+                                }
+                            }
+
+                            {
+                                let mut rooms_lock = rooms.lock().await;
+                                if let Some(room) = rooms_lock.get_mut(&room_id) {
+                                    if let Some(channel) = room.get_mut(&channel_id) {
+                                        if let Some((_, status)) = channel.get_mut(&user_id) {
+                                            status.nickname = nickname;
+                                            status.avatar = avatar;
+                                        }
+
+                                        let notify_msg = serde_json::to_string(&SignalMessage {
+                                            msg_type: "user-update".into(),
+                                            user_id: Some(user_id.clone()),
+                                            target: None,
+                                            data: notify_data,
+                                        }).unwrap();
+
+                                        for (uid, (tx, _)) in channel.iter() {
+                                            if *uid != user_id {
+                                                let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
+                                            }
                                         }
                                     }
                                 }
+                            }
+                            broadcast_channel_list(&rooms, &room_id).await;
+                        } else if parsed.msg_type == "cam-toggle" {
+                            let rooms_lock = rooms.lock().await;
+                            if let Some(room) = rooms_lock.get(&room_id) {
+                                if let Some(channel) = room.get(&channel_id) {
+                                    let notify_msg = serde_json::to_string(&SignalMessage {
+                                        msg_type: "cam-toggle".into(),
+                                        user_id: Some(user_id.clone()),
+                                        target: None,
+                                        data: parsed.data.clone(),
+                                    }).unwrap();
 
-                                let notify_msg = serde_json::to_string(&SignalMessage {
-                                    msg_type: "user-update".into(),
-                                    user_id: Some(user_id.clone()),
-                                    target: None,
-                                    data: notify_data,
-                                }).unwrap();
-
-                                for (uid, tx) in room.iter() {
-                                    if *uid != user_id {
-                                        if let Err(_) = tx.try_send(Ok(Message::Text(notify_msg.clone().into()))) {
-                                            eprintln!("[{}] Failed to send user-update notification to {} (channel full)", room_id, uid);
+                                    for (uid, (tx, _)) in channel.iter() {
+                                        if *uid != user_id {
+                                            let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
                                         }
                                     }
                                 }
-                            } else if parsed.msg_type == "cam-toggle" {
-                                let notify_data = parsed.data.clone();
-                                let notify_msg = serde_json::to_string(&SignalMessage {
-                                    msg_type: "cam-toggle".into(),
-                                    user_id: Some(user_id.clone()),
-                                    target: None,
-                                    data: notify_data,
-                                }).unwrap();
+                            }
+                        } else if parsed.msg_type == "screen-toggle" {
+                            let rooms_lock = rooms.lock().await;
+                            if let Some(room) = rooms_lock.get(&room_id) {
+                                if let Some(channel) = room.get(&channel_id) {
+                                    let notify_msg = serde_json::to_string(&SignalMessage {
+                                        msg_type: "screen-toggle".into(),
+                                        user_id: Some(user_id.clone()),
+                                        target: None,
+                                        data: parsed.data.clone(),
+                                    }).unwrap();
 
-                                for (uid, tx) in room.iter() {
-                                    if *uid != user_id {
-                                        if let Err(_) = tx.try_send(Ok(Message::Text(notify_msg.clone().into()))) {
-                                            eprintln!("[{}] Failed to send cam-toggle notification to {} (channel full)", room_id, uid);
+                                    for (uid, (tx, _)) in channel.iter() {
+                                        if *uid != user_id {
+                                            let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
                                         }
                                     }
                                 }
-                            } else if parsed.msg_type == "screen-toggle" {
-                                let notify_data = parsed.data.clone();
-                                let notify_msg = serde_json::to_string(&SignalMessage {
-                                    msg_type: "screen-toggle".into(),
-                                    user_id: Some(user_id.clone()),
-                                    target: None,
-                                    data: notify_data,
-                                }).unwrap();
+                            }
+                        } else if parsed.msg_type == "delete-channel" {
+                            let target_channel_id = parsed.data.as_ref()
+                                .and_then(|d| d.get("channelId"))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or(&channel_id)
+                                .to_string();
 
-                                for (uid, tx) in room.iter() {
-                                    if *uid != user_id {
-                                        if let Err(_) = tx.try_send(Ok(Message::Text(notify_msg.clone().into()))) {
-                                            eprintln!("[{}] Failed to send screen-toggle notification to {} (channel full)", room_id, uid);
-                                        }
+                            let mut rooms_lock = rooms.lock().await;
+                            if let Some(room) = rooms_lock.get_mut(&room_id) {
+                                if let Some(channel) = room.remove(&target_channel_id) {
+                                    let close_msg = serde_json::to_string(&SignalMessage {
+                                        msg_type: "room-deleted".into(),
+                                        user_id: None,
+                                        target: None,
+                                        data: None,
+                                    }).unwrap();
+                                    for (tx, _) in channel.values() {
+                                        let _ = tx.try_send(Ok(Message::Text(close_msg.clone().into())));
                                     }
                                 }
-                            } else if let Some(ref target_id) = parsed.target {
-                                if let Some(target_tx) = room.get(target_id) {
-                                    let mut forwarded_msg = parsed.clone();
-                                    forwarded_msg.user_id = Some(user_id.clone());
-                                    let forwarded_text = serde_json::to_string(&forwarded_msg).unwrap();
-                                    if let Err(_) = target_tx.try_send(Ok(Message::Text(forwarded_text.into()))) {
-                                        eprintln!("[{}] Failed to forward signal from {} to {} (channel full)", room_id, user_id, target_id);
+                            }
+                            drop(rooms_lock);
+                            broadcast_channel_list(&rooms, &room_id).await;
+                        } else if parsed.msg_type == "rename-channel" {
+                            let target_channel_id = parsed.data.as_ref()
+                                .and_then(|d| d.get("channelId"))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or(&channel_id)
+                                .to_string();
+                            let new_name = parsed.data.as_ref()
+                                .and_then(|d| d.get("newName"))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("General")
+                                .to_string();
+
+                            let mut rooms_lock = rooms.lock().await;
+                            if let Some(room) = rooms_lock.get_mut(&room_id) {
+                                if let Some(channel_data) = room.remove(&target_channel_id) {
+                                    // Notify users in this channel about the rename
+                                    let rename_msg = serde_json::to_string(&SignalMessage {
+                                        msg_type: "rename-channel".into(),
+                                        user_id: None,
+                                        target: None,
+                                        data: Some(serde_json::json!({
+                                            "roomId": room_id,
+                                            "oldName": target_channel_id,
+                                            "newName": new_name
+                                        })),
+                                    }).unwrap();
+
+                                    for (client_tx, _) in channel_data.values() {
+                                        let _ = client_tx.try_send(Ok(Message::Text(rename_msg.clone().into())));
+                                    }
+
+                                    room.insert(new_name, channel_data);
+                                }
+                            }
+                            drop(rooms_lock);
+                            broadcast_channel_list(&rooms, &room_id).await;
+                        } else if let Some(ref target_id) = parsed.target {
+                            let rooms_lock = rooms.lock().await;
+                            if let Some(room) = rooms_lock.get(&room_id) {
+                                if let Some(channel) = room.get(&channel_id) {
+                                    if let Some((target_tx, _)) = channel.get(target_id) {
+                                        let mut forwarded_msg = parsed.clone();
+                                        forwarded_msg.user_id = Some(user_id.clone());
+                                        let forwarded_text = serde_json::to_string(&forwarded_msg).unwrap();
+                                        let _ = target_tx.try_send(Ok(Message::Text(forwarded_text.into())));
                                     }
                                 }
                             }
@@ -4065,26 +4854,58 @@ async fn handle_socket(socket: WebSocket, room_id: String, rooms: RoomMap) {
 
     {
         let mut rooms_lock = rooms.lock().await;
-        if let Some(room) = rooms_lock.get_mut(&room_id) {
-            if is_joined {
-                room.remove(&user_id);
-                if room.is_empty() {
-                    rooms_lock.remove(&room_id);
-                } else {
-                    let notify_msg = serde_json::to_string(&SignalMessage {
-                        msg_type: "user-left".into(),
-                        user_id: Some(user_id.clone()),
-                        target: None,
-                        data: None,
-                    }).unwrap();
 
-                    for (_, tx) in room.iter() {
-                        if let Err(_) = tx.try_send(Ok(Message::Text(notify_msg.clone().into()))) {
-                            eprintln!("[{}] Failed to send user-left notification (channel full)", room_id);
+        if is_joined {
+            if let Some(room) = rooms_lock.get_mut(&room_id) {
+                let mut removed = false;
+
+                // First try to find in the expected channel
+                if let Some(channel) = room.get_mut(&channel_id) {
+                    if let Some((stored_tx, _)) = channel.get(&user_id) {
+                        if stored_tx.same_channel(&tx) {
+                            channel.remove(&user_id);
+                            removed = true;
+                            if !channel.is_empty() {
+                                let notify_msg = serde_json::to_string(&SignalMessage {
+                                    msg_type: "user-left".into(),
+                                    user_id: Some(user_id.clone()),
+                                    target: None,
+                                    data: None,
+                                }).unwrap();
+
+                                for (_, (tx, _)) in channel.iter() {
+                                    let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
+                                }
+                            }
                         }
                     }
+                }
+                
+                // If not found (e.g. race condition or rename), scan all channels
+                if !removed {
+                    for channel in room.values_mut() {
+                        if let Some((stored_tx, _)) = channel.get(&user_id) {
+                            if stored_tx.same_channel(&tx) {
+                                channel.remove(&user_id);
+                                if !channel.is_empty() {
+                                    let notify_msg = serde_json::to_string(&SignalMessage {
+                                        msg_type: "user-left".into(),
+                                        user_id: Some(user_id.clone()),
+                                        target: None,
+                                        data: None,
+                                    }).unwrap();
+
+                                    for (_, (tx, _)) in channel.iter() {
+                                        let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    } 
                 }
             }
         }
     }
+    broadcast_channel_list(&rooms, &room_id).await;
 }
