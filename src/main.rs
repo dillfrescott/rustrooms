@@ -2638,6 +2638,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 return;
             }
 
+            // Check if room is empty
+            const roomData = globalRoomList[targetRoomId];
+            if (roomData && roomData.users && Object.keys(roomData.users).length > 0) {
+                showCustomAlert("Room Not Empty", "You cannot rename a room that still has users in it.");
+                return;
+            }
+
             showNameModal("Rename Channel", "Enter new name", (newName) => {
                 if (!newName) return;
                 if (ws && ws.readyState === WebSocket.OPEN) {
@@ -2709,7 +2716,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                     </button>
                                     <button onclick="deleteRoom('${rid}', event)" class="p-1 text-zinc-500 hover:text-red-500 transition-colors" title="Delete Channel">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                                     </button>
                                 </div>
                              ` : ''}
@@ -3501,7 +3508,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             <button class="text-white hover:text-blue-400" onclick="toggleMute('${userId}', 'main')" id="mute-main-${userId}">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                             </button>
-                            <input type="range" min="0" max="1" step="0.05" value="${savedVol}" oninput="setVolume('${userId}', 'main', this.value)">
+                            <input type="range" min="0" max="1" step="0.05" value="${getVolumeSettings(userId, 'main')}" oninput="setVolume('${userId}', 'main', this.value)">
                         `;
                         volControls.insertBefore(row, volControls.firstChild);
                         
@@ -4778,57 +4785,74 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, r
                                 .to_string();
 
                             let mut rooms_lock = rooms.lock().await;
-                            if let Some(room) = rooms_lock.get_mut(&room_id) {
-                                if let Some(channel) = room.remove(&target_channel_id) {
-                                    let close_msg = serde_json::to_string(&SignalMessage {
-                                        msg_type: "room-deleted".into(),
-                                        user_id: None,
-                                        target: None,
-                                        data: None,
-                                    }).unwrap();
-                                    for (tx, _) in channel.values() {
-                                        let _ = tx.try_send(Ok(Message::Text(close_msg.clone().into())));
+                            
+                            // Check if channel is empty
+                            let can_delete = if let Some(room) = rooms_lock.get(&room_id) {
+                                if let Some(current_channel) = room.get(&target_channel_id) {
+                                    current_channel.is_empty()
+                                } else {
+                                    // Channel doesn't exist?
+                                    false
+                                }
+                            } else {
+                                false
+                            };
+
+                            if can_delete {
+                                if let Some(room) = rooms_lock.get_mut(&room_id) {
+                                    if let Some(channel) = room.remove(&target_channel_id) {
+                                        let close_msg = serde_json::to_string(&SignalMessage {
+                                            msg_type: "room-deleted".into(),
+                                            user_id: None,
+                                            target: None,
+                                            data: None,
+                                        }).unwrap();
+                                        for (tx, _) in channel.values() {
+                                            let _ = tx.try_send(Ok(Message::Text(close_msg.clone().into())));
+                                        }
                                     }
                                 }
+                                drop(rooms_lock);
+                                broadcast_channel_list(&rooms, &room_id).await;
+                            } else {
+                                // Optionally notify user they can't delete (handled purely by UI for now)
                             }
-                            drop(rooms_lock);
-                            broadcast_channel_list(&rooms, &room_id).await;
                         } else if parsed.msg_type == "rename-channel" {
                             let target_channel_id = parsed.data.as_ref()
                                 .and_then(|d| d.get("channelId"))
                                 .and_then(|v| v.as_str())
                                 .unwrap_or(&channel_id)
                                 .to_string();
-                            let new_name = parsed.data.as_ref()
+
+                             let new_name = parsed.data.as_ref()
                                 .and_then(|d| d.get("newName"))
                                 .and_then(|v| v.as_str())
-                                .unwrap_or("General")
-                                .to_string();
+                                .map(|s| s.to_string());
 
-                            let mut rooms_lock = rooms.lock().await;
-                            if let Some(room) = rooms_lock.get_mut(&room_id) {
-                                if let Some(channel_data) = room.remove(&target_channel_id) {
-                                    // Notify users in this channel about the rename
-                                    let rename_msg = serde_json::to_string(&SignalMessage {
-                                        msg_type: "rename-channel".into(),
-                                        user_id: None,
-                                        target: None,
-                                        data: Some(serde_json::json!({
-                                            "roomId": room_id,
-                                            "oldName": target_channel_id,
-                                            "newName": new_name
-                                        })),
-                                    }).unwrap();
-
-                                    for (client_tx, _) in channel_data.values() {
-                                        let _ = client_tx.try_send(Ok(Message::Text(rename_msg.clone().into())));
+                            if let Some(new_name_str) = new_name {
+                                let mut rooms_lock = rooms.lock().await;
+                                
+                                // Check if channel is empty
+                                let can_rename = if let Some(room) = rooms_lock.get(&room_id) {
+                                    if let Some(target_channel) = room.get(&target_channel_id) {
+                                        target_channel.is_empty()
+                                    } else {
+                                        false
                                     }
+                                } else {
+                                    false
+                                };
 
-                                    room.insert(new_name, channel_data);
+                                if can_rename {
+                                     if let Some(room) = rooms_lock.get_mut(&room_id) {
+                                         if let Some(channel) = room.remove(&target_channel_id) {
+                                             room.insert(new_name_str.clone(), channel);
+                                         }
+                                     }
+                                     drop(rooms_lock);
+                                     broadcast_channel_list(&rooms, &room_id).await;
                                 }
                             }
-                            drop(rooms_lock);
-                            broadcast_channel_list(&rooms, &room_id).await;
                         } else if let Some(ref target_id) = parsed.target {
                             let rooms_lock = rooms.lock().await;
                             if let Some(room) = rooms_lock.get(&room_id) {
