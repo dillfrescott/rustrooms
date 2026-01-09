@@ -1394,7 +1394,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         // WebSocket heartbeat/keep-alive
         let heartbeatInterval = null;
-        const heartbeatIntervalMs = 30000; // Send ping every 30 seconds
+        const heartbeatIntervalMs = 8000; // Send ping every 8 seconds
         const heartbeatTimeoutMs = 5000; // Wait 5 seconds for pong response
         let lastPongTime = Date.now();
         let heartbeatTimeout = null;
