@@ -1132,6 +1132,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
+    <!-- iOS Wake Lock Workaround Video -->
+    <video id="iosWakeLockVideo" playsinline muted loop style="position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none;">
+        <source src="data:video/mp4;base64,AAAAHGZ0eXBNNEVDAAAAAE00QSCZnZnZ/38AAACqbW9vdgAAAABsbXZoAAAAAMWJ1IDFiNSA1cQAAQAAAQABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKAbXRyYWsAAABcdGtoZAAAAAHFiNSAxYnUgAAAAQAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAEAAABxAAAAAAABAAAAAm1kaWEAAAAgbWRoZAAAAADFiNSAxYnUgAAAcQAAAH EAAAAAAAAAAAAAACWhZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAAVxtaW5mAAAAFHZtaGQAAAAAAQAAAAAADwAAAASeZGlbmYAAAAcZHJlZgAAAAAAAAABAAAADHVybCAAAAABAAABM3N0YmwAAACpc3RzZAAAAAAAAAABAAAAhWF2YzEAAAAAAAAAAQABAAAAAAAAAAAAAAAAAAAAAAEAAAEAAABIAAAASAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGP//AAAALWF2Y0MBAAAgb//4TSgAAv/6F8sFADQACj/wAAADACAAAAMAQe5R8sBAAAACRzdHRzAAAAAAAAAAEAAAEAAAAcc3RzYwAAAAAAAAABAAAAAQAAAAEAAAABAAAAFHN6aXQAAAAAAAAAAQAAABQAAAAUbWN0YQAAAAAAAAAAAAAAJWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAAIi9AAABVc3RzcwAAAAAAAAABAAAAAQAAABxzdGNvAAAAAAAAAAEAAAAsAAAAPHVkdGEAAAA0bWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpcgAAAAAAAAAAAAAAAAAAAAAIL2lsb3QAAAAA" type="video/mp4">
+    </video>
+
     <div id="appLayout" class="hidden flex-col h-full w-full">
         <div class="flex-none p-4 md:p-5 z-40 flex justify-between items-center">
             <div class="flex items-center gap-3">
@@ -1494,6 +1499,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 await requestWakeLock();
             }
         });
+        
+        // iOS Wake Lock Workaround: Silent video loop
+        function enableIosWakeLock() {
+            const video = document.getElementById('iosWakeLockVideo');
+            if (video) {
+                video.play().catch(e => console.log("iOS WakeLock video play failed:", e));
+            }
+        }
 
         async function loadDevices() {
             const btnJoin = document.getElementById('btnJoin');
@@ -2309,6 +2322,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             });
 
             await requestWakeLock();
+            enableIosWakeLock();
         }
 
         const welcomeOverlay = document.getElementById('welcomeOverlay');
@@ -4515,7 +4529,7 @@ async fn index(State(_state): State<AppState>) -> impl IntoResponse {
     (
         [(
             header::CONTENT_SECURITY_POLICY, 
-            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob: data:; object-src 'none'; frame-ancestors 'none';"
         )],
         Html(html)
     )
