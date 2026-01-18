@@ -17,7 +17,6 @@ use std::{
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-
 async fn rnnoise_js() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "application/javascript")],
@@ -4419,8 +4418,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct UserStatus {
-    nickname: String,
-    avatar: Option<String>,
+    pub nickname: String,
+    pub avatar: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4432,11 +4431,11 @@ struct RoomStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct SignalMessage {
     #[serde(rename = "type")]
-    msg_type: String,     
-    target: Option<String>,
-    data: Option<serde_json::Value>, 
+    pub msg_type: String,     
+    pub target: Option<String>,
+    pub data: Option<serde_json::Value>, 
     #[serde(rename = "userId")]
-    user_id: Option<String>, 
+    pub user_id: Option<String>, 
 }
 
 type UserTx = tokio::sync::mpsc::Sender<Result<Message, axum::Error>>;
@@ -4446,13 +4445,30 @@ type RoomMap = Arc<Mutex<HashMap<String, ChannelMap>>>;
 #[derive(Clone)]
 struct AppState {
     rooms: RoomMap,
+    cluster_handle: Option<cluster::ClusterHandle>,
 }
 
 #[tokio::main]
 async fn main() {
     let rooms: RoomMap = Arc::new(Mutex::new(HashMap::new()));
+    
+    // Initialize Cluster if IROH_KEY is present
+    let cluster_handle = if let Ok(key) = std::env::var("IROH_KEY") {
+        match cluster::start_cluster(key, rooms.clone()).await {
+            Ok(h) => {
+                println!("CLUSTER: Enabled");
+                Some(h)
+            },
+            Err(e) => {
+                eprintln!("CLUSTER: Failed to start: {}", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
 
-    let state = AppState { rooms };
+    let state = AppState { rooms, cluster_handle };
 
     let app = Router::new()
         .route("/", get(index))
@@ -4537,7 +4553,7 @@ async fn ws_handler(
     }
 
     ws.max_message_size(8 * 1024 * 1024)
-        .on_upgrade(move |socket| handle_socket(socket, room_id, channel_id, state.rooms))
+        .on_upgrade(move |socket| handle_socket(socket, room_id, channel_id, state))
 }
 
 async fn broadcast_channel_list(rooms: &RoomMap, room_id: &str) {
@@ -4574,7 +4590,8 @@ async fn broadcast_channel_list(rooms: &RoomMap, room_id: &str) {
     }
 }
 
-async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, rooms: RoomMap) {
+async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, state: AppState) {
+    let rooms = state.rooms.clone();
     let (mut user_ws_tx, mut user_ws_rx) = socket.split();
     let (tx, mut rx) = tokio::sync::mpsc::channel(5000);
     
@@ -4655,7 +4672,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, r
                                     channel.remove(&user_id);
                                 }
                                 
-                                channel.insert(user_id.clone(), (tx.clone(), UserStatus { nickname, avatar }));
+                                channel.insert(user_id.clone(), (tx.clone(), UserStatus { nickname: nickname.clone(), avatar: avatar.clone() }));
                              }
                              is_joined = true;
                               
@@ -4669,6 +4686,18 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, r
                                  map.remove("userId");
                              }
 
+                            
+                             // Broadcast to Cluster
+                             if let Some(ch) = &state.cluster_handle {
+                                 ch.broadcast(cluster::ClusterMessage::Join {
+                                     room_id: room_id.clone(),
+                                     channel_id: channel_id.clone(),
+                                     user_id: user_id.clone(),
+                                     nickname: nickname.clone(),
+                                     avatar: avatar.clone(),
+                                 });
+                             }
+                             
                              let notify_msg = serde_json::to_string(&SignalMessage {
                                 msg_type: "user-joined".into(),
                                 user_id: Some(user_id.clone()),
@@ -4716,6 +4745,15 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, r
                                         if let Some((_, status)) = channel.get_mut(&user_id) {
                                             status.nickname = nickname;
                                             status.avatar = avatar;
+                                        }
+
+                                        if let Some(ch) = &state.cluster_handle {
+                                            ch.broadcast(cluster::ClusterMessage::Update {
+                                                room_id: room_id.clone(),
+                                                channel_id: channel_id.clone(),
+                                                user_id: user_id.clone(),
+                                                data: notify_data.clone().unwrap_or(serde_json::to_value(HashMap::<String,String>::new()).unwrap()), 
+                                            });
                                         }
 
                                         let notify_msg = serde_json::to_string(&SignalMessage {
@@ -4847,16 +4885,34 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, r
                                 }
                             }
                         } else if let Some(ref target_id) = parsed.target {
-                            let rooms_lock = rooms.lock().await;
-                            if let Some(room) = rooms_lock.get(&room_id) {
-                                if let Some(channel) = room.get(&channel_id) {
-                                    if let Some((target_tx, _)) = channel.get(target_id) {
-                                        let mut forwarded_msg = parsed.clone();
-                                        forwarded_msg.user_id = Some(user_id.clone());
-                                        let forwarded_text = serde_json::to_string(&forwarded_msg).unwrap();
-                                        let _ = target_tx.try_send(Ok(Message::Text(forwarded_text.into())));
+                            // Forward generic signal (Offer/Answer/Candidate)
+                            // First check if target is valid local?
+                            // Actually, if we forward to a Proxy TX, the proxy takes care of it.
+                            // If target is NOT found locally, we might need to broadcast?
+                            // No, relying on RoomMap logic: If target is in RoomMap (either local or proxy), send to it.
+                            // BUT, we need to populate RoomMap with Proxies.
+                            // So this code block remains largely unchanged, assuming channel.get() returns the Proxy TX.
+                            let mut found = false;
+                            { 
+                                let rooms_lock = rooms.lock().await;
+                                if let Some(room) = rooms_lock.get(&room_id) {
+                                    if let Some(channel) = room.get(&channel_id) {
+                                        if let Some((target_tx, _)) = channel.get(target_id) {
+                                            let mut forwarded_msg = parsed.clone();
+                                            forwarded_msg.user_id = Some(user_id.clone());
+                                            let forwarded_text = serde_json::to_string(&forwarded_msg).unwrap();
+                                            let _ = target_tx.try_send(Ok(Message::Text(forwarded_text.into())));
+                                            found = true;
+                                        }
                                     }
                                 }
+                            }
+                            
+                            if !found {
+                                // If not found in local map, maybe it's on another instance but we haven't synced?
+                                // Or maybe the user just left.
+                                // We can optionally broadcast Signal here if we wanted "stateless" signaling, 
+                                // but we are using "stateful" proxies. So if not in map, we assume unreachable.
                             }
                         }
                     }
@@ -4882,6 +4938,17 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, r
                         if stored_tx.same_channel(&tx) {
                             channel.remove(&user_id);
                             removed = true;
+                            
+
+                            
+                                     if let Some(ch) = &state.cluster_handle {
+                                         ch.broadcast(cluster::ClusterMessage::Leave {
+                                             room_id: room_id.clone(),
+                                             channel_id: channel_id.clone(),
+                                             user_id: user_id.clone(),
+                                         });
+                             }
+                            
                             if !channel.is_empty() {
                                 let notify_msg = serde_json::to_string(&SignalMessage {
                                     msg_type: "user-left".into(),
@@ -4911,6 +4978,14 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, r
                                         target: None,
                                         data: None,
                                     }).unwrap();
+                                    
+                                    if let Some(ch) = &state.cluster_handle {
+                                        ch.broadcast(cluster::ClusterMessage::Leave {
+                                            room_id: room_id.clone(),
+                                            channel_id: "unknown".to_string(),
+                                            user_id: user_id.clone(),
+                                        }); 
+                                    }
 
                                     for (_, (tx, _)) in channel.iter() {
                                         let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
@@ -4925,4 +5000,196 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, r
         }
     }
     broadcast_channel_list(&rooms, &room_id).await;
+}
+
+mod cluster {
+    use super::*;
+    use iroh::Endpoint;
+     use iroh_gossip::api::Event as GossipEvent;
+     use iroh_gossip::{net::Gossip, proto::TopicId};
+    use std::collections::HashMap;
+    use axum::extract::ws::Message;
+    use serde::{Serialize, Deserialize};
+
+    #[derive(Clone, Debug, Serialize, Deserialize)]
+    pub enum ClusterMessage {
+        Join { room_id: String, channel_id: String, user_id: String, nickname: String, avatar: Option<String> },
+        Leave { room_id: String, channel_id: String, user_id: String },
+        Update { room_id: String, channel_id: String, user_id: String, data: serde_json::Value },
+        Signal { target_user_id: String, payload: String },
+    }
+
+    #[derive(Clone)]
+    pub struct ClusterHandle {
+        cmd_tx: tokio::sync::mpsc::Sender<ClusterMessage>,
+        _topic: TopicId,
+    }
+
+    impl ClusterHandle {
+        pub fn broadcast(&self, msg: ClusterMessage) {
+             let _ = self.cmd_tx.try_send(msg);
+        }
+    }
+
+    pub async fn start_cluster(key: String, rooms: RoomMap) -> anyhow::Result<ClusterHandle> {
+        let topic_bytes = blake3::hash(key.as_bytes());
+        let topic = TopicId::from_bytes(*topic_bytes.as_bytes());
+
+        // Setup Iroh node
+        // Setup Iroh node
+        let endpoint = Endpoint::builder().bind().await?;
+        let gossip = Gossip::builder().spawn(endpoint.clone());
+
+        // Join the topic
+        let topic_io = gossip.subscribe_and_join(topic, vec![]).await?;
+        
+        println!("CLUSTER: Joined topic {}, Node ID: {}", topic, endpoint.secret_key().public());
+        
+        let (cmd_tx, mut cmd_rx) = tokio::sync::mpsc::channel(100);
+
+        let handle = ClusterHandle { cmd_tx, _topic: topic };
+        let handle_clone = handle.clone();
+        
+        tokio::spawn(async move {
+            let mut stream = topic_io;
+            loop {
+                tokio::select! {
+                    cmd = cmd_rx.recv() => {
+                        if let Some(msg) = cmd {
+                            let data = serde_json::to_vec(&msg).unwrap();
+                            let _ = stream.broadcast(data.into()).await;
+                        } else {
+                            break;
+                        }
+                    }
+                    event = stream.next() => {
+                        if let Some(res) = event {
+                            if let Ok(event) = res {
+                                match event {
+                                    GossipEvent::Received(msg) => {
+                                         if let Ok(cluster_msg) = serde_json::from_slice::<ClusterMessage>(&msg.content) {
+                                            handle_cluster_message(cluster_msg, &rooms, &handle_clone).await;
+                                         }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+
+        Ok(handle)
+    }
+
+    async fn handle_cluster_message(msg: ClusterMessage, rooms: &RoomMap, handle: &ClusterHandle) {
+         match msg {
+             ClusterMessage::Join { room_id, channel_id, user_id, nickname, avatar } => {
+                 let mut rooms_lock = rooms.lock().await;
+                 let room = rooms_lock.entry(room_id.clone()).or_insert_with(HashMap::new);
+                 let channel = room.entry(channel_id.clone()).or_insert_with(HashMap::new);
+
+                 if channel.contains_key(&user_id) {
+                     return; 
+                 }
+
+                 // Create Proxy
+                 let (tx, mut rx) = tokio::sync::mpsc::channel(5000);
+                 let h = handle.clone();
+                 let target = user_id.clone();
+                 
+                 tokio::spawn(async move {
+                     while let Some(res) = rx.recv().await {
+                         if let Ok(Message::Text(text)) = res {
+                             let sig = ClusterMessage::Signal {
+                                 target_user_id: target.clone(),
+                                 payload: text.to_string(),
+                             };
+                             h.broadcast(sig);
+                         }
+                     }
+                 });
+
+                 channel.insert(user_id.clone(), (tx, UserStatus { nickname: nickname.clone(), avatar: avatar.clone() }));
+                 println!("CLUSTER: Added proxy user {} in {}/{}", user_id, room_id, channel_id);
+                 
+                  let notify_msg = serde_json::to_string(&SignalMessage {
+                        msg_type: "user-joined".into(),
+                        user_id: Some(user_id.clone()),
+                        target: None,
+                        data: Some(serde_json::json!({
+                            "nickname": nickname,
+                            "avatar": avatar
+                        })),
+                    }).unwrap();
+                 
+                 for (uid, (tx, _)) in channel.iter() {
+                     if *uid != user_id {
+                         let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
+                     }
+                 }
+             }
+             ClusterMessage::Leave { room_id, channel_id, user_id } => {
+                  let mut rooms_lock = rooms.lock().await;
+                  if let Some(room) = rooms_lock.get_mut(&room_id) {
+                      if let Some(channel) = room.get_mut(&channel_id) {
+                          if channel.remove(&user_id).is_some() {
+                               let notify_msg = serde_json::to_string(&SignalMessage {
+                                    msg_type: "user-left".into(),
+                                    user_id: Some(user_id.clone()),
+                                    target: None,
+                                    data: None,
+                                }).unwrap();
+                                for (_, (tx, _)) in channel.iter() {
+                                    let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
+                                }
+                          }
+                      }
+                  }
+             }
+             ClusterMessage::Update { room_id, channel_id, user_id, data } => {
+                  let mut rooms_lock = rooms.lock().await;
+                  if let Some(room) = rooms_lock.get_mut(&room_id) {
+                      if let Some(channel) = room.get_mut(&channel_id) {
+                          if let Some((_, status)) = channel.get_mut(&user_id) {
+                                if let Some(map) = data.as_object() {
+                                    if let Some(serde_json::Value::String(n)) = map.get("nickname") {
+                                        status.nickname = n.clone();
+                                    }
+                                    if let Some(serde_json::Value::String(a)) = map.get("avatar") {
+                                        status.avatar = Some(a.clone());
+                                    }
+                                }
+                          }
+                          
+                          let notify_msg = serde_json::to_string(&SignalMessage {
+                                msg_type: "user-update".into(),
+                                user_id: Some(user_id.clone()),
+                                target: None,
+                                data: Some(data),
+                            }).unwrap();
+                            for (uid, (tx, _)) in channel.iter() {
+                                if *uid != user_id {
+                                    let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
+                                }
+                            }
+                      }
+                  }
+             }
+             ClusterMessage::Signal { target_user_id, payload } => {
+                  let rooms_lock = rooms.lock().await;
+                  for room in rooms_lock.values() {
+                      for channel in room.values() {
+                          if let Some((tx, _)) = channel.get(&target_user_id) {
+                              let _ = tx.try_send(Ok(Message::Text(payload.clone().into())));
+                              return;
+                          }
+                      }
+                  }
+             }
+         }
+    }
 }
