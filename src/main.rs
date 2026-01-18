@@ -5035,23 +5035,38 @@ mod cluster {
         let topic_bytes = blake3::hash(key.as_bytes());
         let topic = TopicId::from_bytes(*topic_bytes.as_bytes());
 
-        // Setup Iroh node
-        // Setup Iroh node
-        let endpoint = Endpoint::builder().bind().await?;
-        let gossip = Gossip::builder().spawn(endpoint.clone());
-
-        // Join the topic
-        let topic_io = gossip.subscribe_and_join(topic, vec![]).await?;
-        
-        println!("CLUSTER: Joined topic {}, Node ID: {}", topic, endpoint.secret_key().public());
-        
+        // Create the channel immediately so we can return the handle
         let (cmd_tx, mut cmd_rx) = tokio::sync::mpsc::channel(100);
-
+        
         let handle = ClusterHandle { cmd_tx, _topic: topic };
         let handle_clone = handle.clone();
-        
+
+        // Spawn the connection and processing loop in the background
         tokio::spawn(async move {
-            let mut stream = topic_io;
+            println!("CLUSTER: Initializing node...");
+            
+            // Setup Iroh node
+            let endpoint_res = Endpoint::builder().bind().await;
+            if let Err(e) = endpoint_res {
+                eprintln!("CLUSTER ERROR: Failed to bind endpoint: {}", e);
+                return;
+            }
+            let endpoint = endpoint_res.unwrap();
+            
+            let gossip = Gossip::builder().spawn(endpoint.clone());
+
+            // Join the topic (this can take time, so it's good we're effectively backgrounded)
+            println!("CLUSTER: Joining topic {}...", topic);
+            
+            let topic_io_res = gossip.subscribe_and_join(topic, vec![]).await;
+            if let Err(e) = topic_io_res {
+                 eprintln!("CLUSTER ERROR: Failed to join topic: {}", e);
+                 return;
+            }
+            let mut stream = topic_io_res.unwrap();
+            
+            println!("CLUSTER: Joined topic {}, Node ID: {}", topic, endpoint.secret_key().public());
+        
             loop {
                 tokio::select! {
                     cmd = cmd_rx.recv() => {
