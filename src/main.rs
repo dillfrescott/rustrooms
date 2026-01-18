@@ -5093,7 +5093,9 @@ mod cluster {
                  let channel = room.entry(channel_id.clone()).or_insert_with(HashMap::new);
 
                  if channel.contains_key(&user_id) {
-                     return; 
+                     // If user exists, we overwrite/update the proxy.
+                     // This handles the case where a node died and the user reconnected elsewhere.
+                     println!("CLUSTER: Overwriting existing proxy (re-join) {} in {}/{}", user_id, room_id, channel_id);
                  }
 
                  // Create Proxy
