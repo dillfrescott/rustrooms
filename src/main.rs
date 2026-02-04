@@ -5088,14 +5088,18 @@ async fn main() {
     let app = Router::new()
         .route("/", get(index))
         .route("/new", get(new_room))
+        .route("/new/", get(redirect_new_trailing_slash))
         .route("/{room_id}", get(index))
+        .route("/{room_id}/", get(redirect_room_trailing_slash))
         .route("/{room_id}/{channel_id}", get(index))
+        .route("/{room_id}/{channel_id}/", get(redirect_channel_trailing_slash))
         .route("/rnnoise.js", get(rnnoise_js))
         .route("/rnnoise_processor.js", get(rnnoise_processor_js))
         .route("/manifest.json", get(manifest_json))
         .route("/service-worker.js", get(service_worker_js))
         .route("/icon.svg", get(icon_svg))
         .route("/ws/{room_id}/{channel_id}", get(ws_handler))
+        .route("/ws/{room_id}/{channel_id}/", get(redirect_ws_trailing_slash))
         .with_state(state);
 
     let port = 3000;
@@ -5135,6 +5139,22 @@ async fn new_room(
     };
 
     Ok(Redirect::to(&format!("/{}/General", room_id)))
+}
+
+async fn redirect_room_trailing_slash(Path(room_id): Path<String>) -> Redirect {
+    Redirect::to(&format!("/{}", room_id))
+}
+
+async fn redirect_channel_trailing_slash(Path((room_id, channel_id)): Path<(String, String)>) -> Redirect {
+    Redirect::to(&format!("/{}/{}", room_id, channel_id))
+}
+
+async fn redirect_new_trailing_slash() -> Redirect {
+    Redirect::to("/new")
+}
+
+async fn redirect_ws_trailing_slash(Path((room_id, channel_id)): Path<(String, String)>) -> Redirect {
+    Redirect::to(&format!("/ws/{}/{}", room_id, channel_id))
 }
 
 async fn index(State(_state): State<AppState>) -> impl IntoResponse {
