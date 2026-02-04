@@ -111,7 +111,7 @@ async fn icon_svg() -> impl IntoResponse {
     )
 }
 
-fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> String {
+fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str, giphy_api_key: &str) -> String {
 
     let html = r###"
 <!DOCTYPE html>
@@ -308,6 +308,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             object-fit: cover;
         }
 
+        /* GIF animation control - only animate when speaking */
+        .avatar-center img.gif-avatar {
+            animation-play-state: paused;
+        }
+
+        .avatar-center.speaking-glow img.gif-avatar {
+            animation-play-state: running;
+        }
+
         video.active + .avatar-layer {
             display: none !important;
         }
@@ -495,13 +504,22 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .speaking-glow {
-            border: 4px solid rgba(16, 185, 129, 0.9) !important;
-            box-shadow: 0 0 12px rgba(16, 185, 129, 0.7), 0 0 0 3px rgba(16, 185, 129, 0.5) !important;
+            border: 2px solid rgba(16, 185, 129, 0.9) !important;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.6), 0 0 0 2px rgba(16, 185, 129, 0.4) !important;
             transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         }
 
         #localPipWrapper.speaking-glow {
-            box-shadow: 0 0 12px rgba(16, 185, 129, 0.7), 0 0 0 3px rgba(16, 185, 129, 0.5);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.6), 0 0 0 2px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Local avatar GIF animation control */
+        #localPipWrapper.speaking-glow #localAvatarCenterImg.gif-avatar {
+            animation-play-state: running;
+        }
+
+        #localAvatarCenterImg.gif-avatar {
+            animation-play-state: paused;
         }
 
         .video-container {
@@ -878,6 +896,271 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             transform: scale(1);
         }
 
+        /* GIF Picker Modal */
+        .gif-picker-modal {
+            max-width: 800px;
+            width: 95%;
+            height: 85vh;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .gif-picker-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-elevated);
+        }
+
+        .gif-picker-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .gif-search-container {
+            position: relative;
+            flex: 1;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .gif-search-input {
+            width: 100%;
+            padding: 14px 48px 14px 40px;
+            border-radius: 12px;
+            border: 1px solid var(--border-medium);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .gif-search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .gif-search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .gif-search-clear {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .gif-search-clear:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .gif-picker-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: var(--bg-primary);
+        }
+
+        .gif-picker-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            background: var(--bg-elevated);
+        }
+
+        .gif-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            padding-bottom: 20px;
+        }
+
+        .gif-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--bg-secondary);
+            border: 2px solid transparent;
+        }
+
+        .gif-item:hover {
+            transform: scale(1.02);
+            border-color: var(--accent);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .gif-item.selected {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+
+        .gif-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            animation: none;
+        }
+
+        .gif-item:hover .gif-duration {
+            opacity: 0.8;
+        }
+
+        .gif-duration {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            backdrop-filter: blur(4px);
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .gif-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            padding: 40px;
+            text-align: center;
+        }
+
+        .gif-placeholder svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .gif-placeholder p {
+            margin: 8px 0 0;
+            font-size: 0.9rem;
+        }
+
+        .gif-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+            color: var(--text-secondary);
+        }
+
+        .gif-loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .gif-preview-container {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .gif-preview-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid var(--border-medium);
+        }
+
+        .gif-preview-info {
+            flex: 1;
+        }
+
+        .gif-preview-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .gif-preview-size {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .gif-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .gif-btn-primary {
+            background: var(--accent);
+            color: white;
+            border: none;
+        }
+
+        .gif-btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .gif-btn-secondary {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-medium);
+        }
+
+        .gif-btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
         .room-user-row {
             display: flex;
             align-items: center;
@@ -955,6 +1238,49 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
+    <!-- GIF Picker Modal -->
+    <div id="gifPickerModal" class="modal-overlay" style="z-index: 90;">
+        <div class="gif-picker-modal">
+            <div class="gif-picker-header">
+                <h2>Choose a GIF</h2>
+                <div class="gif-search-container">
+                    <svg class="gif-search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="gifSearchInput" class="gif-search-input" placeholder="Search for GIFs (e.g., cat, dance, happy)..." autocomplete="off">
+                    <div id="gifSearchClear" class="gif-search-clear" onclick="clearGifSearch()"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></div>
+                </div>
+                <button onclick="closeGifPicker()" class="text-zinc-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="gif-picker-body">
+                <div id="gifPreviewContainer" class="gif-preview-container hidden">
+                    <img id="gifPreviewImg" class="gif-preview-img" src="" alt="Preview">
+                    <div class="gif-preview-info">
+                        <div id="gifPreviewName" class="gif-preview-name">Selected GIF</div>
+                        <div id="gifPreviewSize" class="gif-preview-size">Loading...</div>
+                    </div>
+                </div>
+                <div id="gifGrid" class="gif-grid"></div>
+                <div id="gifLoading" class="gif-loading hidden">
+                    <div class="gif-loading-spinner"></div>
+                    <p>Loading GIFs...</p>
+                </div>
+                <div id="gifEmpty" class="gif-placeholder hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    <p>Search for GIFs to get started</p>
+                    <p style="font-size: 0.8rem; opacity: 0.6; margin-top: 4px;">Powered by Giphy</p>
+                </div>
+            </div>
+            <div class="gif-picker-footer">
+                <button onclick="closeGifPicker()" class="gif-btn gif-btn-secondary">Cancel</button>
+                <button id="gifSelectBtn" onclick="selectGif()" class="gif-btn gif-btn-primary" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Set as Avatar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="welcomeOverlay" class="fixed inset-0 z-[70] flex flex-col items-center justify-center p-4" style="display: none; background: linear-gradient(180deg, var(--bg-primary) 0%, #0d0d18 100%);">
         <canvas id="particleCanvas"></canvas>
         <div class="text-center space-y-8 max-w-md w-full relative z-10">
@@ -1020,7 +1346,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     <span id="avatarPlaceholder" class="text-3xl" style="color: var(--text-muted);">👤</span>
                                     <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold" style="background: rgba(0, 0, 0, 0.7); color: var(--text-primary);">Edit</div>
                                 </div>
-                                <input type="file" id="avatarInput" hidden accept="image/*" onchange="handleAvatarUpload(this)">
+                                <input type="file" id="avatarInput" hidden accept="image/*,.gif" onchange="handleAvatarUpload(this)">
+                                <button onclick="openGifPicker()" class="mt-2 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline mr-1"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                                    Pick GIF
+                                </button>
                             </div>
                         </div>
 
@@ -1081,12 +1411,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 <div class="lg:w-1/2 space-y-4">
                     <div class="flex flex-col items-center gap-4 p-4 rounded-2xl" style="background: var(--bg-secondary); border: 1px solid var(--border-subtle);">
                         <label class="label-text">Avatar</label>
-                        <div onclick="document.getElementById('settingsAvatarInput').click()" class="w-32 h-32 rounded-3xl cursor-pointer overflow-hidden flex items-center justify-center transition-all group relative" style="background: var(--bg-tertiary); border: 2px solid var(--border-subtle);">
-                            <img id="settingsAvatarPreview" src="" class="hidden w-full h-full object-cover" draggable="false">
-                            <span id="settingsAvatarPlaceholder" class="text-6xl" style="color: var(--text-muted);">👤</span>
-                             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold" style="background: rgba(0, 0, 0, 0.75); color: var(--text-primary);">Change</div>
+                        <div class="flex flex-col items-center gap-3">
+                            <div onclick="document.getElementById('settingsAvatarInput').click()" class="w-32 h-32 rounded-3xl cursor-pointer overflow-hidden flex items-center justify-center transition-all relative" style="background: var(--bg-tertiary); border: 2px solid var(--border-subtle);">
+                                <img id="settingsAvatarPreview" src="" class="hidden w-full h-full object-cover" draggable="false">
+                                <span id="settingsAvatarPlaceholder" class="text-6xl" style="color: var(--text-muted);">👤</span>
+                                <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold" style="background: rgba(0, 0, 0, 0.75); color: var(--text-primary);">Change</div>
+                            </div>
+                            <input type="file" id="settingsAvatarInput" hidden accept="image/*,.gif" onchange="handleSettingsAvatarUpload(this)">
+                            <button onclick="openGifPicker()" class="text-sm font-medium px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 transition-all border border-blue-500/20">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline mr-1.5"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                                Pick GIF
+                            </button>
                         </div>
-                        <input type="file" id="settingsAvatarInput" hidden accept="image/*" onchange="handleSettingsAvatarUpload(this)">
                     </div>
 
                     <div>
@@ -1213,6 +1549,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 .then(reg => console.log('SW registered'))
                 .catch(err => console.log('SW error', err));
         }
+    </script>
+    <script>
+        // Set Giphy API key from environment variable
+        window.GIPHY_API_KEY = "{{GIPHY_API_KEY}}";
     </script>
     <script>
         // Welcome screen simple particle system (lobby-style)
@@ -1754,7 +2094,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         function setupAudioMonitor(stream, targetId) {
             if (!audioContext) return;
             if (!stream.getAudioTracks().length) return;
-            
+
             if (audioContext.state === 'suspended') {
                 audioContext.resume();
             }
@@ -1763,36 +2103,50 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const analyser = audioContext.createAnalyser();
             analyser.fftSize = 256;
             source.connect(analyser);
-            
+
             const bufferLength = analyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
-            
+
             function checkAudio() {
                 if (targetId !== 'local' && !document.getElementById(targetId)) return;
-                
+
                 analyser.getByteFrequencyData(dataArray);
                 let sum = 0;
                 for(let i = 0; i < bufferLength; i++) {
                     sum += dataArray[i];
                 }
                 const average = sum / bufferLength;
-                
+
                 let targetEl;
+                let avatarCenterEl = null;
+
                 if (targetId === 'local') {
                     targetEl = document.getElementById('localPipWrapper');
+                    // Also get the local avatar center for GIF animation
+                    avatarCenterEl = document.getElementById('localAvatarCenterImg');
                 } else {
                     const wrapper = document.getElementById(targetId);
-                    if (wrapper) targetEl = wrapper.querySelector('.avatar-center');
+                    if (wrapper) {
+                        targetEl = wrapper.querySelector('.avatar-center');
+                        avatarCenterEl = targetEl;  // Same element for remote
+                    }
                 }
-                
+
                 if (targetEl) {
-                    if (average > 10) { 
+                    if (average > 10) {
                         targetEl.classList.add('speaking-glow');
                     } else {
                         targetEl.classList.remove('speaking-glow');
                     }
                 }
-                
+
+                // Handle GIF animation for avatar center (only controls animation, not visual glow)
+                // The visual glow is applied to the parent container (targetEl) only
+                // We need to check if avatarCenterEl is a GIF to control animation via parent's state
+                // But we don't add the speaking-glow class to the image itself
+                // The parent's .speaking-glow state will control the GIF animation via CSS
+                // No additional JS needed here
+
                 requestAnimationFrame(checkAudio);
             }
             checkAudio();
@@ -1946,39 +2300,53 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const file = input.files[0];
             if (!file) return;
 
+            const isGif = file.type === 'image/gif';
+
             const reader = new FileReader();
             reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    const MAX_SIZE = 2048;
-                    let width = img.width;
-                    let height = img.height;
-                    
-                    if (width > height) {
-                        if (width > MAX_SIZE) {
-                            height *= MAX_SIZE / width;
-                            width = MAX_SIZE;
-                        }
-                    } else {
-                        if (height > MAX_SIZE) {
-                            width *= MAX_SIZE / height;
-                            height = MAX_SIZE;
-                        }
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    userAvatar = canvas.toDataURL('image/jpeg', 0.8);
+                if (isGif) {
+                    // For GIFs, store the raw data URL
+                    userAvatar = e.target.result;
                     avatarPreview.src = userAvatar;
                     avatarPreview.classList.remove('hidden');
                     avatarPlaceholder.classList.add('hidden');
-                };
-                img.src = e.target.result;
+                    // Mark it as a GIF for later handling
+                    avatarPreview.dataset.isGif = 'true';
+                } else {
+                    // For static images, process as before
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+
+                        const MAX_SIZE = 2048;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_SIZE) {
+                                height *= MAX_SIZE / width;
+                                width = MAX_SIZE;
+                            }
+                        } else {
+                            if (height > MAX_SIZE) {
+                                width *= MAX_SIZE / height;
+                                height = MAX_SIZE;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        userAvatar = canvas.toDataURL('image/jpeg', 0.8);
+                        avatarPreview.src = userAvatar;
+                        avatarPreview.classList.remove('hidden');
+                        avatarPlaceholder.classList.add('hidden');
+                        avatarPreview.dataset.isGif = 'false';
+                    };
+                    img.src = e.target.result;
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -3028,6 +3396,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                const centerImg = document.createElement('img');
                centerImg.src = avatar;
                centerImg.draggable = false;
+
+               // Detect if this is a GIF and add the appropriate class
+               if (typeof avatar === 'string' && avatar.startsWith('data:image/gif')) {
+                   centerImg.classList.add('gif-avatar');
+               }
 
                centerDiv.appendChild(centerImg);
                layer.appendChild(bgImg);
@@ -4122,47 +4495,281 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const file = input.files[0];
             if (!file) return;
 
+            const isGif = file.type === 'image/gif';
+
             const reader = new FileReader();
             reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    const MAX_SIZE = 2048;
-                    let width = img.width;
-                    let height = img.height;
-                    
-                    if (width > height) {
-                        if (width > MAX_SIZE) {
-                            height *= MAX_SIZE / width;
-                            width = MAX_SIZE;
-                        }
-                    } else {
-                        if (height > MAX_SIZE) {
-                            width *= MAX_SIZE / height;
-                            height = MAX_SIZE;
-                        }
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    newAvatarCandidate = canvas.toDataURL('image/jpeg', 0.8);
+                if (isGif) {
+                    // For GIFs, store the raw data URL
+                    newAvatarCandidate = e.target.result;
                     settingsAvatarPreview.src = newAvatarCandidate;
                     settingsAvatarPreview.classList.remove('hidden');
                     settingsAvatarPlaceholder.classList.add('hidden');
-                };
-                img.src = e.target.result;
+                    settingsAvatarPreview.dataset.isGif = 'true';
+                } else {
+                    // For static images, process as before
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const MAX_SIZE = 2048;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_SIZE) {
+                                height *= MAX_SIZE / width;
+                                width = MAX_SIZE;
+                            }
+                        } else {
+                            if (height > MAX_SIZE) {
+                                width *= MAX_SIZE / height;
+                                height = MAX_SIZE;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        newAvatarCandidate = canvas.toDataURL('image/jpeg', 0.8);
+                        settingsAvatarPreview.src = newAvatarCandidate;
+                        settingsAvatarPreview.classList.remove('hidden');
+                        settingsAvatarPlaceholder.classList.add('hidden');
+                        settingsAvatarPreview.dataset.isGif = 'false';
+                    };
+                    img.src = e.target.result;
+                }
             };
             reader.readAsDataURL(file);
+        }
+
+        // GIF Picker State
+        let gifPickerState = {
+            searchQuery: '',
+            gifResults: [],
+            selectedGif: null,
+            page: 1,
+            loading: false,
+            apiKey: window.GIPHY_API_KEY || 'YOUR_GIPHY_API_KEY' // Giphy API key from environment
+        };
+
+        // Open GIF picker from settings
+        function openGifPicker() {
+            gifPickerState = {
+                searchQuery: '',
+                gifResults: [],
+                selectedGif: null,
+                page: 1,
+                loading: false,
+                apiKey: window.GIPHY_API_KEY || 'YOUR_GIPHY_API_KEY'
+            };
+            document.getElementById('gifSearchInput').value = '';
+            document.getElementById('gifPreviewContainer').classList.add('hidden');
+            document.getElementById('gifSelectBtn').disabled = true;
+            document.getElementById('gifSelectBtn').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Set as Avatar';
+            showGifGrid();
+            document.getElementById('gifPickerModal').classList.add('open');
+            document.getElementById('gifSearchInput').focus();
+            searchGifs('');
+        }
+
+        // Close GIF picker
+        function closeGifPicker() {
+            document.getElementById('gifPickerModal').classList.remove('open');
+            gifPickerState = {
+                searchQuery: '',
+                gifResults: [],
+                selectedGif: null,
+                page: 1,
+                loading: false,
+                apiKey: window.GIPHY_API_KEY || 'YOUR_GIPHY_API_KEY'
+            };
+        }
+
+        // Handle GIF search input
+        document.getElementById('gifSearchInput').addEventListener('input', function(e) {
+            gifPickerState.searchQuery = e.target.value;
+            gifPickerState.page = 1;
+            searchGifs(e.target.value);
+        });
+
+        // Clear search
+        function clearGifSearch() {
+            document.getElementById('gifSearchInput').value = '';
+            gifPickerState.searchQuery = '';
+            gifPickerState.page = 1;
+            searchGifs('');
+        }
+
+        // Search GIFs using Giphy API
+        async function searchGifs(query) {
+            if (gifPickerState.loading) return;
+
+            const loadingEl = document.getElementById('gifLoading');
+            const emptyEl = document.getElementById('gifEmpty');
+            const gridEl = document.getElementById('gifGrid');
+
+            loadingEl.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
+            gridEl.classList.add('hidden');
+
+            try {
+                // Use a free Giphy API endpoint
+                const apiKey = gifPickerState.apiKey;
+
+                // Debug: Check if API key is set
+                if (!apiKey || apiKey === 'YOUR_GIPHY_API_KEY' || apiKey === '') {
+                    console.error('Giphy API key is missing or using default value');
+                    throw new Error('Giphy API key is not configured. Please set GIPHY_API_KEY environment variable.');
+                }
+
+                const url = query
+                    ? `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&limit=24&offset=0`
+                    : `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=24&offset=0`;
+
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Giphy API error:', response.status, errorData);
+                    throw new Error(`Giphy API error: ${response.status} ${errorData.message || 'Failed to fetch GIFs'}`);
+                }
+
+                const data = await response.json();
+
+                gifPickerState.gifResults = data.data || [];
+
+                loadingEl.classList.add('hidden');
+                showGifGrid();
+
+                if (gifPickerState.gifResults.length === 0) {
+                    emptyEl.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('GIF search error:', error);
+                loadingEl.classList.add('hidden');
+                gridEl.classList.remove('hidden');
+
+                // Show error placeholder with specific message
+                const errorMessage = error.message || 'Failed to load GIFs';
+                gridEl.innerHTML = `
+                    <div class="col-span-full gif-placeholder">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                        <p>Could not load GIFs</p>
+                        <p style="font-size: 0.8rem; opacity: 0.6; margin-top: 8px;">${errorMessage}</p>
+                        <p style="font-size: 0.75rem; opacity: 0.5; margin-top: 12px;">Make sure GIPHY_API_KEY is set in your environment</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Show GIF grid
+        function showGifGrid() {
+            const gridEl = document.getElementById('gifGrid');
+
+            if (!gifPickerState.gifResults || gifPickerState.gifResults.length === 0) {
+                return;
+            }
+
+            gridEl.classList.remove('hidden');
+            gridEl.innerHTML = '';
+
+            gifPickerState.gifResults.forEach((gif, index) => {
+                const gifItem = document.createElement('div');
+                gifItem.className = 'gif-item';
+                if (gifPickerState.selectedGif && gifPickerState.selectedGif.id === gif.id) {
+                    gifItem.classList.add('selected');
+                }
+
+                const gifImg = document.createElement('img');
+                gifImg.src = gif.images.fixed_height_small.url;
+                gifImg.alt = gif.title || 'GIF';
+                gifImg.loading = 'lazy';
+
+                const durationEl = document.createElement('div');
+                durationEl.className = 'gif-duration';
+                durationEl.textContent = gif.duration ? formatDuration(gif.duration) : '';
+
+                gifItem.appendChild(gifImg);
+                gifItem.appendChild(durationEl);
+
+                gifItem.addEventListener('click', () => selectGifPreview(gif, gifItem));
+
+                gridEl.appendChild(gifItem);
+            });
+        }
+
+        // Format duration
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            if (mins > 0) return `${mins}:${secs.toString().padStart(2, '0')}`;
+            return `0:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Preview selected GIF
+        function selectGifPreview(gif, element) {
+            // Remove selected class from all items
+            document.querySelectorAll('.gif-item').forEach(item => item.classList.remove('selected'));
+            element.classList.add('selected');
+
+            gifPickerState.selectedGif = gif;
+
+            // Update preview
+            const previewContainer = document.getElementById('gifPreviewContainer');
+            const previewImg = document.getElementById('gifPreviewImg');
+            const previewName = document.getElementById('gifPreviewName');
+            const previewSize = document.getElementById('gifPreviewSize');
+
+            previewImg.src = gif.images.original.url;
+            previewName.textContent = gif.title || 'Selected GIF';
+            previewSize.textContent = `${gif.images.original.width}x${gif.images.original.height} • ${formatDuration(gif.duration)}`;
+
+            previewContainer.classList.remove('hidden');
+
+            // Enable select button
+            document.getElementById('gifSelectBtn').disabled = false;
+            document.getElementById('gifSelectBtn').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Set as Avatar';
+        }
+
+        // Select GIF as avatar
+        function selectGif() {
+            if (!gifPickerState.selectedGif) return;
+
+            // Get the original GIF URL
+            const gifUrl = gifPickerState.selectedGif.images.original.url;
+
+            // For local avatar (from settings)
+            newAvatarCandidate = gifUrl;
+
+            // Update the settings avatar preview
+            settingsAvatarPreview.src = gifUrl;
+            settingsAvatarPreview.classList.remove('hidden');
+            settingsAvatarPlaceholder.classList.add('hidden');
+            settingsAvatarPreview.dataset.isGif = 'true';
+
+            // Update userAvatar if we're in the setup screen
+            if (document.getElementById('avatarPreview')) {
+                userAvatar = gifUrl;
+                avatarPreview.src = gifUrl;
+                avatarPreview.classList.remove('hidden');
+                avatarPlaceholder.classList.add('hidden');
+                avatarPreview.dataset.isGif = 'true';
+            }
+
+            // Close the modal
+            closeGifPicker();
+
+            // Update local avatar if currently shown
+            updateLocalAvatar();
         }
 
         async function saveSettings() {
             const newAudio = document.getElementById('settingsAudioSource').value;
             const newAudioOutput = document.getElementById('settingsAudioOutputSource').value;
             const newVideo = document.getElementById('settingsVideoSource').value;
-            
+
             const currentAudioTrack = localStream ? localStream.getAudioTracks()[0] : null;
             const currentVideoTrack = localStream ? localStream.getVideoTracks()[0] : null;
             
@@ -4202,26 +4809,32 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              const img = document.getElementById('localAvatarImg');
              const centerImg = document.getElementById('localAvatarCenterImg');
              const placeholder = document.getElementById('localAvatarPlaceholder');
-             
+
              let camEnabled = false;
              if (localStream) {
                  const videoTrack = localStream.getVideoTracks()[0];
                  if (videoTrack && videoTrack.enabled) camEnabled = true;
              }
-             
+
              if (screenStream || camEnabled) {
                  if (screenStream) {
-                     layer.style.display = 'none'; 
+                     layer.style.display = 'none';
                  } else {
-                    layer.style.display = 'none'; 
+                    layer.style.display = 'none';
                  }
              } else {
-                 layer.style.display = 'flex'; 
+                 layer.style.display = 'flex';
                  if (userAvatar) {
                      img.classList.remove('hidden');
-                     
+
                      centerImg.src = userAvatar;
                      centerImg.classList.remove('hidden');
+                     // Add gif-avatar class if this is a GIF
+                     if (userAvatar && userAvatar.startsWith('data:image/gif')) {
+                         centerImg.classList.add('gif-avatar');
+                     } else {
+                         centerImg.classList.remove('gif-avatar');
+                     }
                      placeholder.classList.add('hidden');
                  } else {
                      img.classList.add('hidden');
@@ -4414,6 +5027,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     html.replace("{{TURN_URL}}", turn_url)
         .replace("{{TURN_USERNAME}}", turn_username)
         .replace("{{TURN_CREDENTIAL}}", turn_credential)
+        .replace("{{GIPHY_API_KEY}}", giphy_api_key)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4526,12 +5140,13 @@ async fn index(State(_state): State<AppState>) -> impl IntoResponse {
     let turn_url = std::env::var("TURN_URL").unwrap_or_default();
     let turn_username = std::env::var("TURN_USERNAME").unwrap_or_default();
     let turn_credential = std::env::var("TURN_CREDENTIAL").unwrap_or_default();
+    let giphy_api_key = std::env::var("GIPHY_API_KEY").unwrap_or_default();
 
-    let html = get_html_page(&turn_url, &turn_username, &turn_credential);
+    let html = get_html_page(&turn_url, &turn_username, &turn_credential, &giphy_api_key);
     (
         [(
             header::CONTENT_SECURITY_POLICY, 
-            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' wss: ws: https://api.giphy.com; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
         )],
         Html(html)
     )
