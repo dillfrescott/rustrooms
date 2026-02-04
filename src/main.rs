@@ -98,7 +98,7 @@ self.addEventListener('fetch', (event) => {
 
 async fn icon_svg() -> impl IntoResponse {
     let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-    <rect width="512" height="512" fill="#09090b"/>
+    <rect width="512" height="512" rx="128" ry="128" fill="#09090b"/>
     <circle cx="256" cy="256" r="180" fill="#6366f1" fill-opacity="0.15"/>
     <circle cx="256" cy="256" r="140" fill="#6366f1" fill-opacity="0.3"/>
     <circle cx="256" cy="256" r="100" fill="#6366f1"/>
