@@ -905,6 +905,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str, gip
             flex-direction: column;
             padding: 0;
             overflow: hidden;
+            border-radius: 24px;
         }
 
         .gif-picker-header {
