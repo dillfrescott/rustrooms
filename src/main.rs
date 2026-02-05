@@ -1714,6 +1714,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str, gip
         let audioContext;
         let wakeLock = null;
         let currentAudioOutputId = 'default';
+        let currentAudioInputId = null;
+        let currentVideoInputId = null;
         
         // Persistent user ID to prevent duplicates on reconnection
         let persistentUserId = localStorage.getItem('rustrooms_user_id');
@@ -1899,16 +1901,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str, gip
                     else if (device.kind === 'videoinput') videoSelect.appendChild(option);
                 });
 
-                if (activeAudioId && [...audioSelect.options].some(o => o.value === activeAudioId)) {
-                    audioSelect.value = activeAudioId;
+                const targetAudioId = currentAudioInputId || activeAudioId;
+                if (targetAudioId && [...audioSelect.options].some(o => o.value === targetAudioId)) {
+                    audioSelect.value = targetAudioId;
                 }
 
-                if (currentAudioOutput && [...audioOutputSelect.options].some(o => o.value === currentAudioOutput)) {
-                    audioOutputSelect.value = currentAudioOutput;
+                const targetAudioOutputId = currentAudioOutputId || 'default';
+                if (targetAudioOutputId && [...audioOutputSelect.options].some(o => o.value === targetAudioOutputId)) {
+                    audioOutputSelect.value = targetAudioOutputId;
                 }
                 
-                if (activeVideoId && [...videoSelect.options].some(o => o.value === activeVideoId)) {
-                    videoSelect.value = activeVideoId;
+                const targetVideoId = currentVideoInputId || activeVideoId;
+                if (targetVideoId && [...videoSelect.options].some(o => o.value === targetVideoId)) {
+                    videoSelect.value = targetVideoId;
                 }
 
             } catch(e) {
@@ -1946,16 +1951,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str, gip
                     else if (device.kind === 'videoinput') settingsVideo.appendChild(option);
                 });
                 
-                 if (activeAudioId && [...settingsAudio.options].some(o => o.value === activeAudioId)) {
-                    settingsAudio.value = activeAudioId;
+                const targetAudioId = currentAudioInputId || activeAudioId;
+                if (targetAudioId && [...settingsAudio.options].some(o => o.value === targetAudioId)) {
+                    settingsAudio.value = targetAudioId;
                 }
 
-                if (activeAudioOutputId && [...settingsAudioOutput.options].some(o => o.value === activeAudioOutputId)) {
-                    settingsAudioOutput.value = activeAudioOutputId;
+                const targetAudioOutputId = currentAudioOutputId || 'default';
+                if (targetAudioOutputId && [...settingsAudioOutput.options].some(o => o.value === targetAudioOutputId)) {
+                    settingsAudioOutput.value = targetAudioOutputId;
                 }
                 
-                if (activeVideoId && [...settingsVideo.options].some(o => o.value === activeVideoId)) {
-                    settingsVideo.value = activeVideoId;
+                const targetVideoId = currentVideoInputId || activeVideoId;
+                if (targetVideoId && [...settingsVideo.options].some(o => o.value === targetVideoId)) {
+                    settingsVideo.value = targetVideoId;
                 }
             } catch (e) { console.error(e); }
         }
@@ -2181,16 +2189,49 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str, gip
                     if (data.audioOutputId) {
                         currentAudioOutputId = data.audioOutputId;
                     }
+                    if (data.audioInputId) {
+                        currentAudioInputId = data.audioInputId;
+                    }
+                    if (data.videoInputId) {
+                        currentVideoInputId = data.videoInputId;
+                    }
                 } catch (e) { console.error("Load pref error", e); }
             }
         }
 
         function savePreferences() {
+            let audioInputId = currentAudioInputId;
+            let videoInputId = currentVideoInputId;
+            let audioOutputId = currentAudioOutputId;
+
+            const isSettingsOpen = settingsOverlay && !settingsOverlay.classList.contains('hidden');
+            const isConfigOpen = configOverlay && !configOverlay.classList.contains('hidden');
+
+            if (isSettingsOpen) {
+                const sAudio = document.getElementById('settingsAudioSource');
+                const sVideo = document.getElementById('settingsVideoSource');
+                const sAudioOut = document.getElementById('settingsAudioOutputSource');
+                if (sAudio && sAudio.value !== undefined) audioInputId = sAudio.value;
+                if (sVideo && sVideo.value !== undefined) videoInputId = sVideo.value;
+                if (sAudioOut && sAudioOut.value !== undefined) audioOutputId = sAudioOut.value;
+            } else if (isConfigOpen) {
+                if (audioSelect) audioInputId = audioSelect.value;
+                if (videoSelect) videoInputId = videoSelect.value;
+                if (audioOutputSelect) audioOutputId = audioOutputSelect.value;
+            }
+
             localStorage.setItem('rustrooms_profile', JSON.stringify({
                 nickname: userNickname,
                 avatar: userAvatar,
-                audioOutputId: currentAudioOutputId
+                audioOutputId: audioOutputId,
+                audioInputId: audioInputId,
+                videoInputId: videoInputId
             }));
+            
+            // Keep the global variables in sync
+            currentAudioInputId = audioInputId;
+            currentVideoInputId = videoInputId;
+            currentAudioOutputId = audioOutputId;
         }
 
         async function testSpeaker(selectId) {
@@ -2365,6 +2406,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str, gip
             const audioSource = audioSelect.value;
             const videoSource = videoSelect.value;
             
+            savePreferences();
+
             const constraints = {
                 audio: { 
                     deviceId: audioSource ? { exact: audioSource } : undefined,
