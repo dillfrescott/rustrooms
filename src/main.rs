@@ -914,6 +914,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str, gip
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 12px;
             background: var(--bg-elevated);
         }
 
