@@ -253,6 +253,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str, gip
             z-index: 10;
         }
 
+        .giphy-button { {{GIPHY_STYLE}} }
+
         .avatar-img {
             position: absolute;
             inset: 0;
@@ -1349,7 +1351,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str, gip
                                     <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold" style="background: rgba(0, 0, 0, 0.7); color: var(--text-primary);">Edit</div>
                                 </div>
                                 <input type="file" id="avatarInput" hidden accept="image/*,.gif" onchange="handleAvatarUpload(this)">
-                                <button onclick="openGifPicker()" class="mt-2 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors">
+                                <button onclick="openGifPicker()" class="giphy-button mt-2 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline mr-1"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
                                     Pick GIF
                                 </button>
@@ -1420,7 +1422,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str, gip
                                 <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold" style="background: rgba(0, 0, 0, 0.75); color: var(--text-primary);">Change</div>
                             </div>
                             <input type="file" id="settingsAvatarInput" hidden accept="image/*,.gif" onchange="handleSettingsAvatarUpload(this)">
-                            <button onclick="openGifPicker()" class="text-sm font-medium px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 transition-all border border-blue-500/20">
+                            <button onclick="openGifPicker()" class="giphy-button text-sm font-medium px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 transition-all border border-blue-500/20">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline mr-1.5"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
                                 Pick GIF
                             </button>
@@ -5069,10 +5071,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str, gip
 </body>
 </html>
 "###;
+    let giphy_style = if giphy_api_key.is_empty() || giphy_api_key == "YOUR_GIPHY_API_KEY" {
+        "display: none !important;"
+    } else {
+        ""
+    };
+
     html.replace("{{TURN_URL}}", turn_url)
         .replace("{{TURN_USERNAME}}", turn_username)
         .replace("{{TURN_CREDENTIAL}}", turn_credential)
         .replace("{{GIPHY_API_KEY}}", giphy_api_key)
+        .replace("{{GIPHY_STYLE}}", giphy_style)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
