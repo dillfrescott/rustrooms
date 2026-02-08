@@ -1389,7 +1389,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let currentAudioOutputId = 'default';
         let currentAudioInputId = null;
         let currentVideoInputId = null;
-        let roomCreationPassword = null;
+        let roomCreationPassword = sessionStorage.getItem('rustrooms_room_password');
         
         // Persistent user ID to prevent duplicates on reconnection
         let persistentUserId = localStorage.getItem('rustrooms_user_id');
@@ -2854,19 +2854,25 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (!password) return;
             
             try {
+                // Save password before redirect
+                sessionStorage.setItem('rustrooms_room_password', password);
+                
                 const res = await fetch('/new?password=' + encodeURIComponent(password));
                  if (res.ok) {
                      window.location.href = `/${crypto.randomUUID()}/General`;
                  } else if (res.status === 401) {
+                     sessionStorage.removeItem('rustrooms_room_password');
                      input.classList.add('ring-2', 'ring-red-500', 'border-red-500');
                      setTimeout(() => input.classList.remove('ring-2', 'ring-red-500', 'border-red-500'), 500);
                      input.value = '';
                      input.placeholder = "Incorrect Password";
                  } else {
+                     sessionStorage.removeItem('rustrooms_room_password');
                      alert("Error creating room");
                  }
             } catch (e) {
                 console.error(e);
+                sessionStorage.removeItem('rustrooms_room_password');
                 alert("Error creating room");
             }
         }
@@ -2929,17 +2935,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             switch (msg.type) {
                                 case 'error':
                                     if (msg.data && msg.data.code === 'PASSWORD_REQUIRED') {
-                                        isReconnecting = false;
-                                        hasLeftRoom = true;
-                                        showPasswordModal("Room Creation Password", msg.data.message || "Password required to create this room:", (pass) => {
-                                            if (pass) {
-                                                hasLeftRoom = false;
-                                                roomCreationPassword = pass;
-                                                connectWs();
-                                            } else {
-                                                window.location.href = "/";
-                                            }
-                                        });
+                                        // Don't set hasLeftRoom = true here, we want to allow re-connection
+                                        // after the password is provided or if the room is created.
+                                        
+                                        // Check if password modal is already visible to avoid duplicates
+                                        const modal = document.getElementById('passwordModal');
+                                        if (modal && !modal.classList.contains('open')) {
+                                            showPasswordModal("Room Creation Password", msg.data.message || "Password required to create this room:", (pass) => {
+                                                if (pass) {
+                                                    roomCreationPassword = pass;
+                                                    sessionStorage.setItem('rustrooms_room_password', pass);
+                                                    connectWs();
+                                                } else {
+                                                    hasLeftRoom = true; // User cancelled
+                                                    window.location.href = "/";
+                                                }
+                                            });
+                                        }
                                     } else {
                                         showCustomAlert("Error", msg.data.message || "An error occurred.");
                                     }
