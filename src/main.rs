@@ -4585,6 +4585,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             let dragBounds = null;
             let pendingFrame = false;
             let collisionRects = null; // Cached collision rectangles
+            let lastX = 0;
+            let lastY = 0;
 
             function startDrag(clientX, clientY) {
                 isDragging = true;
@@ -4601,6 +4603,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 dragOffset.x = clientX - rect.left;
                 dragOffset.y = clientY - rect.top;
+
+                lastX = clientX;
+                lastY = clientY;
 
                 // Cache static boundaries that don't change during drag
                 dragBounds = {
@@ -4642,13 +4647,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             function handleMove(clientX, clientY) {
+                lastX = clientX;
+                lastY = clientY;
+
                 if (!isDragging || pendingFrame) return;
 
                 pendingFrame = true;
 
                 requestAnimationFrame(() => {
-                    let newX = clientX - dragOffset.x;
-                    let newY = clientY - dragOffset.y;
+                    if (!isDragging) {
+                        pendingFrame = false;
+                        return;
+                    }
+
+                    let newX = lastX - dragOffset.x;
+                    let newY = lastY - dragOffset.y;
 
                     if (dragBounds) {
                         newX = Math.max(dragBounds.minX, Math.min(newX, dragBounds.maxX));
@@ -4702,9 +4715,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             
             function onMouseUp() {
                 isDragging = false;
-                dragBounds = null;
-                collisionRects = null;
-                pendingFrame = false;
                 pip.style.cursor = 'grab';
                 pip.style.transition = '';
                 document.removeEventListener('mousemove', onMouseMove);
@@ -4713,9 +4723,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             function onTouchEnd() {
                 isDragging = false;
-                dragBounds = null;
-                collisionRects = null;
-                pendingFrame = false;
                 pip.style.cursor = 'grab';
                 pip.style.transition = '';
                 document.removeEventListener('touchmove', onTouchMove);
