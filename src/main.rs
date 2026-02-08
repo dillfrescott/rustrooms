@@ -936,6 +936,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
+    <div id="passwordModal" class="modal-overlay">
+        <div class="modal-content text-center space-y-6">
+            <h3 id="passwordModalTitle" class="text-2xl font-bold text-white">Password Required</h3>
+            <p id="passwordModalMessage" class="text-zinc-300"></p>
+            <div class="space-y-4">
+                <input type="password" id="passwordModalInput" placeholder="Enter password..." class="w-full rounded-xl px-4 py-3 text-white transition-all bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none" onkeydown="if(event.key==='Enter') document.getElementById('passwordModalSubmit').click()">
+                <div class="flex gap-3">
+                    <button onclick="closePasswordModal()" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
+                    <button id="passwordModalSubmit" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="alertModal" class="modal-overlay">
         <div class="modal-content text-center space-y-6">
             <h3 id="alertTitle" class="text-2xl font-bold text-white">Alert</h3>
@@ -1375,6 +1389,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let currentAudioOutputId = 'default';
         let currentAudioInputId = null;
         let currentVideoInputId = null;
+        let roomCreationPassword = null;
         
         // Persistent user ID to prevent duplicates on reconnection
         let persistentUserId = localStorage.getItem('rustrooms_user_id');
@@ -2500,6 +2515,31 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             document.getElementById('alertModal').classList.remove('open');
         }
 
+        function showPasswordModal(title, message, callback) {
+            const modal = document.getElementById('passwordModal');
+            const modalTitle = document.getElementById('passwordModalTitle');
+            const modalMessage = document.getElementById('passwordModalMessage');
+            const modalInput = document.getElementById('passwordModalInput');
+            const modalSubmit = document.getElementById('passwordModalSubmit');
+
+            modalTitle.innerText = title;
+            modalMessage.innerText = message || "";
+            modalInput.value = '';
+            modal.classList.add('open');
+            setTimeout(() => modalInput.focus(), 100);
+
+            modalSubmit.onclick = () => {
+                const pass = modalInput.value;
+                callback(pass);
+                closePasswordModal();
+            };
+        }
+
+        function closePasswordModal() {
+            const modal = document.getElementById('passwordModal');
+            modal.classList.remove('open');
+        }
+
         function showCustomConfirm(title, message, onConfirm) {
             document.getElementById('confirmTitle').innerText = title;
             document.getElementById('confirmMessage').innerText = message;
@@ -2850,6 +2890,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             updateStatus('connecting', 'Connecting...');
             ws = new WebSocket(wsUrl);
             
+            
+
+            
                         ws.onopen = () => {
                             // Clear any pending reconnect status timeout
                             if (reconnectStatusTimeout) {
@@ -2873,7 +2916,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     avatar: userAvatar,
                                     camEnabled: camEnabled,
                                     screenEnabled: screenEnabled,
-                                    screenAudio: screenHasAudio
+                                    screenAudio: screenHasAudio,
+                                    password: roomCreationPassword
                                 }
                             }));
                             checkEmpty();
@@ -2883,6 +2927,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             const msg = JSON.parse(event.data);
                             
                             switch (msg.type) {
+                                case 'error':
+                                    if (msg.data && msg.data.code === 'PASSWORD_REQUIRED') {
+                                        isReconnecting = false;
+                                        hasLeftRoom = true;
+                                        showPasswordModal("Room Creation Password", msg.data.message || "Password required to create this room:", (pass) => {
+                                            if (pass) {
+                                                hasLeftRoom = false;
+                                                roomCreationPassword = pass;
+                                                connectWs();
+                                            } else {
+                                                window.location.href = "/";
+                                            }
+                                        });
+                                    } else {
+                                        showCustomAlert("Error", msg.data.message || "An error occurred.");
+                                    }
+                                    break;
                                 case 'room-list':
                                     globalRoomList = msg.data;
                                     if (typeof updateRoomListUI === 'function') updateRoomListUI();
@@ -4493,6 +4554,7 @@ type RoomMap = Arc<Mutex<HashMap<String, ChannelMap>>>;
 struct AppState {
     rooms: RoomMap,
     cluster_handle: Option<cluster::ClusterHandle>,
+    room_creation_password: Option<String>,
 }
 
 #[tokio::main]
@@ -4515,7 +4577,9 @@ async fn main() {
         None
     };
 
-    let state = AppState { rooms, cluster_handle };
+
+    let room_creation_password = std::env::var("ROOM_CREATION_PASSWORD").ok().filter(|s| !s.is_empty());
+    let state = AppState { rooms, cluster_handle, room_creation_password };
 
     let app = Router::new()
         .route("/", get(index))
@@ -4720,6 +4784,37 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                              
                              {
                                 let mut rooms_lock = rooms.lock().await;
+
+                                // If password is set, prevent creation of new rooms via WebSocket
+                                if let Some(ref required_pass) = state.room_creation_password {
+                                    if !rooms_lock.contains_key(&room_id) {
+                                         let pass_match = if let Some(ref data) = parsed.data {
+                                             data.get("password")
+                                                 .and_then(|v| v.as_str())
+                                                 .map(|p| p == required_pass)
+                                                 .unwrap_or(false)
+                                         } else {
+                                             false
+                                         };
+
+                                         if !pass_match {
+                                             let error_msg = serde_json::to_string(&SignalMessage {
+                                                 msg_type: "error".into(),
+                                                 user_id: None,
+                                                 target: None,
+                                                 data: Some(serde_json::json!({
+                                                     "code": "PASSWORD_REQUIRED",
+                                                     "message": "Room creation requires a password."
+                                                 })),
+                                             }).unwrap();
+                                             let _ = tx.send(Ok(Message::Text(error_msg.into()))).await;
+                                             // Allow time for the message to be sent before closing
+                                             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                                             return;
+                                         }
+                                    }
+                                }
+
                                 let room = rooms_lock.entry(room_id.clone()).or_insert_with(HashMap::new);
                                 let channel = room.entry(channel_id.clone()).or_insert_with(HashMap::new);
                                 
