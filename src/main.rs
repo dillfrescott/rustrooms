@@ -1390,6 +1390,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let currentAudioInputId = null;
         let currentVideoInputId = null;
         let roomCreationPassword = sessionStorage.getItem('rustrooms_room_password');
+        let workletLoadingPromise = null;
         
         // Persistent user ID to prevent duplicates on reconnection
         let persistentUserId = localStorage.getItem('rustrooms_user_id');
@@ -1492,6 +1493,28 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const avatarPreview = document.getElementById('avatarPreview');
         const avatarPlaceholder = document.getElementById('avatarPlaceholder');
         
+        async function initAudioWorklet() {
+            if (workletLoadingPromise) return workletLoadingPromise;
+            
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            workletLoadingPromise = (async () => {
+                try {
+                    await audioContext.audioWorklet.addModule('/rnnoise_processor.js');
+                    console.log("AudioWorklet loaded");
+                    return true;
+                } catch (err) {
+                    console.error("Failed to load AudioWorklet", err);
+                    workletLoadingPromise = null; // Allow retry
+                    return false;
+                }
+            })();
+            
+            return workletLoadingPromise;
+        }
+        
         async function requestWakeLock() {
             try {
                 if ('wakeLock' in navigator) {
@@ -1524,6 +1547,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 await new Promise(r => setTimeout(r, 500));
                 await populateDeviceList();
                 navigator.mediaDevices.ondevicechange = populateDeviceList;
+
+                // Start loading worklet early
+                initAudioWorklet();
 
                 await startPreview();
 
@@ -1681,7 +1707,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      let stream = await navigator.mediaDevices.getUserMedia(constraints);
                      
                      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                     try { await audioContext.audioWorklet.addModule('/rnnoise_processor.js'); } catch (err) { console.error("Failed to load rnnoise_processor in switchMediaStream", err); }
+                     await initAudioWorklet();
                      if (audioContext.state === 'suspended') audioContext.resume().catch(e => {});
 
                      const source = audioContext.createMediaStreamSource(stream);
@@ -2071,29 +2097,35 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             try {
                 let rawStream = await navigator.mediaDevices.getUserMedia(constraints);
                 
+                // Set up volume meter IMMEDIATELY with raw stream for instant feedback
+                setupVolumeMeter(rawStream, 'setupMicBar');
+
                  if (rawStream.getAudioTracks().length > 0) {
                      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                      
-                     try {
-                         await audioContext.audioWorklet.addModule('/rnnoise_processor.js');
-                     } catch (err) { console.error("Failed to load rnnoise_processor in startPreview", err); }
+                     // Start loading but don't block the meter OR basic track setup if we can avoid it
+                     const workletLoaded = await initAudioWorklet();
                      
                      if (audioContext.state === 'suspended') {
                          audioContext.resume().catch(e => {});
                      }
 
-                     const source = audioContext.createMediaStreamSource(rawStream);
-                     const worklet = new AudioWorkletNode(audioContext, 'rnnoise-processor');
-                     const dest = audioContext.createMediaStreamDestination();
-                     
-                     source.connect(worklet);
-                     worklet.connect(dest);
-                     
-                     const processedAudio = dest.stream.getAudioTracks()[0];
-                     const videoTracks = rawStream.getVideoTracks();
-                     
-                     localStream = new MediaStream([processedAudio, ...videoTracks]);
-                     localStream._originalStream = rawStream;
+                     if (workletLoaded) {
+                         const source = audioContext.createMediaStreamSource(rawStream);
+                         const worklet = new AudioWorkletNode(audioContext, 'rnnoise-processor');
+                         const dest = audioContext.createMediaStreamDestination();
+                         
+                         source.connect(worklet);
+                         worklet.connect(dest);
+                         
+                         const processedAudio = dest.stream.getAudioTracks()[0];
+                         const videoTracks = rawStream.getVideoTracks();
+                         
+                         localStream = new MediaStream([processedAudio, ...videoTracks]);
+                         localStream._originalStream = rawStream;
+                     } else {
+                         localStream = rawStream;
+                     }
                 } else {
                     localStream = rawStream;
                 }
@@ -2101,7 +2133,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 previewVideo.srcObject = localStream;
                 document.getElementById('previewPlaceholder').style.display = 'none';
                 updatePreviewButtons();
-                setupVolumeMeter(localStream, 'setupMicBar');
+                
+                // If we switched to localStream (processed), we might want to update the meter source, 
+                // but rawStream is usually better for setup menu anyway as it's more sensitive
+                // setupVolumeMeter(localStream, 'setupMicBar'); 
 
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     if (document.getElementById('localVideo')) document.getElementById('localVideo').srcObject = localStream;
@@ -2174,25 +2209,27 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     if (rawStream.getAudioTracks().length > 0) {
                          if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                          
-                         try {
-                             await audioContext.audioWorklet.addModule('/rnnoise_processor.js');
-                         } catch (err) { console.error("Failed to load rnnoise_processor in startPreview fallback", err); }
+                         const workletLoaded = await initAudioWorklet();
                          
                          if (audioContext.state === 'suspended') {
                              audioContext.resume().catch(e => {});
                          }
     
-                         const source = audioContext.createMediaStreamSource(rawStream);
-                         const worklet = new AudioWorkletNode(audioContext, 'rnnoise-processor');
-                         const dest = audioContext.createMediaStreamDestination();
-                         
-                         source.connect(worklet);
-                         worklet.connect(dest);
-                         
-                         const processedAudio = dest.stream.getAudioTracks()[0];
-                         
-                         localStream = new MediaStream([processedAudio]);
-                         localStream._originalStream = rawStream;
+                         if (workletLoaded) {
+                             const source = audioContext.createMediaStreamSource(rawStream);
+                             const worklet = new AudioWorkletNode(audioContext, 'rnnoise-processor');
+                             const dest = audioContext.createMediaStreamDestination();
+                             
+                             source.connect(worklet);
+                             worklet.connect(dest);
+                             
+                             const processedAudio = dest.stream.getAudioTracks()[0];
+                             
+                             localStream = new MediaStream([processedAudio]);
+                             localStream._originalStream = rawStream;
+                         } else {
+                             localStream = rawStream;
+                         }
                     } else {
                         localStream = rawStream;
                     }

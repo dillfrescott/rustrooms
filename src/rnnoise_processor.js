@@ -19,6 +19,8 @@ class RnnoiseProcessor extends AudioWorkletProcessor {
         this.denoiseState = null;
         this.ready = false;
         this.frameCount = 0;
+        this.prebufferCount = 0;
+        this.minPrebuffer = 2; // Number of frames to buffer before starting output
 
         console.log(`RnnoiseProcessor: initializing... SampleRate=${globalThis.sampleRate}`);
 
@@ -74,11 +76,25 @@ class RnnoiseProcessor extends AudioWorkletProcessor {
             }
 
             if (this.outputQueue.length >= outputData.length) {
-                for (let i = 0; i < outputData.length; i++) {
-                    outputData[i] = this.outputQueue.shift();
+                // If we haven't reached our prebuffer threshold yet, wait
+                if (this.prebufferCount < this.minPrebuffer) {
+                    this.prebufferCount++;
+                    outputData.fill(0);
+                } else {
+                    for (let i = 0; i < outputData.length; i++) {
+                        outputData[i] = this.outputQueue.shift();
+                    }
                 }
             } else {
+                // If we run out of processed data (should be rare with prebuffering),
+                // it's better to output silence or partial than to bypass and leak latency.
                 outputData.fill(0);
+            }
+
+            // Limit queue size to prevent massive buildup if processing falls behind
+            if (this.outputQueue.length > this.frameSize * 5) {
+                console.warn("RnnoiseProcessor: output queue overflow, draining...");
+                this.outputQueue.splice(0, this.outputQueue.length - this.frameSize);
             }
 
             for (let i = 1; i < output.length; i++) {
