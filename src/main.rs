@@ -896,6 +896,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             color: var(--text-secondary);
             font-weight: 500;
         }
+
+        .status-indicators {
+            display: flex;
+            gap: 4px;
+            margin-left: auto;
+            align-items: center;
+        }
+
+        .status-icon {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        .status-icon.active {
+            color: #ef4444; /* active-red */
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="flex flex-col overflow-hidden" style="background-color: var(--bg-primary);">
@@ -1205,6 +1222,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 <button class="control-btn" id="btnMic" onclick="toggleMic()" title="Toggle Microphone">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
                 </button>
+                <button class="control-btn" id="btnDeafen" onclick="toggleDeafen()" title="Deafen (D)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
+                </button>
                 <button class="control-btn" id="btnCam" onclick="toggleCam()" title="Toggle Camera">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
                 </button>
@@ -1389,6 +1409,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let currentAudioOutputId = 'default';
         let currentAudioInputId = null;
         let currentVideoInputId = null;
+        let isDeafened = false;
         let roomCreationPassword = sessionStorage.getItem('rustrooms_room_password');
         let workletLoadingPromise = null;
         
@@ -2372,6 +2393,22 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  btnCam.innerHTML = camOffSvg;
             }
 
+            if (isDeafened) {
+                const btnDeafen = document.getElementById('btnDeafen');
+                const deafenOffSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg>`;
+                if (btnDeafen) {
+                    btnDeafen.classList.add('active-red');
+                    btnDeafen.innerHTML = deafenOffSvg;
+                }
+                
+                // Ensure all remote audio is muted if joining while deafened
+                document.querySelectorAll('video, audio').forEach(el => {
+                    if (el.id !== 'localVideo' && el.id !== 'previewVideo') {
+                        el.muted = true;
+                    }
+                });
+            }
+
             connectWs();
             
             // Mark setup as done
@@ -2818,12 +2855,26 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 
                 userIds.forEach(uid => {
                     const u = users[uid];
+                    const isMuted = u.is_muted;
+                    const isDeafened = u.is_deafened;
+                    
                     usersHtml += `
                         <div class="room-user-row">
                             <div class="mini-avatar">
                                 ${u.avatar ? `<img src="${u.avatar}">` : `<div class="mini-avatar-placeholder">${u.nickname.charAt(0).toUpperCase()}</div>`}
                             </div>
                             <span class="room-user-name">${u.nickname}</span>
+                            <div class="status-indicators">
+                                ${isMuted || isDeafened ? `
+                                    <div class="status-icon active" title="${isDeafened ? 'Deafened' : 'Muted'}">
+                                        ${isDeafened ? `
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg>
+                                        ` : `
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path></svg>
+                                        `}
+                                    </div>
+                                ` : ''}
+                            </div>
                         </div>
                     `;
                 });
@@ -2856,8 +2907,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         window.addEventListener('keydown', (e) => {
-            if (e.key.toLowerCase() === 'r' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+            
+            const key = e.key.toLowerCase();
+            if (key === 'r') {
                 toggleSidebar();
+            } else if (key === 'm') {
+                toggleMic();
+            } else if (key === 'v') {
+                toggleCam();
+            } else if (key === 'd') {
+                toggleDeafen();
             }
         });
 
@@ -2951,6 +3011,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             const camEnabled = localStream && localStream.getVideoTracks()[0] && localStream.getVideoTracks()[0].enabled;
                             const screenEnabled = !!screenStream;
                             const screenHasAudio = screenStream && screenStream.getAudioTracks().length > 0;
+                            const audioTrack = localStream && localStream.getAudioTracks()[0];
+                            const isMuted = !audioTrack || !audioTrack.enabled;
+
                             ws.send(JSON.stringify({
                                 type: "join",
                                 data: {
@@ -2960,6 +3023,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     camEnabled: camEnabled,
                                     screenEnabled: screenEnabled,
                                     screenAudio: screenHasAudio,
+                                    isMuted: isMuted,
+                                    isDeafened: isDeafened,
                                     password: roomCreationPassword
                                 }
                             }));
@@ -3007,18 +3072,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     if (peers[msg.userId] || document.getElementById(`wrapper-${msg.userId}`)) {
                                         removePeer(msg.userId);
                                     }
-
+                                    
                                     if (msg.data.camEnabled !== undefined) {
                                         peerCamStatus[msg.userId] = msg.data.camEnabled;
                                     }
                                     if (msg.data.screenEnabled !== undefined) {
                                         peerScreenStatus[msg.userId] = msg.data.screenEnabled;
                                     }
-                                    initPeer(msg.userId, true, msg.data?.nickname, msg.data?.avatar);
+                                    initPeer(msg.userId, true, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened);
                                     
-                                    const myCamEnabled = localStream && localStream.getVideoTracks()[0] && localStream.getVideoTracks()[0].enabled;
-                                    const myScreenEnabled = !!screenStream;
-                                    const myScreenHasAudio = screenStream && screenStream.getAudioTracks().length > 0;
+                                    const myAudioTrack = localStream && localStream.getAudioTracks()[0];
+                                    const myMuted = !myAudioTrack || !myAudioTrack.enabled;
+
                                     ws.send(JSON.stringify({
                                         type: 'identify',
                                         target: msg.userId,
@@ -3028,7 +3093,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                             avatar: userAvatar,
                                             camEnabled: myCamEnabled,
                                             screenEnabled: myScreenEnabled,
-                                            screenAudio: myScreenHasAudio
+                                            screenAudio: myScreenHasAudio,
+                                            isMuted: myMuted,
+                                            isDeafened: isDeafened
                                         }
                                     }));
                                     break;
@@ -3042,7 +3109,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     }
                                     break;
                                 case 'user-update':
-                                     updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar);
+                                     updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened);
                                     break;
                                 case 'cam-toggle':
                                     if (msg.data && msg.data.enabled !== undefined) {
@@ -3071,9 +3138,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         peerScreenStatus[msg.userId] = msg.data.screenEnabled;
                                     }
                                     if (peers[msg.userId]) {
-                                        updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar);
+                                        updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened);
                                     } else {
-                                        initPeer(msg.userId, false, msg.data.nickname, msg.data.avatar);
+                                        initPeer(msg.userId, false, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened);
                                     }
                                     break;
                                 case 'rename-channel':
@@ -3210,11 +3277,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
            }
         }
 
-        function updatePeerInfo(userId, nickname, avatar) {
+        function updatePeerInfo(userId, nickname, avatar, isMuted, isDeafened) {
             const wrapper = document.getElementById(`wrapper-${userId}`);
             if (wrapper) {
-                const label = wrapper.querySelector('.absolute.bottom-3.left-3');
-                if (label) label.innerText = nickname || "Unknown";
+                const nameSpan = wrapper.querySelector('.peer-name');
+                if (nameSpan) nameSpan.innerText = nickname || "Unknown";
+                
+                const statusContainer = wrapper.querySelector('.peer-status-icons');
+                if (statusContainer) {
+                    statusContainer.innerHTML = '';
+                    if (isDeafened) {
+                        statusContainer.innerHTML = `<span class="text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg></span>`;
+                    } else if (isMuted) {
+                        statusContainer.innerHTML = `<span class="text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path></svg></span>`;
+                    }
+                }
                 
                 const avatarLayer = wrapper.querySelector('.avatar-layer');
                 if (avatarLayer) {
@@ -3529,7 +3606,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 .catch(e => console.error("Negotiation error", e));
         }
 
-        function initPeer(userId, initiator, nickname, avatarUrl) {
+        function initPeer(userId, initiator, nickname, avatarUrl, isMuted, isDeafened) {
             if (peers[userId]) return; 
             
             const displayName = nickname || `User ${userId.substr(0,4)}`;
@@ -3595,6 +3672,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     vid.volume = savedVol;
                     
                     vid.srcObject = new MediaStream();
+                    if (isDeafened) vid.muted = true;
                     
                     const avatarLayer = document.createElement('div');
                     avatarLayer.className = 'avatar-layer';
@@ -3602,8 +3680,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     setAvatar(avatarLayer, avatarUrl);
 
                     const label = document.createElement('div');
-                    label.className = 'absolute bottom-3 left-3 bg-black/50 px-3 py-1 rounded-full text-sm text-white backdrop-blur-md z-30';
-                    label.innerText = displayName;
+                    label.className = 'absolute bottom-3 left-3 bg-black/50 px-3 py-1 rounded-full text-sm text-white backdrop-blur-md z-30 flex items-center gap-1.5';
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'peer-name';
+                    nameSpan.innerText = displayName;
+                    
+                    const statusContainer = document.createElement('div');
+                    statusContainer.className = 'peer-status-icons flex items-center';
+                    
+                    if (isDeafened) {
+                        statusContainer.innerHTML = `<span class="text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg></span>`;
+                    } else if (isMuted) {
+                        statusContainer.innerHTML = `<span class="text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path></svg></span>`;
+                    }
+
+                    label.appendChild(nameSpan);
+                    label.appendChild(statusContainer);
 
                     const volControls = document.createElement('div');
                     volControls.id = `vol-controls-${userId}`;
@@ -3682,6 +3775,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         
                         const screenStream = new MediaStream([event.track]);
                         screenAud.srcObject = screenStream;
+                        if (isDeafened) screenAud.muted = true;
                         container.appendChild(screenAud);
                         
                         const row = document.createElement('div');
@@ -4012,6 +4106,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const tracks = localStream.getAudioTracks();
             if (tracks.length > 0) {
                 const track = tracks[0];
+                
+                // If deafened, we can only mute, not unmute
+                if (isDeafened && !track.enabled) {
+                    return;
+                }
+
                 track.enabled = !track.enabled;
                 const btn = document.getElementById('btnMic');
                 if (!track.enabled) {
@@ -4024,6 +4124,68 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
                 }
                 updateLocalLabel();
+
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'update-user',
+                        data: {
+                            isMuted: !track.enabled,
+                            isDeafened: isDeafened
+                        }
+                    }));
+                }
+            }
+        }
+
+        function toggleDeafen() {
+            isDeafened = !isDeafened;
+            const btn = document.getElementById('btnDeafen');
+            const btnMic = document.getElementById('btnMic');
+            
+            const deafenOnSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>`;
+            const deafenOffSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg>`;
+
+            if (isDeafened) {
+                playNotificationSound('mute');
+                btn.classList.add('active-red');
+                btn.innerHTML = deafenOffSvg;
+                
+                // Mute mic if it was on
+                const tracks = localStream?.getAudioTracks();
+                if (tracks && tracks.length > 0 && tracks[0].enabled) {
+                    toggleMic();
+                }
+                
+                // Mute all remote audio and remember state
+                document.querySelectorAll('video, audio').forEach(el => {
+                    if (el.id !== 'localVideo' && el.id !== 'previewVideo') {
+                        el.dataset.wasMuted = el.muted;
+                        el.muted = true;
+                    }
+                });
+            } else {
+                playNotificationSound('unmute');
+                btn.classList.remove('active-red');
+                btn.innerHTML = deafenOnSvg;
+                
+                // Restore remote audio
+                document.querySelectorAll('video, audio').forEach(el => {
+                    if (el.id !== 'localVideo' && el.id !== 'previewVideo') {
+                        el.muted = el.dataset.wasMuted === 'true';
+                    }
+                });
+            }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const audioTrack = localStream?.getAudioTracks()[0];
+                const currentlyMuted = !audioTrack || !audioTrack.enabled;
+                ws.send(JSON.stringify({
+                    type: 'update-user',
+                    data: {
+                        isMuted: currentlyMuted,
+                        isDeafened: isDeafened
+                    }
+                }));
             }
         }
 
@@ -4210,16 +4372,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         function updateLocalLabel() {
             const label = document.getElementById('localLabel');
             if (!label) return;
-            if (!localStream) {
-                label.innerText = "You (Offline)";
-                return;
-            }
-            const audioTrack = localStream.getAudioTracks()[0];
-            if (audioTrack && audioTrack.enabled) {
-                label.innerText = `You (${userNickname})`;
+            
+            let statusIcons = '';
+            if (isDeafened) {
+                statusIcons = `<span class="ml-1.5 inline-flex items-center text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg></span>`;
             } else {
-                label.innerText = `You (Muted)`;
+                const audioTrack = localStream ? localStream.getAudioTracks()[0] : null;
+                if (!audioTrack || !audioTrack.enabled) {
+                    statusIcons = `<span class="ml-1.5 inline-flex items-center text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path></svg></span>`;
+                }
             }
+
+            label.innerHTML = `<span class="flex items-center">${userNickname}${statusIcons}</span>`;
         }
 
         function copyLink() {
@@ -4577,6 +4741,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 struct UserStatus {
     pub nickname: String,
     pub avatar: Option<String>,
+    pub is_muted: bool,
+    pub is_deafened: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4825,6 +4991,16 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 .and_then(|v| v.as_str())
                                 .map(|s| s.to_string());
 
+                            let is_muted = parsed.data.as_ref()
+                                .and_then(|d| d.get("isMuted"))
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+
+                            let is_deafened = parsed.data.as_ref()
+                                .and_then(|d| d.get("isDeafened"))
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+
                             if let Some(ref a) = avatar {
                                 if a.len() > 7_000_000 {
                                     avatar = None;
@@ -4883,7 +5059,12 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     channel.remove(&user_id);
                                 }
                                 
-                                channel.insert(user_id.clone(), (tx.clone(), UserStatus { nickname: nickname.clone(), avatar: avatar.clone() }));
+                                channel.insert(user_id.clone(), (tx.clone(), UserStatus { 
+                                    nickname: nickname.clone(), 
+                                    avatar: avatar.clone(),
+                                    is_muted,
+                                    is_deafened,
+                                }));
                              }
                              is_joined = true;
                               
@@ -4906,6 +5087,8 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                      user_id: user_id.clone(),
                                      nickname: nickname.clone(),
                                      avatar: avatar.clone(),
+                                     is_muted,
+                                     is_deafened,
                                  });
                              }
                              
@@ -4949,6 +5132,14 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 }
                             }
 
+                            let is_muted = notify_data.as_ref()
+                                .and_then(|d| d.get("isMuted"))
+                                .and_then(|v| v.as_bool());
+
+                            let is_deafened = notify_data.as_ref()
+                                .and_then(|d| d.get("isDeafened"))
+                                .and_then(|v| v.as_bool());
+
                             {
                                 let mut rooms_lock = rooms.lock().await;
                                 if let Some(room) = rooms_lock.get_mut(&room_id) {
@@ -4956,6 +5147,8 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         if let Some((_, status)) = channel.get_mut(&user_id) {
                                             status.nickname = nickname;
                                             status.avatar = avatar;
+                                            if let Some(m) = is_muted { status.is_muted = m; }
+                                            if let Some(d) = is_deafened { status.is_deafened = d; }
                                         }
 
                                         if let Some(ch) = &state.cluster_handle {
@@ -5268,7 +5461,7 @@ mod cluster {
 
     #[derive(Clone, Debug, Serialize, Deserialize)]
     pub enum ClusterMessage {
-        Join { room_id: String, channel_id: String, user_id: String, nickname: String, avatar: Option<String> },
+        Join { room_id: String, channel_id: String, user_id: String, nickname: String, avatar: Option<String>, is_muted: bool, is_deafened: bool },
         Leave { room_id: String, channel_id: String, user_id: String },
         Update { room_id: String, channel_id: String, user_id: String, data: serde_json::Value },
         Signal { target_user_id: String, payload: String },
@@ -5357,7 +5550,7 @@ mod cluster {
 
     async fn handle_cluster_message(msg: ClusterMessage, rooms: &RoomMap, handle: &ClusterHandle) {
          match msg {
-             ClusterMessage::Join { room_id, channel_id, user_id, nickname, avatar } => {
+             ClusterMessage::Join { room_id, channel_id, user_id, nickname, avatar, is_muted, is_deafened } => {
                  let mut rooms_lock = rooms.lock().await;
                  let room = rooms_lock.entry(room_id.clone()).or_insert_with(HashMap::new);
                  let channel = room.entry(channel_id.clone()).or_insert_with(HashMap::new);
@@ -5385,7 +5578,12 @@ mod cluster {
                      }
                  });
 
-                 channel.insert(user_id.clone(), (tx, UserStatus { nickname: nickname.clone(), avatar: avatar.clone() }));
+                 channel.insert(user_id.clone(), (tx, UserStatus { 
+                     nickname: nickname.clone(), 
+                     avatar: avatar.clone(),
+                     is_muted,
+                     is_deafened,
+                 }));
                  println!("CLUSTER: Added proxy user {} in {}/{}", user_id, room_id, channel_id);
                  
                   let notify_msg = serde_json::to_string(&SignalMessage {
@@ -5394,7 +5592,9 @@ mod cluster {
                         target: None,
                         data: Some(serde_json::json!({
                             "nickname": nickname,
-                            "avatar": avatar
+                            "avatar": avatar,
+                            "isMuted": is_muted,
+                            "isDeafened": is_deafened
                         })),
                     }).unwrap();
                  
@@ -5433,6 +5633,12 @@ mod cluster {
                                     }
                                     if let Some(serde_json::Value::String(a)) = map.get("avatar") {
                                         status.avatar = Some(a.clone());
+                                    }
+                                    if let Some(serde_json::Value::Bool(m)) = map.get("isMuted") {
+                                        status.is_muted = *m;
+                                    }
+                                    if let Some(serde_json::Value::Bool(d)) = map.get("isDeafened") {
+                                        status.is_deafened = *d;
                                     }
                                 }
                           }
