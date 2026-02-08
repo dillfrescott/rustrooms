@@ -2855,8 +2855,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 
                 userIds.forEach(uid => {
                     const u = users[uid];
-                    const isMuted = u.is_muted;
-                    const isDeafened = u.is_deafened;
+                    const isMuted = u.isMuted;
+                    const isDeafened = u.isDeafened;
                     
                     usersHtml += `
                         <div class="room-user-row">
@@ -3069,20 +3069,35 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 case 'user-joined':
                                     playNotificationSound('join');
                                     // Check for existing peer OR DOM element to prevent duplicates
-                                    if (peers[msg.userId] || document.getElementById(`wrapper-${msg.userId}`)) {
-                                        removePeer(msg.userId);
+                                    if (peers[msg.userId]) {
+                                        // Update info if peer already exists from signaling
+                                        if (msg.data.camEnabled !== undefined) {
+                                            peerCamStatus[msg.userId] = msg.data.camEnabled;
+                                        }
+                                        if (msg.data.screenEnabled !== undefined) {
+                                            peerScreenStatus[msg.userId] = msg.data.screenEnabled;
+                                        }
+                                        updatePeerInfo(msg.userId, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened);
+                                    } else {
+                                        // Check for existing DOM element to prevent duplicates
+                                        if (document.getElementById(`wrapper-${msg.userId}`)) {
+                                            removePeer(msg.userId);
+                                        }
+                                        
+                                        if (msg.data.camEnabled !== undefined) {
+                                            peerCamStatus[msg.userId] = msg.data.camEnabled;
+                                        }
+                                        if (msg.data.screenEnabled !== undefined) {
+                                            peerScreenStatus[msg.userId] = msg.data.screenEnabled;
+                                        }
+                                        initPeer(msg.userId, true, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened);
                                     }
-                                    
-                                    if (msg.data.camEnabled !== undefined) {
-                                        peerCamStatus[msg.userId] = msg.data.camEnabled;
-                                    }
-                                    if (msg.data.screenEnabled !== undefined) {
-                                        peerScreenStatus[msg.userId] = msg.data.screenEnabled;
-                                    }
-                                    initPeer(msg.userId, true, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened);
                                     
                                     const myAudioTrack = localStream && localStream.getAudioTracks()[0];
                                     const myMuted = !myAudioTrack || !myAudioTrack.enabled;
+                                    const myCamEnabled = localStream && localStream.getVideoTracks()[0] && localStream.getVideoTracks()[0].enabled;
+                                    const myScreenEnabled = !!screenStream;
+                                    const myScreenHasAudio = screenStream && screenStream.getAudioTracks().length > 0;
 
                                     ws.send(JSON.stringify({
                                         type: 'identify',
@@ -3281,15 +3296,22 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const wrapper = document.getElementById(`wrapper-${userId}`);
             if (wrapper) {
                 const nameSpan = wrapper.querySelector('.peer-name');
-                if (nameSpan) nameSpan.innerText = nickname || "Unknown";
+                if (nameSpan && nickname) nameSpan.innerText = nickname;
                 
                 const statusContainer = wrapper.querySelector('.peer-status-icons');
                 if (statusContainer) {
                     statusContainer.innerHTML = '';
                     if (isDeafened) {
+                        statusContainer.classList.remove('hidden');
+                        statusContainer.classList.add('flex');
                         statusContainer.innerHTML = `<span class="text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg></span>`;
                     } else if (isMuted) {
+                        statusContainer.classList.remove('hidden');
+                        statusContainer.classList.add('flex');
                         statusContainer.innerHTML = `<span class="text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path></svg></span>`;
+                    } else {
+                        statusContainer.classList.add('hidden');
+                        statusContainer.classList.remove('flex');
                     }
                 }
                 
@@ -3687,7 +3709,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     nameSpan.innerText = displayName;
                     
                     const statusContainer = document.createElement('div');
-                    statusContainer.className = 'peer-status-icons flex items-center';
+                    statusContainer.className = 'peer-status-icons items-center' + (isDeafened || isMuted ? ' flex' : ' hidden');
                     
                     if (isDeafened) {
                         statusContainer.innerHTML = `<span class="text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg></span>`;
@@ -3908,7 +3930,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         async function handleSignal(userId, data) {
-            if (!peers[userId]) initPeer(userId, false, "Unknown", null); 
+            if (!peers[userId]) initPeer(userId, false, undefined, null); 
             const pc = peers[userId];
 
             try {
@@ -4738,6 +4760,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct UserStatus {
     pub nickname: String,
     pub avatar: Option<String>,
@@ -5115,68 +5138,64 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                         }
                     } else {
                         if parsed.msg_type == "update-user" {
-                            let mut notify_data = parsed.data.clone();
-                            let mut nickname = "Guest".to_string();
-                            let mut avatar = None;
-
-                            if let Some(serde_json::Value::Object(ref mut map)) = notify_data {
-                                if let Some(serde_json::Value::String(n)) = map.get("nickname") {
-                                    nickname = n.clone();
-                                }
-                                if let Some(serde_json::Value::String(a)) = map.get("avatar") {
-                                    if a.len() > 7_000_000 {
-                                        map.remove("avatar");
-                                    } else {
-                                        avatar = Some(a.clone());
-                                    }
-                                }
-                            }
-
-                            let is_muted = notify_data.as_ref()
-                                .and_then(|d| d.get("isMuted"))
-                                .and_then(|v| v.as_bool());
-
-                            let is_deafened = notify_data.as_ref()
-                                .and_then(|d| d.get("isDeafened"))
-                                .and_then(|v| v.as_bool());
-
+                            let data = parsed.data.as_ref().and_then(|d| d.as_object());
+                            
+                            let mut full_status = None;
                             {
                                 let mut rooms_lock = rooms.lock().await;
                                 if let Some(room) = rooms_lock.get_mut(&room_id) {
                                     if let Some(channel) = room.get_mut(&channel_id) {
                                         if let Some((_, status)) = channel.get_mut(&user_id) {
-                                            status.nickname = nickname;
-                                            status.avatar = avatar;
-                                            if let Some(m) = is_muted { status.is_muted = m; }
-                                            if let Some(d) = is_deafened { status.is_deafened = d; }
+                                            if let Some(d) = data {
+                                                if let Some(n) = d.get("nickname").and_then(|v| v.as_str()) {
+                                                    status.nickname = n.to_string();
+                                                }
+                                                if let Some(a) = d.get("avatar").and_then(|v| v.as_str()) {
+                                                    if a.len() <= 7_000_000 {
+                                                        status.avatar = Some(a.to_string());
+                                                    }
+                                                }
+                                                if let Some(m) = d.get("isMuted").and_then(|v| v.as_bool()) {
+                                                    status.is_muted = m;
+                                                }
+                                                if let Some(d) = d.get("isDeafened").and_then(|v| v.as_bool()) {
+                                                    status.is_deafened = d;
+                                                }
+                                            }
+                                            full_status = Some(status.clone());
                                         }
 
-                                        if let Some(ch) = &state.cluster_handle {
-                                            ch.broadcast(cluster::ClusterMessage::Update {
-                                                room_id: room_id.clone(),
-                                                channel_id: channel_id.clone(),
-                                                user_id: user_id.clone(),
-                                                data: notify_data.clone().unwrap_or(serde_json::to_value(HashMap::<String,String>::new()).unwrap()), 
-                                            });
-                                        }
+                                        if let Some(status) = full_status {
+                                            let full_data = serde_json::to_value(&status).unwrap();
 
-                                        let notify_msg = serde_json::to_string(&SignalMessage {
-                                            msg_type: "user-update".into(),
-                                            user_id: Some(user_id.clone()),
-                                            target: None,
-                                            data: notify_data,
-                                        }).unwrap();
+                                            if let Some(ch) = &state.cluster_handle {
+                                                ch.broadcast(cluster::ClusterMessage::Update {
+                                                    room_id: room_id.clone(),
+                                                    channel_id: channel_id.clone(),
+                                                    user_id: user_id.clone(),
+                                                    data: full_data.clone(),
+                                                });
+                                            }
 
-                                        for (uid, (tx, _)) in channel.iter() {
-                                            if *uid != user_id {
-                                                let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
+                                            let notify_msg = serde_json::to_string(&SignalMessage {
+                                                msg_type: "user-update".into(),
+                                                user_id: Some(user_id.clone()),
+                                                target: None,
+                                                data: Some(full_data),
+                                            }).unwrap();
+
+                                            for (uid, (tx, _)) in channel.iter() {
+                                                if *uid != user_id {
+                                                    let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                             broadcast_channel_list(&rooms, &room_id).await;
-                        } else if parsed.msg_type == "cam-toggle" {
+                        }
+ else if parsed.msg_type == "cam-toggle" {
                             let rooms_lock = rooms.lock().await;
                             if let Some(room) = rooms_lock.get(&room_id) {
                                 if let Some(channel) = room.get(&channel_id) {
