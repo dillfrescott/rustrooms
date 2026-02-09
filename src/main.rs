@@ -3628,15 +3628,108 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 .catch(e => console.error("Negotiation error", e));
         }
 
-        function initPeer(userId, initiator, nickname, avatarUrl, isMuted, isDeafened) {
-            if (peers[userId]) return; 
-            
+        function createPeerUI(userId, displayName, avatarUrl, remoteIsDeafened, remoteIsMuted) {
+            // Check if UI already exists
+            if (document.getElementById(`wrapper-${userId}`)) {
+                return;
+            }
+
+
+            const container = document.createElement('div');
+            container.id = `wrapper-${userId}`;
+            container.className = 'video-container group bg-slate-800 border border-slate-700';
+
+            const vid = document.createElement('video');
+            vid.id = `vid-${userId}`;
+            vid.autoplay = true;
+            vid.playsInline = true;
+            attachSinkId(vid, currentAudioOutputId);
+            vid.autoplay = true;
+            vid.playsInline = true;
+            attachSinkId(vid, currentAudioOutputId);
+
+            // Load persisted volume
+            const savedVol = getVolumeSettings(userId, 'main');
+            vid.volume = savedVol;
+
+            vid.srcObject = new MediaStream();
+            if (isDeafened) vid.muted = true;
+
+            const avatarLayer = document.createElement('div');
+            avatarLayer.className = 'avatar-layer';
+
+            setAvatar(avatarLayer, avatarUrl);
+
+            const label = document.createElement('div');
+            label.className = 'absolute bottom-3 left-3 bg-black/50 px-3 py-1 rounded-full text-sm text-white backdrop-blur-md z-30 flex items-center gap-1.5';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'peer-name';
+            nameSpan.innerText = displayName;
+
+            const statusContainer = document.createElement('div');
+            statusContainer.className = 'peer-status-icons items-center' + (remoteIsDeafened || remoteIsMuted ? ' flex' : ' hidden');
+
+            if (remoteIsDeafened) {
+                statusContainer.innerHTML = `<span class="text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg></span>`;
+            } else if (remoteIsMuted) {
+                statusContainer.innerHTML = `<span class="text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path></svg></span>`;
+            }
+
+            label.appendChild(nameSpan);
+            label.appendChild(statusContainer);
+
+            const volControls = document.createElement('div');
+            volControls.id = `vol-controls-${userId}`;
+            volControls.className = 'volume-controls z-30';
+
+            const fsBtn = document.createElement('button');
+            fsBtn.className = 'absolute top-3 right-3 p-2 rounded-xl bg-black/40 hover:bg-blue-600 text-white backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 scale-90 hover:scale-100 z-30';
+            fsBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
+            fsBtn.onclick = () => toggleFullscreen(userId);
+            fsBtn.title = "Toggle Fullscreen";
+
+            fsBtn.addEventListener('fullscreenchange', () => {
+                if (document.fullscreenElement === container) {
+                    fsBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3"/></svg>';
+                    fsBtn.classList.add('bg-blue-600');
+                } else {
+                    fsBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
+                    fsBtn.classList.remove('bg-blue-600');
+                }
+            });
+
+            container.dataset.userId = userId;
+
+            setupSmoothDragAndDrop(container);
+
+            container.appendChild(vid);
+            container.appendChild(avatarLayer);
+            container.appendChild(label);
+            container.appendChild(volControls);
+            container.appendChild(fsBtn);
+
+            const remoteGrid = document.getElementById('remoteGrid');
+            if (remoteGrid) {
+                remoteGrid.appendChild(container);
+                checkEmpty();
+            } else {
+                console.error('remoteGrid not found!');
+            }
+
+        }
+
+        function initPeer(userId, initiator, nickname, avatarUrl, isMuted, remoteIsDeafened) {
+            if (peers[userId]) return;
+
             const displayName = nickname || `User ${userId.substr(0,4)}`;
 
             const pc = new RTCPeerConnection(rtcConfig);
             peers[userId] = pc;
 
-            if (localStream) {
+            // Only add mic audio track if LOCAL user is not deafened
+            // (remoteIsDeafened is the REMOTE user's state, isDeafened is our state)
+            if (localStream && !isDeafened) {
                 localStream.getAudioTracks().forEach(track => pc.addTrack(track, localStream));
             }
 
@@ -3661,12 +3754,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 localStream.getVideoTracks().forEach(track => pc.addTrack(track, localStream));
             }
 
+            // Add recvonly transceivers for tracks we're not sending
             if (!localStream || localStream.getVideoTracks().length === 0) {
                  pc.addTransceiver('video', { direction: 'recvonly' });
             }
-            if (!localStream || localStream.getAudioTracks().length === 0) {
+            // For audio: if we're deafened, we're not sending audio, so add a recvonly transceiver
+            if (!localStream || localStream.getAudioTracks().length === 0 || isDeafened) {
                  pc.addTransceiver('audio', { direction: 'recvonly' });
             }
+
+            // Create the UI element immediately so the user appears even without tracks
+            createPeerUI(userId, displayName, avatarUrl, remoteIsDeafened, isMuted);
 
             pc.ontrack = (event) => {
                 // Check if this peer is still valid (hasn't been removed and replaced)
@@ -3675,85 +3773,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }
 
                 let container = document.getElementById(`wrapper-${userId}`);
-                if (!container) {
-                    container = document.createElement('div');
-                    container.id = `wrapper-${userId}`;
-                    container.className = 'video-container group bg-slate-800 border border-slate-700';
-                    
-                    const vid = document.createElement('video');
-                    vid.id = `vid-${userId}`;
-                    vid.autoplay = true;
-                    vid.playsInline = true; 
-                    attachSinkId(vid, currentAudioOutputId);
-                    vid.autoplay = true;
-                    vid.playsInline = true; 
-                    attachSinkId(vid, currentAudioOutputId);
-                    
-                    // Load persisted volume
-                    const savedVol = getVolumeSettings(userId, 'main');
-                    vid.volume = savedVol;
-                    
-                    vid.srcObject = new MediaStream();
-                    if (isDeafened) vid.muted = true;
-                    
-                    const avatarLayer = document.createElement('div');
-                    avatarLayer.className = 'avatar-layer';
-                    
-                    setAvatar(avatarLayer, avatarUrl);
+                let vid = document.getElementById(`vid-${userId}`);
 
-                    const label = document.createElement('div');
-                    label.className = 'absolute bottom-3 left-3 bg-black/50 px-3 py-1 rounded-full text-sm text-white backdrop-blur-md z-30 flex items-center gap-1.5';
-                    
-                    const nameSpan = document.createElement('span');
-                    nameSpan.className = 'peer-name';
-                    nameSpan.innerText = displayName;
-                    
-                    const statusContainer = document.createElement('div');
-                    statusContainer.className = 'peer-status-icons items-center' + (isDeafened || isMuted ? ' flex' : ' hidden');
-                    
-                    if (isDeafened) {
-                        statusContainer.innerHTML = `<span class="text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg></span>`;
-                    } else if (isMuted) {
-                        statusContainer.innerHTML = `<span class="text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path></svg></span>`;
-                    }
-
-                    label.appendChild(nameSpan);
-                    label.appendChild(statusContainer);
-
-                    const volControls = document.createElement('div');
-                    volControls.id = `vol-controls-${userId}`;
-                    volControls.className = 'volume-controls z-30';
-                    
-                    const fsBtn = document.createElement('button');
-                    fsBtn.className = 'absolute top-3 right-3 p-2 rounded-xl bg-black/40 hover:bg-blue-600 text-white backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 scale-90 hover:scale-100 z-30';
-                    fsBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2-2h3"/></svg>';
-                    fsBtn.onclick = () => toggleFullscreen(userId);
-                    fsBtn.title = "Toggle Fullscreen";
-                    
-                    container.addEventListener('fullscreenchange', () => {
-                        if (document.fullscreenElement === container) {
-                            fsBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3"/></svg>';
-                            fsBtn.classList.add('bg-blue-600');
-                        } else {
-                            fsBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2-2h3"/></svg>';
-                            fsBtn.classList.remove('bg-blue-600');
-                        }
-                    });
-
-                    container.dataset.userId = userId;
-
-                    setupSmoothDragAndDrop(container);
-
-                    container.appendChild(vid);
-                    container.appendChild(avatarLayer);
-                    container.appendChild(label);
-                    container.appendChild(volControls);
-                    container.appendChild(fsBtn);
-                    remoteGrid.appendChild(container);
-                    checkEmpty();
+                // Create container if it doesn't exist (shouldn't happen now, but keeping for safety)
+                if (!container || !vid) {
+                    createPeerUI(userId, displayName, avatarUrl, remoteIsDeafened, isMuted);
+                    container = document.getElementById(`wrapper-${userId}`);
+                    vid = document.getElementById(`vid-${userId}`);
                 }
 
-                const vid = document.getElementById(`vid-${userId}`);
+                // Safety check - if vid is still null, skip this track event
+                if (!vid || !vid.srcObject) {
+                    console.error('[ontrack] Video element or srcObject is null for', userId);
+                    return;
+                }
+
                 const volControls = document.getElementById(`vol-controls-${userId}`);
                 const mainStream = vid.srcObject;
 
@@ -3768,6 +3802,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }
                 
                 if (event.track.kind === 'audio') {
+                    // Check if this track is already in the stream to prevent duplicates
+                    const existingTracks = mainStream.getAudioTracks();
+                    const trackAlreadyExists = existingTracks.some(t => t.id === event.track.id);
+
+                    if (trackAlreadyExists) {
+                        // Track already exists, skip adding it again
+                        return;
+                    }
+
                     if (mainStream.getAudioTracks().length === 0) {
                         mainStream.addTrack(event.track);
                         setupAudioMonitor(mainStream, `wrapper-${userId}`);
@@ -3789,35 +3832,43 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     } else {
                         const savedScreenVol = getVolumeSettings(userId, 'screen');
 
-                        const screenAud = document.createElement('audio');
-                        screenAud.id = `aud-screen-${userId}`;
-                        screenAud.autoplay = true;
-                        attachSinkId(screenAud, currentAudioOutputId);
-                        screenAud.volume = savedScreenVol; // Set volume from persisted settings
-                        
+                        // Only create screen audio element if it doesn't exist
+                        let screenAud = document.getElementById(`aud-screen-${userId}`);
+                        if (!screenAud) {
+                            screenAud = document.createElement('audio');
+                            screenAud.id = `aud-screen-${userId}`;
+                            screenAud.autoplay = true;
+                            attachSinkId(screenAud, currentAudioOutputId);
+                            screenAud.volume = savedScreenVol;
+                            container.appendChild(screenAud);
+                        }
+
                         const screenStream = new MediaStream([event.track]);
                         screenAud.srcObject = screenStream;
                         if (isDeafened) screenAud.muted = true;
-                        container.appendChild(screenAud);
-                        
-                        const row = document.createElement('div');
-                        row.className = 'vol-row';
-                        row.id = `vol-row-screen-${userId}`;
-                        row.innerHTML = `
-                            <div class="flex items-center gap-2">
-                                <button class="text-white hover:text-blue-400" onclick="toggleMute('${userId}', 'screen')" id="mute-screen-${userId}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="14" rx="2" ry="2"></rect><line x1="12" y1="22" x2="12" y2="16"></line><path d="M5 12h14"></path><path d="M12 12v4"></path></svg>
-                                </button>
-                                <input type="range" min="0" max="1" step="0.05" value="${savedScreenVol}" oninput="setVolume('${userId}', 'screen', this.value)">
-                            </div>
-                        `;
-                        volControls.appendChild(row);
-                        
+
+                        // Only create volume row if it doesn't exist
+                        if (!document.getElementById(`vol-row-screen-${userId}`)) {
+                            const row = document.createElement('div');
+                            row.className = 'vol-row';
+                            row.id = `vol-row-screen-${userId}`;
+                            row.innerHTML = `
+                                <div class="flex items-center gap-2">
+                                    <button class="text-white hover:text-blue-400" onclick="toggleMute('${userId}', 'screen')" id="mute-screen-${userId}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="14" rx="2" ry="2"></rect><line x1="12" y1="22" x2="12" y2="16"></line><path d="M5 12h14"></path><path d="M12 12v4"></path></svg>
+                                    </button>
+                                    <input type="range" min="0" max="1" step="0.05" value="${savedScreenVol}" oninput="setVolume('${userId}', 'screen', this.value)">
+                                </div>
+                            `;
+                            volControls.appendChild(row);
+                        }
+
                         setupAudioMonitor(screenStream, `wrapper-${userId}`); // Use setupAudioMonitor for screen audio
-                        
+
                         event.track.onended = () => {
                             screenAud.remove(); // Remove the screen audio element
-                            row.remove(); // Remove its volume control row
+                            const row = document.getElementById(`vol-row-screen-${userId}`);
+                            if (row) row.remove(); // Remove its volume control row
                         };
                     }
                 }
@@ -4128,9 +4179,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const tracks = localStream.getAudioTracks();
             if (tracks.length > 0) {
                 const track = tracks[0];
-                
-                // If deafened, we can only mute, not unmute
-                if (isDeafened && !track.enabled) {
+
+                // If deafened, the mic button is disabled, so this shouldn't be called
+                // But just in case, prevent toggling when deafened
+                if (isDeafened) {
                     return;
                 }
 
@@ -4163,21 +4215,55 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             isDeafened = !isDeafened;
             const btn = document.getElementById('btnDeafen');
             const btnMic = document.getElementById('btnMic');
-            
+
             const deafenOnSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>`;
             const deafenOffSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg>`;
+
+            const micAudioTrack = localStream?.getAudioTracks()[0];
+            const screenAudioTrack = screenStream?.getAudioTracks()[0];
 
             if (isDeafened) {
                 playNotificationSound('mute');
                 btn.classList.add('active-red');
                 btn.innerHTML = deafenOffSvg;
-                
-                // Mute mic if it was on
-                const tracks = localStream?.getAudioTracks();
-                if (tracks && tracks.length > 0 && tracks[0].enabled) {
-                    toggleMic();
+
+                // Store the original mic enabled state before deafening
+                if (micAudioTrack && micAudioTrack.enabled) {
+                    btn.dataset.micWasEnabled = 'true';
                 }
-                
+
+                // Disable mic button and update UI to show mic is muted
+                if (btnMic) {
+                    btnMic.disabled = true;
+                    // Update mic button UI to show muted state
+                    if (micAudioTrack && micAudioTrack.enabled) {
+                        btnMic.classList.add('active-red');
+                        btnMic.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>`;
+                    }
+                }
+
+                // Disable the mic track (so others know we're muted) and stop sending
+                if (micAudioTrack && micAudioTrack.enabled) {
+                    micAudioTrack.enabled = false;
+                }
+
+                // Stop sending mic audio (but keep screen audio if sharing)
+                for (const userId in peers) {
+                    const pc = peers[userId];
+                    const senders = pc.getSenders();
+
+                    for (const sender of senders) {
+                        if (sender.track && sender.track.kind === 'audio') {
+                            // Check if this is NOT the screen audio track - if so, it's the mic track
+                            const isScreenAudio = screenAudioTrack && sender.track.id === screenAudioTrack.id;
+                            if (!isScreenAudio) {
+                                sender.replaceTrack(null);
+                            }
+                            // Screen audio track continues sending
+                        }
+                    }
+                }
+
                 // Mute all remote audio and remember state
                 document.querySelectorAll('video, audio').forEach(el => {
                     if (el.id !== 'localVideo' && el.id !== 'previewVideo') {
@@ -4189,7 +4275,89 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 playNotificationSound('unmute');
                 btn.classList.remove('active-red');
                 btn.innerHTML = deafenOnSvg;
-                
+
+                // Enable mic button
+                if (btnMic) {
+                    btnMic.disabled = false;
+                }
+
+                // Re-enable the mic track only if it was enabled before deafening
+                if (micAudioTrack && btn.dataset.micWasEnabled === 'true') {
+                    micAudioTrack.enabled = true;
+                    // Update mic button UI to show unmuted state
+                    if (btnMic) {
+                        btnMic.classList.remove('active-red');
+                        btnMic.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
+                    }
+                    delete btn.dataset.micWasEnabled;
+                }
+
+                // Restore sending mic audio
+                if (micAudioTrack) {
+                    console.log('[Undeafen] Restoring mic audio for all peers, mic track:', micAudioTrack.id);
+                    for (const userId in peers) {
+                        const pc = peers[userId];
+                        const senders = pc.getSenders();
+                        console.log('[Undeafen] Peer', userId, 'senders:', senders.length);
+
+                        // Find the mic audio sender (not screen audio)
+                        let micSender = null;
+                        for (const s of senders) {
+                            console.log('[Undeafen] Sender track:', s.track ? s.track.kind + ' (' + s.track.id + ')' : 'null');
+                            if (s.track && s.track.kind === 'audio') {
+                                const isScreenAudio = screenAudioTrack && s.track.id === screenAudioTrack.id;
+                                if (!isScreenAudio) {
+                                    micSender = s;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (micSender) {
+                            // We have a mic sender - make sure it has the correct track
+                            // (it might be null from deafening, or might have a stale track)
+                            console.log('[Undeafen] Found mic sender for', userId, ', track:', micSender.track ? micSender.track.id : 'null');
+                            if (micSender.track !== micAudioTrack) {
+                                console.log('[Undeafen] Replacing track for', userId);
+                                micSender.replaceTrack(micAudioTrack);
+                                negotiate(userId, pc);
+                            } else {
+                                console.log('[Undeafen] Track already correct for', userId);
+                            }
+                        } else {
+                            // No mic sender found - need to add one
+                            console.log('[Undeafen] No mic sender for', userId, ', adding mic track');
+                            // First, try to find a sender with a null track (from previous replaceTrack)
+                            // Make sure it's an audio sender before replacing
+                            let nullSenderFound = false;
+                            for (const s of senders) {
+                                if (!s.track || s.track === null) {
+                                    // Check if this is an audio sender by checking the transceiver
+                                    if (s.transceiver && s.transceiver.receiver && s.transceiver.receiver.track) {
+                                        const kind = s.transceiver.receiver.track.kind;
+                                        console.log('[Undeafen] Found null sender for', userId, ', kind:', kind);
+                                        if (kind === 'audio') {
+                                            console.log('[Undeafen] Replacing null audio sender for', userId);
+                                            s.replaceTrack(micAudioTrack);
+                                            nullSenderFound = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // If no null sender was found, add a new track (peer joined while deafened)
+                            if (!nullSenderFound) {
+                                console.log('[Undeafen] Adding new mic track for', userId);
+                                pc.addTrack(micAudioTrack, localStream);
+                            }
+
+                            console.log('[Undeafen] Negotiating with', userId);
+                            negotiate(userId, pc);
+                        }
+                    }
+                }
+
                 // Restore remote audio
                 document.querySelectorAll('video, audio').forEach(el => {
                     if (el.id !== 'localVideo' && el.id !== 'previewVideo') {
@@ -4198,13 +4366,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 });
             }
 
+            // Send update AFTER we've finished deafening/undeafening
             if (ws && ws.readyState === WebSocket.OPEN) {
-                const audioTrack = localStream?.getAudioTracks()[0];
-                const currentlyMuted = !audioTrack || !audioTrack.enabled;
                 ws.send(JSON.stringify({
                     type: 'update-user',
                     data: {
-                        isMuted: currentlyMuted,
+                        isMuted: isDeafened || !micAudioTrack || !micAudioTrack.enabled,
                         isDeafened: isDeafened
                     }
                 }));
