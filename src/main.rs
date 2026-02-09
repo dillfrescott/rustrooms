@@ -1396,9 +1396,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let ws;
         let localStream;
         let screenStream;
-        let peers = {}; 
+        let peers = {};
         let peerCamStatus = {};
         let peerScreenStatus = {};
+        let peerScreenHasAudio = {};
         let userNickname = "Guest";
         let userAvatar = null;
         let sidebarOpen = false;
@@ -2716,6 +2717,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             peers = {};
             peerCamStatus = {};
             peerScreenStatus = {};
+            peerScreenHasAudio = {};
             remoteGrid.innerHTML = '';
             
             // Update state
@@ -3121,6 +3123,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         removePeer(msg.userId);
                                         delete peerCamStatus[msg.userId];
                                         delete peerScreenStatus[msg.userId];
+                                        delete peerScreenHasAudio[msg.userId];
                                     }
                                     break;
                                 case 'user-update':
@@ -3134,9 +3137,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 case 'screen-toggle':
                                     if (msg.data && msg.data.enabled !== undefined) {
                                         peerScreenStatus[msg.userId] = msg.data.enabled;
+                                        peerScreenHasAudio[msg.userId] = msg.data.hasAudio;
                                         const v = document.getElementById(`vid-${msg.userId}`);
                                         if (v) v.style.objectFit = msg.data.enabled ? 'contain' : 'contain';
-            
+
                                         if (!msg.data.enabled || !msg.data.hasAudio) {
                                             const row = document.getElementById(`vol-row-screen-${msg.userId}`);
                                             if (row) row.remove();
@@ -3830,6 +3834,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             row.remove();
                         };
                     } else {
+                        // Only create screen audio controls if the peer's screen share has audio
+                        if (!peerScreenHasAudio[userId]) {
+                            return;
+                        }
+
                         const savedScreenVol = getVolumeSettings(userId, 'screen');
 
                         // Only create screen audio element if it doesn't exist
