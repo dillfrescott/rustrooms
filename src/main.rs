@@ -4290,8 +4290,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     btnMic.disabled = false;
                 }
 
+                // Store the mic enabled state before we delete the flag
+                // We need this to know if we should enable the track after replacing it for each peer
+                const shouldEnableMic = btn.dataset.micWasEnabled === 'true';
+
                 // Re-enable the mic track only if it was enabled before deafening
-                if (micAudioTrack && btn.dataset.micWasEnabled === 'true') {
+                if (micAudioTrack && shouldEnableMic) {
                     micAudioTrack.enabled = true;
                     // Update mic button UI to show unmuted state
                     if (btnMic) {
@@ -4303,7 +4307,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 // Restore sending mic audio
                 if (micAudioTrack) {
-                    console.log('[Undeafen] Restoring mic audio for all peers, mic track:', micAudioTrack.id);
+                    console.log('[Undeafen] Restoring mic audio for all peers, mic track:', micAudioTrack.id, 'enabled before:', micAudioTrack.enabled, 'shouldEnableMic:', shouldEnableMic);
+
+                    // CRITICAL: Enable the mic track FIRST before doing anything else
+                    // This ensures the track is in the correct state when we add/replace it
+                    if (shouldEnableMic) {
+                        micAudioTrack.enabled = true;
+                        console.log('[Undeafen] Pre-emptively enabled mic track, now enabled:', micAudioTrack.enabled);
+                    }
+
                     for (const userId in peers) {
                         const pc = peers[userId];
                         const senders = pc.getSenders();
@@ -4324,40 +4336,41 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                         if (micSender) {
                             // We have a mic sender - make sure it has the correct track
-                            // (it might be null from deafening, or might have a stale track)
                             console.log('[Undeafen] Found mic sender for', userId, ', track:', micSender.track ? micSender.track.id : 'null');
                             if (micSender.track !== micAudioTrack) {
                                 console.log('[Undeafen] Replacing track for', userId);
                                 micSender.replaceTrack(micAudioTrack);
-                                negotiate(userId, pc);
-                            } else {
-                                console.log('[Undeafen] Track already correct for', userId);
                             }
+                            // Always negotiate when undeafening to ensure remote peers receive the updated track state
+                            console.log('[Undeafen] Negotiating with', userId);
+                            negotiate(userId, pc);
                         } else {
                             // No mic sender found - need to add one
                             console.log('[Undeafen] No mic sender for', userId, ', adding mic track');
-                            // First, try to find a sender with a null track (from previous replaceTrack)
-                            // Make sure it's an audio sender before replacing
+
+                            // Try to find and reuse a sender with a null track (from previous replaceTrack(null))
                             let nullSenderFound = false;
                             for (const s of senders) {
                                 if (!s.track || s.track === null) {
-                                    // Check if this is an audio sender by checking the transceiver
-                                    if (s.transceiver && s.transceiver.receiver && s.transceiver.receiver.track) {
-                                        const kind = s.transceiver.receiver.track.kind;
-                                        console.log('[Undeafen] Found null sender for', userId, ', kind:', kind);
-                                        if (kind === 'audio') {
-                                            console.log('[Undeafen] Replacing null audio sender for', userId);
-                                            s.replaceTrack(micAudioTrack);
-                                            nullSenderFound = true;
-                                            break;
-                                        }
-                                    }
+                                    // Found a sender with null track - this is likely our mic sender from deafening
+                                    const receiverKind = s.transceiver?.receiver?.track?.kind;
+                                    const transceiverMid = s.transceiver?.mid;
+
+                                    console.log('[Undeafen] Found null sender for', userId,
+                                        ', receiver kind:', receiverKind, ', mid:', transceiverMid);
+
+                                    // Since we only replace mic tracks (not screen audio) with null during deafening,
+                                    // we can safely assume this null sender should have the mic track
+                                    console.log('[Undeafen] Replacing null sender with mic track for', userId);
+                                    s.replaceTrack(micAudioTrack);
+                                    nullSenderFound = true;
+                                    break;
                                 }
                             }
 
                             // If no null sender was found, add a new track (peer joined while deafened)
                             if (!nullSenderFound) {
-                                console.log('[Undeafen] Adding new mic track for', userId);
+                                console.log('[Undeafen] No null sender found, adding new mic track for', userId);
                                 pc.addTrack(micAudioTrack, localStream);
                             }
 
@@ -4365,6 +4378,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             negotiate(userId, pc);
                         }
                     }
+
+                    // Final verification: ensure track is still enabled after all operations
+                    if (shouldEnableMic && !micAudioTrack.enabled) {
+                        console.warn('[Undeafen] WARNING: mic track was disabled after processing, re-enabling');
+                        micAudioTrack.enabled = true;
+                    }
+                    console.log('[Undeafen] Final mic track state - enabled:', micAudioTrack.enabled);
                 }
 
                 // Restore remote audio
