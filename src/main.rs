@@ -2791,6 +2791,30 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             });
         }
 
+        function deleteRoom(targetRoomId, event) {
+            if (event) event.stopPropagation();
+
+            if (targetRoomId.toLowerCase() === 'general') {
+                showCustomAlert("Action Not Allowed", "Cannot delete the General room.");
+                return;
+            }
+
+            const roomData = globalRoomList[targetRoomId];
+            if (roomData && roomData.users && Object.keys(roomData.users).length > 0) {
+                showCustomAlert("Room Not Empty", "You cannot delete a room that still has users in it.");
+                return;
+            }
+
+            showCustomConfirm("Delete Channel", `Delete "${targetRoomId}"? This cannot be undone.`, () => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'delete-channel',
+                        data: { channelId: targetRoomId }
+                    }));
+                }
+            });
+        }
+
         function updateRoomListUI() {
             const container = document.getElementById('roomListContainer');
             if (!container) return;
@@ -2869,6 +2893,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 <div class="flex gap-1 pointer-events-auto">
                                     <button onclick="renameRoom(this.closest('.room-item').dataset.rid, event)" class="p-1 text-zinc-500 hover:text-blue-500 transition-colors" title="Rename Channel">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    </button>
+                                    <button onclick="deleteRoom(this.closest('.room-item').dataset.rid, event)" class="p-1 text-zinc-500 hover:text-red-500 transition-colors" title="Delete Channel">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                                     </button>
                                 </div>
                              ` : ''}
@@ -5254,6 +5281,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 }
 
                                 let room = rooms_lock.entry(room_id.clone()).or_insert_with(HashMap::new);
+                                room.entry("General".to_string()).or_insert_with(HashMap::new);
                                 let channel = room.entry(channel_id.clone()).or_insert_with(HashMap::new);
                                 
                                 if channel.contains_key(&user_id) {
@@ -5487,6 +5515,34 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                      }
                                      drop(rooms_lock);
                                      broadcast_channel_list(&rooms, &room_id).await;
+                                }
+                            }
+                        } else if parsed.msg_type == "delete-channel" {
+                            let target_channel_id = parsed.data.as_ref()
+                                .and_then(|d| d.get("channelId"))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string();
+
+                            if !target_channel_id.is_empty() && !target_channel_id.eq_ignore_ascii_case("general") {
+                                let mut rooms_lock = rooms.lock().await;
+
+                                let can_delete = if let Some(room) = rooms_lock.get(&room_id) {
+                                    if let Some(target_channel) = room.get(&target_channel_id) {
+                                        target_channel.is_empty()
+                                    } else {
+                                        false
+                                    }
+                                } else {
+                                    false
+                                };
+
+                                if can_delete {
+                                    if let Some(room) = rooms_lock.get_mut(&room_id) {
+                                        room.remove(&target_channel_id);
+                                    }
+                                    drop(rooms_lock);
+                                    broadcast_channel_list(&rooms, &room_id).await;
                                 }
                             }
                         } else if let Some(ref target_id) = parsed.target {
@@ -5769,6 +5825,7 @@ mod cluster {
              ClusterMessage::Join { room_id, channel_id, user_id, nickname, avatar, is_muted, is_deafened, is_screen_sharing } => {
                  let mut rooms_lock = rooms.lock().await;
                  let room = rooms_lock.entry(room_id.clone()).or_insert_with(HashMap::new);
+                 room.entry("General".to_string()).or_insert_with(HashMap::new);
                  let channel = room.entry(channel_id.clone()).or_insert_with(HashMap::new);
 
                  if channel.contains_key(&user_id) {
