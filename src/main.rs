@@ -4990,10 +4990,13 @@ struct SignalMessage {
 type UserTx = tokio::sync::mpsc::Sender<Result<Message, axum::Error>>;
 type ChannelMap = HashMap<String, HashMap<String, (UserTx, UserStatus)>>;
 type RoomMap = Arc<Mutex<HashMap<String, ChannelMap>>>;
+type RoomCleanupMap = Arc<Mutex<HashMap<String, u64>>>;
+const ROOM_EMPTY_GRACE_SECS: u64 = 120;
 
 #[derive(Clone)]
 struct AppState {
     rooms: RoomMap,
+    room_cleanup_generations: RoomCleanupMap,
     cluster_handle: Option<cluster::ClusterHandle>,
     room_creation_password: Option<String>,
 }
@@ -5001,6 +5004,7 @@ struct AppState {
 #[tokio::main]
 async fn main() {
     let rooms: RoomMap = Arc::new(Mutex::new(HashMap::new()));
+    let room_cleanup_generations: RoomCleanupMap = Arc::new(Mutex::new(HashMap::new()));
     
     // Initialize Cluster if IROH_KEY is present
     let cluster_handle = if let Ok(key) = std::env::var("IROH_KEY") {
@@ -5020,7 +5024,7 @@ async fn main() {
 
 
     let room_creation_password = std::env::var("ROOM_CREATION_PASSWORD").ok().filter(|s| !s.is_empty());
-    let state = AppState { rooms, cluster_handle, room_creation_password };
+    let state = AppState { rooms, room_cleanup_generations, cluster_handle, room_creation_password };
 
     let app = Router::new()
         .route("/", get(index))
@@ -5164,6 +5168,7 @@ async fn broadcast_channel_list(rooms: &RoomMap, room_id: &str) {
 
 async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, state: AppState) {
     let rooms = state.rooms.clone();
+    let room_cleanup_generations = state.room_cleanup_generations.clone();
     let (mut user_ws_tx, mut user_ws_rx) = socket.split();
     let (tx, mut rx) = tokio::sync::mpsc::channel(5000);
     
@@ -5292,7 +5297,11 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     is_deafened,
                                 }));
                              }
-                             is_joined = true;
+                            // Any join cancels pending room deletion for this room.
+                            if room_cleanup_generations.lock().await.remove(&room_id).is_some() {
+                                println!("CLEANUP: Canceled pending deletion for room '{}'", room_id);
+                            }
+                            is_joined = true;
                               
                              let mut notify_data = parsed.data.clone();
                              if let Some(serde_json::Value::Object(ref mut map)) = notify_data {
@@ -5435,45 +5444,8 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 }
                             }
                         } else if parsed.msg_type == "delete-channel" {
-                            let target_channel_id = parsed.data.as_ref()
-                                .and_then(|d| d.get("channelId"))
-                                .and_then(|v| v.as_str())
-                                .unwrap_or(&channel_id)
-                                .to_string();
-
-                            let mut rooms_lock = rooms.lock().await;
-                            
-                            // Check if channel is empty
-                            let can_delete = if let Some(room) = rooms_lock.get(&room_id) {
-                                if let Some(current_channel) = room.get(&target_channel_id) {
-                                    current_channel.is_empty()
-                                } else {
-                                    // Channel doesn't exist?
-                                    false
-                                }
-                            } else {
-                                false
-                            };
-
-                            if can_delete {
-                                if let Some(room) = rooms_lock.get_mut(&room_id) {
-                                    if let Some(channel) = room.remove(&target_channel_id) {
-                                        let close_msg = serde_json::to_string(&SignalMessage {
-                                            msg_type: "room-deleted".into(),
-                                            user_id: None,
-                                            target: None,
-                                            data: None,
-                                        }).unwrap();
-                                        for (tx, _) in channel.values() {
-                                            let _ = tx.try_send(Ok(Message::Text(close_msg.clone().into())));
-                                        }
-                                    }
-                                }
-                                drop(rooms_lock);
-                                broadcast_channel_list(&rooms, &room_id).await;
-                            } else {
-                                // Optionally notify user they can't delete (handled purely by UI for now)
-                            }
+                            // Channel-level deletion is intentionally disabled.
+                            println!("CLEANUP: Ignored channel deletion request in room '{}'", room_id);
                         } else if parsed.msg_type == "rename-channel" {
                             let target_channel_id = parsed.data.as_ref()
                                 .and_then(|d| d.get("channelId"))
@@ -5551,6 +5523,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
         }
     }
 
+    let mut schedule_room_cleanup = false;
     {
         let mut rooms_lock = rooms.lock().await;
 
@@ -5584,27 +5557,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 for (_, (tx, _)) in channel.iter() {
                                     let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
                                 }
-                            } else {
-                                // Channel is now empty, spawn delayed cleanup
-                                let rooms_clone = rooms.clone();
-                                let room_id_clone = room_id.clone();
-                                let channel_id_clone = channel_id.clone();
-                                tokio::spawn(async move {
-                                    tokio::time::sleep(std::time::Duration::from_secs(120)).await;
-                                    let mut rooms_lock = rooms_clone.lock().await;
-                                    if let Some(room) = rooms_lock.get_mut(&room_id_clone) {
-                                        let is_empty = room.get(&channel_id_clone).map_or(false, |c| c.is_empty());
-                                        if is_empty {
-                                            room.remove(&channel_id_clone);
-                                            println!("CLEANUP: Removed empty channel '{}' from room '{}' after delay", channel_id_clone, room_id_clone);
-                                            
-                                            if room.is_empty() {
-                                                rooms_lock.remove(&room_id_clone);
-                                                println!("CLEANUP: Removed empty room '{}' after delay", room_id_clone);
-                                            }
-                                        }
-                                    }
-                                });
                             }
                         }
                     }
@@ -5612,11 +5564,20 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                 
                 // If not found (e.g. race condition or rename), scan all channels
                 if !removed {
-                    let mut channel_to_remove = None;
                     for (cid, channel) in room.iter_mut() {
                         if let Some((stored_tx, _)) = channel.get(&user_id) {
                             if stored_tx.same_channel(&tx) {
                                 channel.remove(&user_id);
+                                removed = true;
+
+                                if let Some(ch) = &state.cluster_handle {
+                                    ch.broadcast(cluster::ClusterMessage::Leave {
+                                        room_id: room_id.clone(),
+                                        channel_id: cid.clone(),
+                                        user_id: user_id.clone(),
+                                    });
+                                }
+
                                 if !channel.is_empty() {
                                     let notify_msg = serde_json::to_string(&SignalMessage {
                                         msg_type: "user-left".into(),
@@ -5624,50 +5585,76 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         target: None,
                                         data: None,
                                     }).unwrap();
-                                    
-                                    if let Some(ch) = &state.cluster_handle {
-                                        ch.broadcast(cluster::ClusterMessage::Leave {
-                                            room_id: room_id.clone(),
-                                            channel_id: "unknown".to_string(),
-                                            user_id: user_id.clone(),
-                                        }); 
-                                    }
 
                                     for (_, (tx, _)) in channel.iter() {
                                         let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
                                     }
-                                } else {
-                                    channel_to_remove = Some(cid.clone());
                                 }
                                 break;
                             }
                         }
                     } 
-                    if let Some(cid) = channel_to_remove {
-                        // Spawn delayed cleanup for scanned channel
-                        let rooms_clone = rooms.clone();
-                        let room_id_clone = room_id.clone();
-                        let channel_id_clone = cid.clone();
-                        tokio::spawn(async move {
-                            tokio::time::sleep(std::time::Duration::from_secs(120)).await;
-                            let mut rooms_lock = rooms_clone.lock().await;
-                            if let Some(room) = rooms_lock.get_mut(&room_id_clone) {
-                                let is_empty = room.get(&channel_id_clone).map_or(false, |c| c.is_empty());
-                                if is_empty {
-                                    room.remove(&channel_id_clone);
-                                    println!("CLEANUP: Removed empty channel '{}' (scanned) from room '{}' after delay", channel_id_clone, room_id_clone);
-                                    
-                                    if room.is_empty() {
-                                        rooms_lock.remove(&room_id_clone);
-                                        println!("CLEANUP: Removed empty room '{}' after delay", room_id_clone);
-                                    }
-                                }
-                            }
-                        });
-                    }
+                }
+
+                // Only schedule cleanup when the entire room is empty.
+                if removed && room.values().all(|c| c.is_empty()) {
+                    schedule_room_cleanup = true;
                 }
             }
         }
+    }
+
+    if schedule_room_cleanup {
+        let next_generation = {
+            let mut cleanup_lock = room_cleanup_generations.lock().await;
+            let next = cleanup_lock.get(&room_id).copied().unwrap_or(0) + 1;
+            cleanup_lock.insert(room_id.clone(), next);
+            next
+        };
+        println!(
+            "CLEANUP: Room '{}' became empty; scheduling deletion in {}s (generation {})",
+            room_id, ROOM_EMPTY_GRACE_SECS, next_generation
+        );
+
+        let rooms_clone = rooms.clone();
+        let cleanup_clone = room_cleanup_generations.clone();
+        let room_id_clone = room_id.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_secs(ROOM_EMPTY_GRACE_SECS)).await;
+
+            let generation_still_current = cleanup_clone
+                .lock()
+                .await
+                .get(&room_id_clone)
+                .copied()
+                .map(|g| g == next_generation)
+                .unwrap_or(false);
+            if !generation_still_current {
+                return;
+            }
+
+            let removed_room = {
+                let mut rooms_lock = rooms_clone.lock().await;
+                let should_remove_room = rooms_lock
+                    .get(&room_id_clone)
+                    .map(|room| room.values().all(|c| c.is_empty()))
+                    .unwrap_or(false);
+                if should_remove_room {
+                    rooms_lock.remove(&room_id_clone);
+                    true
+                } else {
+                    false
+                }
+            };
+
+            if removed_room {
+                let mut cleanup_lock = cleanup_clone.lock().await;
+                if cleanup_lock.get(&room_id_clone).copied() == Some(next_generation) {
+                    cleanup_lock.remove(&room_id_clone);
+                }
+                println!("CLEANUP: Removed empty room '{}' after {}s empty", room_id_clone, ROOM_EMPTY_GRACE_SECS);
+            }
+        });
     }
     broadcast_channel_list(&rooms, &room_id).await;
 }
