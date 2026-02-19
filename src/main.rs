@@ -1392,6 +1392,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let peerCamStatus = {};
         let peerScreenStatus = {};
         let peerScreenHasAudio = {};
+        let peerMicTrackId = {};
+        let peerScreenAudioTrackId = {};
         let userNickname = "Guest";
         let userAvatar = null;
         let sidebarOpen = false;
@@ -1430,6 +1432,47 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const heartbeatTimeoutMs = 5000; // Wait 5 seconds for pong response
         let lastPongTime = Date.now();
         let heartbeatTimeout = null;
+        
+        function getScreenAudioFlag(data) {
+            if (!data) return undefined;
+            if (data.hasAudio !== undefined) return !!data.hasAudio;
+            if (data.screenAudio !== undefined) return !!data.screenAudio;
+            return undefined;
+        }
+
+        function updatePeerTrackHints(userId, data) {
+            if (!data || !userId) return;
+            if (data.micTrackId !== undefined) {
+                peerMicTrackId[userId] = data.micTrackId || null;
+            }
+            if (data.screenAudioTrackId !== undefined) {
+                peerScreenAudioTrackId[userId] = data.screenAudioTrackId || null;
+            }
+        }
+
+        function ensureScreenAudioUI(userId) {
+            if (!peerScreenHasAudio[userId]) return;
+
+            const vid = document.getElementById(`vid-${userId}`);
+            const volControls = document.getElementById(`vol-controls-${userId}`);
+            if (!vid || !vid.srcObject || !volControls) return;
+
+            if (document.getElementById(`vol-row-screen-${userId}`)) return;
+
+            const savedScreenVol = getVolumeSettings(userId, 'screen');
+            const row = document.createElement('div');
+            row.className = 'vol-row';
+            row.id = `vol-row-screen-${userId}`;
+            row.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <button class="text-white hover:text-blue-400" onclick="toggleMute('${userId}', 'screen')" id="mute-screen-${userId}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="14" rx="2" ry="2"></rect><line x1="12" y1="22" x2="12" y2="16"></line><path d="M5 12h14"></path><path d="M12 12v4"></path></svg>
+                    </button>
+                    <input type="range" min="0" max="1" step="0.05" value="${savedScreenVol}" oninput="setVolume('${userId}', 'screen', this.value)">
+                </div>
+            `;
+            volControls.appendChild(row);
+        }
         
         const rtcConfig = {
             iceServers: [
@@ -2708,6 +2751,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             peerCamStatus = {};
             peerScreenStatus = {};
             peerScreenHasAudio = {};
+            peerMicTrackId = {};
+            peerScreenAudioTrackId = {};
             remoteGrid.innerHTML = '';
             
             // Update state
@@ -3009,7 +3054,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             const audioTrack = localStream && localStream.getAudioTracks()[0];
                             const isMuted = !audioTrack || !audioTrack.enabled;
 
-                            ws.send(JSON.stringify({
+                                    ws.send(JSON.stringify({
                                 type: "join",
                                 data: {
                                     userId: persistentUserId,
@@ -3018,6 +3063,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     camEnabled: camEnabled,
                                     screenEnabled: screenEnabled,
                                     screenAudio: screenHasAudio,
+                                    micTrackId: audioTrack ? audioTrack.id : null,
+                                    screenAudioTrackId: screenStream ? (screenStream.getAudioTracks()[0]?.id || null) : null,
                                     isMuted: isMuted,
                                     isDeafened: isDeafened,
                                     password: roomCreationPassword
@@ -3063,6 +3110,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     break;
                                 case 'user-joined':
                                     playNotificationSound('join');
+                                    const joinedScreenAudio = getScreenAudioFlag(msg.data);
+                                    updatePeerTrackHints(msg.userId, msg.data);
                                     // Check for existing peer OR DOM element to prevent duplicates
                                     if (peers[msg.userId]) {
                                         // Update info if peer already exists from signaling
@@ -3071,6 +3120,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         }
                                         if (msg.data.screenEnabled !== undefined) {
                                             peerScreenStatus[msg.userId] = msg.data.screenEnabled;
+                                        }
+                                        if (joinedScreenAudio !== undefined) {
+                                            peerScreenHasAudio[msg.userId] = joinedScreenAudio;
+                                        }
+                                        if (peerScreenStatus[msg.userId] === true && joinedScreenAudio === true) {
+                                            ensureScreenAudioUI(msg.userId);
                                         }
                                         updatePeerInfo(msg.userId, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened);
                                     } else {
@@ -3085,7 +3140,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         if (msg.data.screenEnabled !== undefined) {
                                             peerScreenStatus[msg.userId] = msg.data.screenEnabled;
                                         }
+                                        if (joinedScreenAudio !== undefined) {
+                                            peerScreenHasAudio[msg.userId] = joinedScreenAudio;
+                                        }
                                         initPeer(msg.userId, true, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened);
+                                        if (peerScreenStatus[msg.userId] === true && joinedScreenAudio === true) {
+                                            ensureScreenAudioUI(msg.userId);
+                                        }
                                     }
                                     
                                     const myAudioTrack = localStream && localStream.getAudioTracks()[0];
@@ -3104,6 +3165,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                             camEnabled: myCamEnabled,
                                             screenEnabled: myScreenEnabled,
                                             screenAudio: myScreenHasAudio,
+                                            micTrackId: myAudioTrack ? myAudioTrack.id : null,
+                                            screenAudioTrackId: screenStream ? (screenStream.getAudioTracks()[0]?.id || null) : null,
                                             isMuted: myMuted,
                                             isDeafened: isDeafened
                                         }
@@ -3117,9 +3180,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         delete peerCamStatus[msg.userId];
                                         delete peerScreenStatus[msg.userId];
                                         delete peerScreenHasAudio[msg.userId];
+                                        delete peerMicTrackId[msg.userId];
+                                        delete peerScreenAudioTrackId[msg.userId];
                                     }
                                     break;
                                 case 'user-update':
+                                    updatePeerTrackHints(msg.userId, msg.data);
                                      updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened);
                                     break;
                                 case 'cam-toggle':
@@ -3129,12 +3195,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     break;
                                 case 'screen-toggle':
                                     if (msg.data && msg.data.enabled !== undefined) {
+                                        updatePeerTrackHints(msg.userId, msg.data);
                                         peerScreenStatus[msg.userId] = msg.data.enabled;
-                                        peerScreenHasAudio[msg.userId] = msg.data.hasAudio;
+                                        if (msg.data.hasAudio !== undefined) {
+                                            peerScreenHasAudio[msg.userId] = msg.data.hasAudio;
+                                        }
+                                        if (msg.data.enabled && msg.data.hasAudio === true) {
+                                            ensureScreenAudioUI(msg.userId);
+                                        }
                                         const v = document.getElementById(`vid-${msg.userId}`);
                                         if (v) v.style.objectFit = msg.data.enabled ? 'contain' : 'contain';
 
-                                        if (!msg.data.enabled || !msg.data.hasAudio) {
+                                        if (!msg.data.enabled || msg.data.hasAudio === false) {
                                             const row = document.getElementById(`vol-row-screen-${msg.userId}`);
                                             if (row) row.remove();
                                             const aud = document.getElementById(`aud-screen-${msg.userId}`);
@@ -3143,16 +3215,24 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     }
                                     break;
                                 case 'identify':
+                                    const identifiedScreenAudio = getScreenAudioFlag(msg.data);
+                                    updatePeerTrackHints(msg.userId, msg.data);
                                     if (msg.data.camEnabled !== undefined) {
                                         peerCamStatus[msg.userId] = msg.data.camEnabled;
                                     }
                                     if (msg.data.screenEnabled !== undefined) {
                                         peerScreenStatus[msg.userId] = msg.data.screenEnabled;
                                     }
+                                    if (identifiedScreenAudio !== undefined) {
+                                        peerScreenHasAudio[msg.userId] = identifiedScreenAudio;
+                                    }
                                     if (peers[msg.userId]) {
                                         updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened);
                                     } else {
                                         initPeer(msg.userId, false, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened);
+                                    }
+                                    if (peerScreenStatus[msg.userId] === true && identifiedScreenAudio === true) {
+                                        ensureScreenAudioUI(msg.userId);
                                     }
                                     break;
                                 case 'rename-channel':
@@ -3724,9 +3804,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const pc = new RTCPeerConnection(rtcConfig);
             peers[userId] = pc;
 
-            // Only add mic audio track if LOCAL user is not deafened
-            // (remoteIsDeafened is the REMOTE user's state, isDeafened is our state)
-            if (localStream && !isDeafened) {
+            // Keep mic sender stable across deafen/undeafen; control via track.enabled.
+            if (localStream) {
                 localStream.getAudioTracks().forEach(track => pc.addTrack(track, localStream));
             }
 
@@ -3808,29 +3887,79 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         return;
                     }
 
-                    if (mainStream.getAudioTracks().length === 0) {
+                    const hintedMicTrackId = peerMicTrackId[userId];
+                    const hintedScreenTrackId = peerScreenAudioTrackId[userId];
+                    const isHintedScreenTrack = !!hintedScreenTrackId && event.track.id === hintedScreenTrackId;
+                    const isHintedMicTrack = !!hintedMicTrackId && event.track.id === hintedMicTrackId;
+
+                    if (isHintedScreenTrack && !isHintedMicTrack) {
+                        peerScreenHasAudio[userId] = true;
+                        const savedScreenVol = getVolumeSettings(userId, 'screen');
+
+                        let screenAud = document.getElementById(`aud-screen-${userId}`);
+                        if (!screenAud) {
+                            screenAud = document.createElement('audio');
+                            screenAud.id = `aud-screen-${userId}`;
+                            screenAud.autoplay = true;
+                            attachSinkId(screenAud, currentAudioOutputId);
+                            screenAud.volume = savedScreenVol;
+                            container.appendChild(screenAud);
+                        }
+
+                        const screenStream = new MediaStream([event.track]);
+                        screenAud.srcObject = screenStream;
+                        if (isDeafened) screenAud.muted = true;
+
+                        if (!document.getElementById(`vol-row-screen-${userId}`)) {
+                            const row = document.createElement('div');
+                            row.className = 'vol-row';
+                            row.id = `vol-row-screen-${userId}`;
+                            row.innerHTML = `
+                                <div class="flex items-center gap-2">
+                                    <button class="text-white hover:text-blue-400" onclick="toggleMute('${userId}', 'screen')" id="mute-screen-${userId}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="14" rx="2" ry="2"></rect><line x1="12" y1="22" x2="12" y2="16"></line><path d="M5 12h14"></path><path d="M12 12v4"></path></svg>
+                                    </button>
+                                    <input type="range" min="0" max="1" step="0.05" value="${savedScreenVol}" oninput="setVolume('${userId}', 'screen', this.value)">
+                                </div>
+                            `;
+                            volControls.appendChild(row);
+                        }
+
+                        setupAudioMonitor(screenStream, `wrapper-${userId}`);
+                        event.track.onended = () => {
+                            const row = document.getElementById(`vol-row-screen-${userId}`);
+                            if (row) row.remove();
+                            const aud = document.getElementById(`aud-screen-${userId}`);
+                            if (aud) aud.remove();
+                        };
+                        return;
+                    }
+
+                    if (mainStream.getAudioTracks().length === 0 || isHintedMicTrack) {
                         mainStream.addTrack(event.track);
                         setupAudioMonitor(mainStream, `wrapper-${userId}`);
                         
-                        const row = document.createElement('div');
-                        row.className = 'vol-row';
-                        row.id = `vol-row-main-${userId}`;
-                        row.innerHTML = `
-                            <button class="text-white hover:text-blue-400" onclick="toggleMute('${userId}', 'main')" id="mute-main-${userId}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-                            </button>
-                            <input type="range" min="0" max="1" step="0.05" value="${getVolumeSettings(userId, 'main')}" oninput="setVolume('${userId}', 'main', this.value)">
-                        `;
-                        volControls.insertBefore(row, volControls.firstChild);
+                        if (!document.getElementById(`vol-row-main-${userId}`)) {
+                            const row = document.createElement('div');
+                            row.className = 'vol-row';
+                            row.id = `vol-row-main-${userId}`;
+                            row.innerHTML = `
+                                <button class="text-white hover:text-blue-400" onclick="toggleMute('${userId}', 'main')" id="mute-main-${userId}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                                </button>
+                                <input type="range" min="0" max="1" step="0.05" value="${getVolumeSettings(userId, 'main')}" oninput="setVolume('${userId}', 'main', this.value)">
+                            `;
+                            volControls.insertBefore(row, volControls.firstChild);
+                        }
                         
                         event.track.onended = () => {
-                            row.remove();
+                            const row = document.getElementById(`vol-row-main-${userId}`);
+                            if (row) row.remove();
                         };
                     } else {
-                        // Only create screen audio controls if the peer's screen share has audio
-                        if (!peerScreenHasAudio[userId]) {
-                            return;
-                        }
+                        // A second remote audio track is the screen-share audio track in this app.
+                        // It can arrive before identify/screen-toggle metadata for late joiners.
+                        peerScreenHasAudio[userId] = true;
 
                         const savedScreenVol = getVolumeSettings(userId, 'screen');
 
@@ -4020,6 +4149,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (screenAud) screenAud.remove();
             const volRow = document.getElementById(`vol-row-screen-${userId}`);
             if (volRow) volRow.remove();
+            delete peerMicTrackId[userId];
+            delete peerScreenAudioTrackId[userId];
             checkEmpty();
         }
 
@@ -4047,6 +4178,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             
             if (type === 'screen') {
                 el = document.getElementById(`aud-screen-${userId}`);
+                if (!el) {
+                    el = document.getElementById(`vid-${userId}`);
+                }
                 btn = document.getElementById(`mute-screen-${userId}`);
             } else {
                 el = document.getElementById(`vid-${userId}`);
@@ -4081,6 +4215,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              let el;
             if (type === 'screen') {
                 el = document.getElementById(`aud-screen-${userId}`);
+                if (!el) {
+                    el = document.getElementById(`vid-${userId}`);
+                }
             } else {
                 el = document.getElementById(`vid-${userId}`);
             }
@@ -4201,12 +4338,57 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }
                 updateLocalLabel();
 
+                if (track.enabled) {
+                    const screenAudioTrack = screenStream?.getAudioTracks()[0];
+                    for (const userId in peers) {
+                        const pc = peers[userId];
+                        const senders = pc.getSenders();
+                        let micSender = null;
+
+                        for (const sender of senders) {
+                            if (sender.track && sender.track.kind === 'audio') {
+                                const isScreenAudio = screenAudioTrack && sender.track.id === screenAudioTrack.id;
+                                if (!isScreenAudio) {
+                                    micSender = sender;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (micSender) {
+                            micSender.replaceTrack(track).catch(() => {});
+                            if (micSender.transceiver && (micSender.transceiver.direction === 'recvonly' || micSender.transceiver.direction === 'inactive')) {
+                                micSender.transceiver.direction = 'sendrecv';
+                            }
+                        } else {
+                            let attachedToNullSender = false;
+                            for (const sender of senders) {
+                                if (!sender.track || sender.track === null) {
+                                    sender.replaceTrack(track).catch(() => {});
+                                    if (sender.transceiver && (sender.transceiver.direction === 'recvonly' || sender.transceiver.direction === 'inactive')) {
+                                        sender.transceiver.direction = 'sendrecv';
+                                    }
+                                    attachedToNullSender = true;
+                                    break;
+                                }
+                            }
+                            if (!attachedToNullSender) {
+                                pc.addTrack(track, localStream);
+                            }
+                        }
+                        // Always renegotiate after unmuting so peers get a fresh audio send path.
+                        negotiate(userId, pc);
+                    }
+                }
+
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
                         type: 'update-user',
                         data: {
                             isMuted: !track.enabled,
-                            isDeafened: isDeafened
+                            isDeafened: isDeafened,
+                            micTrackId: track ? track.id : null,
+                            screenAudioTrackId: screenStream ? (screenStream.getAudioTracks()[0]?.id || null) : null
                         }
                     }));
                 }
@@ -4244,26 +4426,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                 }
 
-                // Disable the mic track (so others know we're muted) and stop sending
-                if (micAudioTrack && micAudioTrack.enabled) {
+                // Deafen keeps sender topology intact; just disable mic track.
+                if (micAudioTrack) {
                     micAudioTrack.enabled = false;
-                }
-
-                // Stop sending mic audio (but keep screen audio if sharing)
-                for (const userId in peers) {
-                    const pc = peers[userId];
-                    const senders = pc.getSenders();
-
-                    for (const sender of senders) {
-                        if (sender.track && sender.track.kind === 'audio') {
-                            // Check if this is NOT the screen audio track - if so, it's the mic track
-                            const isScreenAudio = screenAudioTrack && sender.track.id === screenAudioTrack.id;
-                            if (!isScreenAudio) {
-                                sender.replaceTrack(null);
-                            }
-                            // Screen audio track continues sending
-                        }
-                    }
                 }
 
                 // Mute all remote audio and remember state
@@ -4283,8 +4448,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     btnMic.disabled = false;
                 }
 
-                // Store the mic enabled state before we delete the flag
-                // We need this to know if we should enable the track after replacing it for each peer
+                // Preserve pre-deafen mic preference.
                 const shouldEnableMic = btn.dataset.micWasEnabled === 'true';
 
                 // Re-enable the mic track only if it was enabled before deafening
@@ -4298,26 +4462,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     delete btn.dataset.micWasEnabled;
                 }
 
-                // Restore sending mic audio
+                // Repair sender state if a stale/null sender exists from older sessions,
+                // but do not force-enable mic unless user had it enabled before deafening.
                 if (micAudioTrack) {
-                    console.log('[Undeafen] Restoring mic audio for all peers, mic track:', micAudioTrack.id, 'enabled before:', micAudioTrack.enabled, 'shouldEnableMic:', shouldEnableMic);
-
-                    // CRITICAL: Enable the mic track FIRST before doing anything else
-                    // This ensures the track is in the correct state when we add/replace it
-                    if (shouldEnableMic) {
-                        micAudioTrack.enabled = true;
-                        console.log('[Undeafen] Pre-emptively enabled mic track, now enabled:', micAudioTrack.enabled);
-                    }
-
                     for (const userId in peers) {
                         const pc = peers[userId];
                         const senders = pc.getSenders();
-                        console.log('[Undeafen] Peer', userId, 'senders:', senders.length);
-
-                        // Find the mic audio sender (not screen audio)
+                        let changed = false;
                         let micSender = null;
                         for (const s of senders) {
-                            console.log('[Undeafen] Sender track:', s.track ? s.track.kind + ' (' + s.track.id + ')' : 'null');
                             if (s.track && s.track.kind === 'audio') {
                                 const isScreenAudio = screenAudioTrack && s.track.id === screenAudioTrack.id;
                                 if (!isScreenAudio) {
@@ -4328,56 +4481,31 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         }
 
                         if (micSender) {
-                            // We have a mic sender - make sure it has the correct track
-                            console.log('[Undeafen] Found mic sender for', userId, ', track:', micSender.track ? micSender.track.id : 'null');
                             if (micSender.track !== micAudioTrack) {
-                                console.log('[Undeafen] Replacing track for', userId);
-                                micSender.replaceTrack(micAudioTrack);
+                                micSender.replaceTrack(micAudioTrack).catch(() => {});
+                                changed = true;
                             }
-                            // Always negotiate when undeafening to ensure remote peers receive the updated track state
-                            console.log('[Undeafen] Negotiating with', userId);
-                            negotiate(userId, pc);
                         } else {
-                            // No mic sender found - need to add one
-                            console.log('[Undeafen] No mic sender for', userId, ', adding mic track');
-
-                            // Try to find and reuse a sender with a null track (from previous replaceTrack(null))
                             let nullSenderFound = false;
                             for (const s of senders) {
                                 if (!s.track || s.track === null) {
-                                    // Found a sender with null track - this is likely our mic sender from deafening
-                                    const receiverKind = s.transceiver?.receiver?.track?.kind;
-                                    const transceiverMid = s.transceiver?.mid;
-
-                                    console.log('[Undeafen] Found null sender for', userId,
-                                        ', receiver kind:', receiverKind, ', mid:', transceiverMid);
-
-                                    // Since we only replace mic tracks (not screen audio) with null during deafening,
-                                    // we can safely assume this null sender should have the mic track
-                                    console.log('[Undeafen] Replacing null sender with mic track for', userId);
-                                    s.replaceTrack(micAudioTrack);
+                                    s.replaceTrack(micAudioTrack).catch(() => {});
                                     nullSenderFound = true;
+                                    changed = true;
                                     break;
                                 }
                             }
 
-                            // If no null sender was found, add a new track (peer joined while deafened)
                             if (!nullSenderFound) {
-                                console.log('[Undeafen] No null sender found, adding new mic track for', userId);
                                 pc.addTrack(micAudioTrack, localStream);
+                                changed = true;
                             }
+                        }
 
-                            console.log('[Undeafen] Negotiating with', userId);
+                        if (changed) {
                             negotiate(userId, pc);
                         }
                     }
-
-                    // Final verification: ensure track is still enabled after all operations
-                    if (shouldEnableMic && !micAudioTrack.enabled) {
-                        console.warn('[Undeafen] WARNING: mic track was disabled after processing, re-enabling');
-                        micAudioTrack.enabled = true;
-                    }
-                    console.log('[Undeafen] Final mic track state - enabled:', micAudioTrack.enabled);
                 }
 
                 // Restore remote audio
@@ -4398,7 +4526,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     type: 'update-user',
                     data: {
                         isMuted: isDeafened || !micAudioTrack || !micAudioTrack.enabled,
-                        isDeafened: isDeafened
+                        isDeafened: isDeafened,
+                        micTrackId: micAudioTrack ? micAudioTrack.id : null,
+                        screenAudioTrackId: screenAudioTrack ? screenAudioTrack.id : null
                     }
                 }));
             }
@@ -4477,7 +4607,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
                         type: 'screen-toggle',
-                        data: { enabled: false, hasAudio: false }
+                        data: { enabled: false, hasAudio: false, screenAudioTrackId: null }
                     }));
                 }
 
@@ -4539,7 +4669,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     if (ws && ws.readyState === WebSocket.OPEN) {
                         ws.send(JSON.stringify({
                             type: 'screen-toggle',
-                            data: { enabled: true, hasAudio: !!screenAudioTrack }
+                            data: {
+                                enabled: true,
+                                hasAudio: !!screenAudioTrack,
+                                screenAudioTrackId: screenAudioTrack ? screenAudioTrack.id : null
+                            }
                         }));
                     }
 
