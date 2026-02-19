@@ -4390,6 +4390,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 });
             }
 
+
+            // Update the local label on usage of toggleDeafen 
+            updateLocalLabel();
+
             // Send update AFTER we've finished deafening/undeafening
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
