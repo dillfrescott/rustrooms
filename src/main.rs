@@ -1769,16 +1769,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              
              if (videoId && videoId !== currentVideoId) {
                  try {
-                     if (currentVideoTrack) {
-                         currentVideoTrack.stop();
-                         localStream.removeTrack(currentVideoTrack);
-                     }
-                     
-                     await new Promise(r => setTimeout(r, 200));
-
                      const constraints = { video: { deviceId: { exact: videoId } } };
-                     const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                     const newTrack = stream.getVideoTracks()[0];
+                     const newVideoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                     const newTrack = newVideoStream.getVideoTracks()[0];
                      
                       if (localStream) {
                           localStream.addTrack(newTrack);
@@ -1806,6 +1799,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                              }));
                          }
                       }
+
+                     if (currentVideoTrack) {
+                         localStream.removeTrack(currentVideoTrack);
+                         currentVideoTrack.stop();
+                     }
 
                  } catch (e) {
                      console.error("Video switch failed", e);
@@ -4630,8 +4628,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const settingsAvatarPreview = document.getElementById('settingsAvatarPreview');
         const settingsAvatarPlaceholder = document.getElementById('settingsAvatarPlaceholder');
         let newAvatarCandidate = null;
+        let settingsInitialAudioId = '';
+        let settingsInitialVideoId = '';
+        let settingsInitialAudioOutputId = '';
 
-        function openSettings() {
+        async function openSettings() {
             settingsNicknameInput.value = userNickname;
             newAvatarCandidate = userAvatar;
             
@@ -4644,7 +4645,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 settingsAvatarPlaceholder.classList.remove('hidden');
             }
             
-            populateSettingsDeviceList();
+            await populateSettingsDeviceList();
+            const settingsAudio = document.getElementById('settingsAudioSource');
+            const settingsVideo = document.getElementById('settingsVideoSource');
+            const settingsAudioOutput = document.getElementById('settingsAudioOutputSource');
+            settingsInitialAudioId = settingsAudio ? settingsAudio.value : '';
+            settingsInitialVideoId = settingsVideo ? settingsVideo.value : '';
+            settingsInitialAudioOutputId = settingsAudioOutput ? settingsAudioOutput.value : '';
             settingsOverlay.classList.remove('hidden');
             if (localStream) {
                 setupVolumeMeter(localStream, 'settingsMicBar');
@@ -4701,17 +4708,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const newAudioOutput = document.getElementById('settingsAudioOutputSource').value;
             const newVideo = document.getElementById('settingsVideoSource').value;
 
-            const currentAudioTrack = localStream ? localStream.getAudioTracks()[0] : null;
-            const currentVideoTrack = localStream ? localStream.getVideoTracks()[0] : null;
-            
-            const currentAudioId = currentAudioTrack ? currentAudioTrack.getSettings().deviceId : "";
-            const currentVideoId = currentVideoTrack ? currentVideoTrack.getSettings().deviceId : "";
-
-            if (newAudio !== currentAudioId || newVideo !== currentVideoId) {
+            if (newAudio !== settingsInitialAudioId || newVideo !== settingsInitialVideoId) {
                 await switchMediaStream(newAudio, newVideo);
             }
 
-            if (newAudioOutput !== currentAudioOutputId) {
+            if (newAudioOutput !== settingsInitialAudioOutputId) {
                 await changeAudioOutput(newAudioOutput);
             }
 
