@@ -127,15 +127,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* Professional monochromatic base with subtle cool tones */
-            --bg-primary: #09090b;
-            --bg-secondary: #18181b;
-            --bg-tertiary: #27272a;
-            --bg-elevated: rgba(39, 39, 42, 0.75);
-            --bg-elevated-strong: rgba(39, 39, 42, 0.9);
-            --border-subtle: rgba(255, 255, 255, 0.06);
-            --border-medium: rgba(255, 255, 255, 0.1);
-            --border-strong: rgba(255, 255, 255, 0.15);
+            /* OLED Black Theme */
+            --bg-primary: #000000;
+            --bg-secondary: #050505;
+            --bg-tertiary: #0a0a0a;
+            --bg-elevated: #111111;
+            --bg-elevated-strong: #161616;
+            --border-subtle: #222222;
+            --border-medium: #333333;
+            --border-strong: #444444;
 
             /* Refined text hierarchy */
             --text-primary: #fafafa;
@@ -205,7 +205,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .video-container {
             position: relative;
-            background: linear-gradient(145deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            background: var(--bg-secondary);
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid var(--border-subtle);
@@ -217,15 +217,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .video-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            opacity: 0.6;
-            z-index: 10;
+            display: none;
         }
 
         .video-container:hover {
@@ -249,7 +241,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(145deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            background: var(--bg-secondary);
             z-index: 10;
         }
 
@@ -273,7 +265,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid var(--border-medium);
-            background: linear-gradient(145deg, var(--bg-tertiary), var(--bg-secondary));
+            background: var(--bg-tertiary);
         }
 
         .avatar-center img {
@@ -343,7 +335,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.05));
+            background: rgba(255, 255, 255, 0.05);
             opacity: 0;
             transition: opacity 0.15s ease;
         }
@@ -395,7 +387,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             overflow: hidden;
             z-index: 40;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            background: linear-gradient(145deg, var(--bg-secondary), var(--bg-tertiary));
+            background: var(--bg-secondary);
         }
 
         @media (min-width: 768px) {
@@ -592,14 +584,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .mic-bar {
             height: 100%;
             width: 0%;
-            background: linear-gradient(90deg, var(--success), #34d399);
+            background: var(--success);
             border-radius: 2px;
             transition: width 0.04s linear;
         }
 
         .taskbar {
-            background: var(--bg-elevated-strong);
-            border-top: 1px solid var(--border-medium);
+            background: #000000;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(32px) saturate(180%) brightness(115%);
             -webkit-backdrop-filter: blur(32px) saturate(180%) brightness(115%);
             padding-bottom: env(safe-area-inset-bottom);
@@ -638,13 +630,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         /* Button styling */
         .btn-primary {
-            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+            background: var(--accent);
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             border-radius: 10px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
         .btn-primary:hover {
-            background: linear-gradient(135deg, var(--accent-hover) 0%, #1d4ed8 100%);
+            background: var(--accent-hover);
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
         }
@@ -729,7 +721,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             width: 320px;
             z-index: 100;
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            background: rgba(15, 15, 20, 0.8);
+            background: #000000;
             backdrop-filter: blur(24px) saturate(160%);
             -webkit-backdrop-filter: blur(24px) saturate(160%);
             border-right: 1px solid var(--border-medium);
@@ -772,7 +764,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .room-item.active {
             border-color: var(--accent);
-            background: rgba(59, 130, 246, 0.1);
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .room-name {
@@ -870,8 +862,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             width: 90%;
             max-width: 400px;
             padding: 32px;
-            transform: scale(0.95);
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: scale(0.96);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .modal-overlay.open .modal-content {
@@ -986,7 +978,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="welcomeOverlay" class="fixed inset-0 z-[70] flex flex-col items-center justify-center p-4" style="display: none; background: linear-gradient(180deg, var(--bg-primary) 0%, #0d0d18 100%);">
+    <div id="welcomeOverlay" class="fixed inset-0 z-[70] flex flex-col items-center justify-center p-4" style="display: none; background: var(--bg-primary);">
         <canvas id="particleCanvas"></canvas>
         <div class="text-center space-y-8 max-w-md w-full relative z-10">
             <div class="space-y-3" id="welcomeTitleContainer">
@@ -1009,7 +1001,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="configOverlay" class="fixed inset-0 z-[60] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: rgba(5, 5, 8, 0.85); backdrop-filter: blur(16px) saturate(120%);">
+    <div id="configOverlay" class="fixed inset-0 z-[60] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(16px) saturate(120%);">
         <canvas id="particleCanvasConfig" class="absolute inset-0 pointer-events-none" style="z-index: 1;"></canvas>
         <div id="configPanel" class="glass-panel p-6 md:p-8 rounded-3xl max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
             <div class="text-center space-y-1 mb-5">
@@ -1096,7 +1088,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="settingsOverlay" class="fixed inset-0 z-[80] flex items-center justify-center p-4 hidden" style="background: rgba(5, 5, 8, 0.88); backdrop-filter: blur(20px) saturate(140%);">
+    <div id="settingsOverlay" class="fixed inset-0 z-[80] flex items-center justify-center p-4 hidden" style="background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px) saturate(140%);">
         <div class="glass-panel p-6 md:p-8 rounded-3xl max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
              <button onclick="closeSettings()" class="absolute top-5 right-5 transition-colors p-1 rounded-lg hover:bg-white/10" style="color: var(--text-muted);">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -1201,7 +1193,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             <div class="pip-wrapper" id="localPipWrapper">
                  <div class="w-full h-full relative flex flex-col">
-                    <div id="localAvatarLayer" class="absolute inset-0 z-20 flex items-center justify-center" style="display: none; background: linear-gradient(145deg, var(--bg-secondary) 0%, #0f0f11 100%);">
+                    <div id="localAvatarLayer" class="absolute inset-0 z-20 flex items-center justify-center" style="display: none; background: var(--bg-secondary);">
                         <img id="localAvatarImg" src="" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-30 hidden" draggable="false">
                         <div class="relative w-14 h-14 md:w-20 md:h-20 rounded-2xl flex items-center justify-center overflow-hidden z-10" style="background: var(--bg-secondary); border: 2px solid var(--border-subtle);">
                              <img id="localAvatarCenterImg" src="" class="w-full h-full object-cover hidden" draggable="false">
