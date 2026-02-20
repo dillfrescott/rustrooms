@@ -3760,6 +3760,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             volControls.id = `vol-controls-${userId}`;
             volControls.className = 'volume-controls z-30';
 
+            const mainVolRow = document.createElement('div');
+            mainVolRow.className = 'vol-row';
+            mainVolRow.id = `vol-row-main-${userId}`;
+            mainVolRow.innerHTML = `
+                <button class="text-white hover:text-blue-400" onclick="toggleMute('${userId}', 'main')" id="mute-main-${userId}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${savedVol === 0 ? '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>' : '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>'}</svg>
+                </button>
+                <input type="range" min="0" max="1" step="0.05" value="${savedVol}" oninput="setVolume('${userId}', 'main', this.value)">
+            `;
+            if (savedVol === 0) {
+                const btn = mainVolRow.querySelector("button");
+                if (btn) btn.classList.add("text-red-500");
+            }
+            volControls.appendChild(mainVolRow);
+
             const fsBtn = document.createElement('button');
             fsBtn.className = 'absolute top-3 right-3 p-2 rounded-xl bg-black/40 hover:bg-blue-600 text-white backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 scale-90 hover:scale-100 z-30';
             fsBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
@@ -3939,23 +3954,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         mainStream.addTrack(event.track);
                         setupAudioMonitor(mainStream, `wrapper-${userId}`);
                         
-                        if (!document.getElementById(`vol-row-main-${userId}`)) {
-                            const row = document.createElement('div');
-                            row.className = 'vol-row';
-                            row.id = `vol-row-main-${userId}`;
-                            row.innerHTML = `
-                                <button class="text-white hover:text-blue-400" onclick="toggleMute('${userId}', 'main')" id="mute-main-${userId}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-                                </button>
-                                <input type="range" min="0" max="1" step="0.05" value="${getVolumeSettings(userId, 'main')}" oninput="setVolume('${userId}', 'main', this.value)">
-                            `;
-                            volControls.insertBefore(row, volControls.firstChild);
-                        }
-                        
-                        event.track.onended = () => {
-                            const row = document.getElementById(`vol-row-main-${userId}`);
-                            if (row) row.remove();
-                        };
+                        // Main volume row is now created unconditionally in createPeerUI.
+                        // We do not remove it when the audio track ends to keep the UI persistent.
                     } else {
                         // A second remote audio track is the screen-share audio track in this app.
                         // It can arrive before identify/screen-toggle metadata for late joiners.
