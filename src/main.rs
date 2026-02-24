@@ -411,7 +411,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             background-color: var(--danger);
             border-radius: 50%;
             display: inline-block;
-            margin-right: 10px;
             transition: background-color 0.3s;
         }
         .connection-dot.connected {
@@ -426,6 +425,36 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             0%, 100% { opacity: 1; }
             50% { opacity: 0.8; }
         }
+
+        .ping-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .ping-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 12px;
+        }
+
+        .ping-bar {
+            width: 3px;
+            background-color: var(--border-medium);
+            border-radius: 1px;
+            transition: background-color 0.3s, height 0.3s;
+        }
+
+        .ping-bar-1 { height: 4px; }
+        .ping-bar-2 { height: 8px; }
+        .ping-bar-3 { height: 12px; }
+
+        .ping-good .ping-bar { background-color: var(--success); }
+        .ping-fair .ping-bar-1, .ping-fair .ping-bar-2 { background-color: var(--warning); }
+        .ping-poor .ping-bar-1 { background-color: var(--danger); }
 
         input[type=range] {
             -webkit-appearance: none;
@@ -1149,23 +1178,35 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     </div>
 
     <div id="appLayout" class="hidden flex-col h-full w-full">
-        <div class="flex-none p-4 md:p-5 z-40 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <button id="sidebarToggle" onclick="toggleSidebar()" class="control-btn shadow-xl hidden !w-12 !h-12 md:!w-14 md:!h-14" title="Channels (R)">
+        <div class="flex-none p-3 sm:p-4 md:p-5 z-40 flex justify-between items-center gap-2 md:gap-4">
+            <div class="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                <button id="sidebarToggle" onclick="toggleSidebar()" class="control-btn shadow-xl hidden !w-10 !h-10 md:!w-14 md:!h-14 flex-shrink-0" title="Channels (R)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </button>
-                <div class="status-pill px-4 py-2 rounded-full flex items-center gap-2">
-                    <div id="connectionDot" class="connection-dot"></div>
-                    <span id="statusText" class="text-xs md:text-sm font-medium" style="color: var(--text-primary);">Waiting...</span>
-                    <button id="btnReconnect" onclick="retryConnection()" class="hidden ml-2 p-1.5 rounded-full transition-all" style="color: var(--text-muted);" title="Retry Connection">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-                    </button>
-                </div>
+                <div id="currentChannelName" class="text-white font-semibold text-lg md:text-xl truncate min-w-0"></div>
             </div>
 
-            <div id="btnCopy" class="status-pill px-4 py-2 rounded-full cursor-pointer transition-all flex items-center gap-2 hover:border-opacity-30" onclick="copyLink()">
-                <span class="text-xs md:text-sm font-medium" style="color: var(--text-primary);">Invite Link</span>
-                <svg id="iconCopy" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            <div class="flex items-center justify-end gap-2 md:gap-3 flex-shrink-0">
+                <div class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center justify-center gap-2 md:gap-2.5 flex-shrink-0 h-8 md:h-10">
+                    <div id="connectionDot" class="connection-dot"></div>
+                    <span id="statusText" class="text-xs md:text-sm font-medium hidden sm:inline-block" style="color: var(--text-primary);">Waiting...</span>
+                    <button id="btnReconnect" onclick="retryConnection()" class="hidden ml-1 p-1 rounded-full transition-all" style="color: var(--text-muted);" title="Retry Connection">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                    </button>
+                    <div id="pingContainer" class="ping-container hidden !ml-1.5 !pl-1.5 md:!ml-2 md:!pl-2 border-l !border-[var(--border-subtle)]">
+                        <span id="pingText" class="w-7 md:w-8 text-right">0ms</span>
+                        <div id="pingBars" class="ping-bars">
+                            <div class="ping-bar ping-bar-1"></div>
+                            <div class="ping-bar ping-bar-2"></div>
+                            <div class="ping-bar ping-bar-3"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="btnCopy" class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full cursor-pointer transition-all flex items-center justify-center gap-2 hover:border-opacity-30 flex-shrink-0" onclick="copyLink()" title="Invite Link">
+                    <span class="text-xs md:text-sm font-medium hidden md:inline-block" style="color: var(--text-primary);">Invite Link</span>
+                    <svg id="iconCopy" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                </div>
             </div>
         </div>
 
@@ -1376,6 +1417,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let channelId = parts[1] || (roomId ? 'General' : '');
         if (channelId.length > 32) channelId = channelId.substring(0, 32);
 
+        const initialChannelNameEl = document.getElementById('currentChannelName');
+        if (initialChannelNameEl && channelId) {
+            initialChannelNameEl.innerText = `# ${channelId}`;
+        }
+
         const currentPath = window.location.pathname;
         const newPath = `/${roomId}${channelId ? '/' + channelId : ''}`;
         if (currentPath !== newPath && roomId) {
@@ -1427,6 +1473,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let heartbeatInterval = null;
         const heartbeatIntervalMs = 8000;
         const heartbeatTimeoutMs = 5000;
+        let lastPingSentTime = 0;
         let lastPongTime = Date.now();
         let heartbeatTimeout = null;
 
@@ -1491,24 +1538,47 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             return Math.max(exponentialDelay + jitter, baseReconnectionDelay);
         }
 
+        function updatePingUI(pingMs) {
+            const pingContainer = document.getElementById('pingContainer');
+            const pingText = document.getElementById('pingText');
+
+            if (pingContainer && pingText) {
+                pingContainer.classList.remove('hidden');
+                pingText.innerText = `${pingMs}ms`;
+
+                pingContainer.classList.remove('ping-good', 'ping-fair', 'ping-poor');
+                if (pingMs < 100) {
+                    pingContainer.classList.add('ping-good');
+                } else if (pingMs < 250) {
+                    pingContainer.classList.add('ping-fair');
+                } else {
+                    pingContainer.classList.add('ping-poor');
+                }
+            }
+        }
+
+        function sendPing() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                lastPingSentTime = Date.now();
+                ws.send(JSON.stringify({ type: 'ping' }));
+
+                if (heartbeatTimeout) clearTimeout(heartbeatTimeout);
+                heartbeatTimeout = setTimeout(() => {
+                    const timeSincePong = Date.now() - lastPongTime;
+                    if (timeSincePong > heartbeatIntervalMs + heartbeatTimeoutMs) {
+                        console.warn('Heartbeat timeout - no pong received, closing connection');
+                        ws.close();
+                    }
+                }, heartbeatTimeoutMs);
+            }
+        }
+
         function startHeartbeat() {
             stopHeartbeat();
             lastPongTime = Date.now();
 
-            heartbeatInterval = setInterval(() => {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-
-                    ws.send(JSON.stringify({ type: 'ping' }));
-
-                    heartbeatTimeout = setTimeout(() => {
-                        const timeSincePong = Date.now() - lastPongTime;
-                        if (timeSincePong > heartbeatIntervalMs + heartbeatTimeoutMs) {
-                            console.warn('Heartbeat timeout - no pong received, closing connection');
-                            ws.close();
-                        }
-                    }, heartbeatTimeoutMs);
-                }
-            }, heartbeatIntervalMs);
+            sendPing();
+            heartbeatInterval = setInterval(sendPing, heartbeatIntervalMs);
         }
 
         function stopHeartbeat() {
@@ -1520,10 +1590,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 clearTimeout(heartbeatTimeout);
                 heartbeatTimeout = null;
             }
+            const pingContainer = document.getElementById('pingContainer');
+            if (pingContainer) pingContainer.classList.add('hidden');
         }
 
         function handlePong() {
             lastPongTime = Date.now();
+            const pingMs = lastPongTime - lastPingSentTime;
+
+            if (lastPingSentTime > 0) {
+                updatePingUI(pingMs);
+            }
+
             if (heartbeatTimeout) {
                 clearTimeout(heartbeatTimeout);
                 heartbeatTimeout = null;
@@ -2738,6 +2816,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             roomId = newRoomId;
             channelId = newChannelId;
 
+            const channelNameEl = document.getElementById('currentChannelName');
+            if (channelNameEl) {
+                channelNameEl.innerText = `# ${channelId}`;
+            }
+
             const newUrl = `/${roomId}/${channelId}`;
             if (window.location.pathname !== newUrl) {
                 history.pushState({ roomId, channelId }, "", newUrl);
@@ -3244,6 +3327,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 if (btn) btn.classList.remove('hidden');
                                 isReconnecting = false;
                                 console.error('WebSocket disconnected after multiple retries. No further attempts will be made.');
+                                stopHeartbeat();
                             } else {
                                 const delay = getReconnectDelay(reconnectionAttempts);
 
