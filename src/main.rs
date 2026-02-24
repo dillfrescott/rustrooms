@@ -1194,7 +1194,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
                     </button>
                     <div id="pingContainer" class="ping-container hidden !ml-1.5 !pl-1.5 md:!ml-2 md:!pl-2 border-l !border-[var(--border-subtle)]">
-                        <span id="pingText" class="w-8 md:w-9 text-right shrink-0">0ms</span>
+                        <span id="pingText" class="w-8 md:w-9 text-right shrink-0 mr-1">0ms</span>
                         <div id="pingBars" class="ping-bars">
                             <div class="ping-bar ping-bar-1"></div>
                             <div class="ping-bar ping-bar-2"></div>
