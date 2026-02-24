@@ -381,7 +381,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             border-radius: 10px;
             border: 1px solid var(--border-subtle);
             overflow: hidden;
-            z-index: 40;
+            z-index: 30;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             background: var(--bg-secondary);
         }
@@ -391,6 +391,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 width: 280px;
                 bottom: 240px;
                 border-radius: 12px;
+            }
+        }
+
+        @media (max-width: 950px) and (orientation: landscape) {
+            .pip-wrapper {
+                width: 100px;
+                bottom: 120px;
             }
         }
 
@@ -4975,28 +4982,84 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             pip.addEventListener('mousedown', onMouseDown);
             pip.addEventListener('touchstart', onTouchStart, { passive: false });
 
+            let lastOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
+            let resizeTimeoutId = null;
             window.addEventListener('resize', () => {
-                if (!pip.style.left) return;
+                if (resizeTimeoutId) clearTimeout(resizeTimeoutId);
 
-                const pipRect = pip.getBoundingClientRect();
-                const taskbarRect = taskbar.getBoundingClientRect();
-                const margin = 16;
+                resizeTimeoutId = setTimeout(() => {
+                    const currentOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
+                    const isScreenFlip = currentOrientation !== lastOrientation;
+                    lastOrientation = currentOrientation;
 
-                const minX = margin;
-                const maxX = window.innerWidth - pipRect.width - margin;
-                const minY = margin;
-                const maxY = window.innerHeight - taskbarRect.height - pipRect.height - margin;
+                    if (isScreenFlip) {
+                        pip.style.left = '';
+                        pip.style.top = '';
+                        pip.style.bottom = '';
+                        pip.style.right = '';
+                        return;
+                    }
 
-                let currentLeft = parseFloat(pip.style.left);
-                let currentTop = parseFloat(pip.style.top);
+                    if (!pip.style.left) return;
 
-                if (isNaN(currentLeft) || isNaN(currentTop)) return;
+                    const pipRect = pip.getBoundingClientRect();
+                    const taskbarRect = taskbar.getBoundingClientRect();
+                    const margin = 16;
 
-                let newX = Math.max(minX, Math.min(currentLeft, maxX));
-                let newY = Math.max(minY, Math.min(currentTop, maxY));
+                    const pipWidth = pip.offsetWidth;
+                    const pipHeight = pip.offsetHeight;
 
-                pip.style.left = newX + 'px';
-                pip.style.top = newY + 'px';
+                    const minX = margin;
+                    const maxX = window.innerWidth - pipWidth - margin;
+                    const minY = margin;
+                    const maxY = window.innerHeight - taskbarRect.height - pipHeight - margin;
+
+                    let currentLeft = parseFloat(pip.style.left);
+                    let currentTop = parseFloat(pip.style.top);
+
+                    if (isNaN(currentLeft) || isNaN(currentTop)) {
+                        currentLeft = pipRect.left;
+                        currentTop = pipRect.top;
+                        pip.style.bottom = 'auto';
+                        pip.style.right = 'auto';
+                    }
+
+                    let newX = Math.max(minX, Math.min(currentLeft, maxX));
+                    let newY = Math.max(minY, Math.min(currentTop, maxY));
+
+                    const statusRect = connectionDot && connectionDot.parentElement ? connectionDot.parentElement.getBoundingClientRect() : null;
+                    const copyRect = btnCopy ? btnCopy.getBoundingClientRect() : null;
+
+                    if (statusRect) {
+                        const dangerRight = statusRect.right + margin;
+                        const dangerBottom = statusRect.bottom + margin;
+
+                        if (newX < dangerRight && newY < dangerBottom) {
+                            const distToRight = dangerRight - newX;
+                            const distToBottom = dangerBottom - newY;
+                            if (distToRight < distToBottom) newX = dangerRight;
+                            else newY = dangerBottom;
+                        }
+                    }
+
+                    if (copyRect) {
+                        const dangerLeft = copyRect.left - margin - pipWidth;
+                        const dangerBottom = copyRect.bottom + margin;
+
+                        if (newX > dangerLeft && newY < dangerBottom) {
+                            const distToLeft = newX - dangerLeft;
+                            const distToBottom = dangerBottom - newY;
+                            if (distToLeft < distToBottom) newX = dangerLeft;
+                            else newY = dangerBottom;
+                        }
+                    }
+
+                    newX = Math.max(minX, Math.min(newX, maxX));
+                    newY = Math.max(minY, Math.min(newY, maxY));
+
+                    pip.style.left = newX + 'px';
+                    pip.style.top = newY + 'px';
+                }, 250);
             });
         })();
     </script>
