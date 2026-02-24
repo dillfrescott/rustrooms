@@ -5235,7 +5235,11 @@ async fn main() {
         .route("/ws/{room_id}/{channel_id}/", get(redirect_ws_trailing_slash))
         .with_state(state);
 
-    let port = 3000;
+    let port = std::env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse::<u16>().ok())
+        .unwrap_or(3000);
+
     let listener = match tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await {
         Ok(l) => l,
         Err(e) => {
