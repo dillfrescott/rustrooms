@@ -73,7 +73,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
-    
+
     event.respondWith(
         (async () => {
             try {
@@ -127,7 +127,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* OLED Black Theme */
+
             --bg-primary: #000000;
             --bg-secondary: #050505;
             --bg-tertiary: #0a0a0a;
@@ -137,19 +137,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             --border-medium: #333333;
             --border-strong: #444444;
 
-            /* Refined text hierarchy */
             --text-primary: #fafafa;
             --text-secondary: #a1a1aa;
             --text-muted: #71717a;
 
-            /* Professional accent - understated blue */
             --accent: #3b82f6;
             --accent-hover: #2563eb;
             --accent-glow: rgba(59, 130, 246, 0.25);
             --accent-blue: #3b82f6;
             --accent-dark-blue: #1d4ed8;
 
-            /* Muted status colors */
             --accent-green: #10b981;
             --accent-red: #ef4444;
             --accent-dark-red: #dc2626;
@@ -181,7 +178,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             touch-action: pan-x pan-y;
         }
 
-        /* Subtle text rendering for professional appearance */
         * {
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
@@ -603,7 +599,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
-        /* Custom input styling */
         input[type="text"],
         input[type="password"],
         select {
@@ -628,7 +623,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             opacity: 0.8;
         }
 
-        /* Button styling */
         .btn-primary {
             background: var(--accent);
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -659,7 +653,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             border-color: var(--border-medium);
         }
 
-        /* Status pill */
         .status-pill {
             background: var(--bg-elevated);
             border: 1px solid var(--border-subtle);
@@ -674,7 +667,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             border-color: var(--border-medium);
         }
 
-        /* Improved label styling */
         .label-text {
             color: var(--text-secondary);
             font-size: 0.75rem;
@@ -682,7 +674,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             letter-spacing: 0.01em;
         }
 
-        /* Empty state */
         .empty-state-icon {
             color: var(--text-muted);
             opacity: 0.4;
@@ -712,7 +703,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             z-index: 1;
         }
 
-        /* Sidebar Styling */
         #roomSidebar {
             position: fixed;
             left: -320px;
@@ -816,7 +806,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             color: var(--text-muted);
         }
 
-
         .sidebar-overlay {
             position: fixed;
             inset: 0;
@@ -833,7 +822,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             pointer-events: auto;
         }
 
-        /* Custom Modal Styling */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -902,7 +890,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .status-icon.active {
-            color: #ef4444; /* active-red */
+            color: #ef4444;
             opacity: 1;
         }
     </style>
@@ -910,7 +898,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 <body class="flex flex-col overflow-hidden" style="background-color: var(--bg-primary);">
 
     <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
-    
+
     <div id="roomSidebar">
         <div class="sidebar-header">
             <h2 id="sidebarTitle" class="text-xl font-bold text-white">Channels</h2>
@@ -926,7 +914,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 </button>
             </div>
             <div id="roomListContainer">
-                <!-- Data will be injected here -->
+
             </div>
         </div>
         </div>
@@ -936,7 +924,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         <div class="modal-content text-center space-y-6">
             <h3 id="modalTitle" class="text-2xl font-bold text-white">Name Channel</h3>
             <div class="space-y-4">
-                <input type="text" id="modalInput" placeholder="Enter name..." class="w-full rounded-xl px-4 py-3 text-white transition-all bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none">
+                <input type="text" id="modalInput" placeholder="Enter name..." class="w-full rounded-xl px-4 py-3 text-white transition-all bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none" maxlength="32">
                 <div class="flex gap-3">
                     <button onclick="closeNameModal()" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
                     <button id="modalSubmit" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all">Confirm</button>
@@ -1010,7 +998,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             </div>
 
             <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
-                <!-- Left: Video Preview -->
+
                 <div class="lg:w-1/2 flex flex-col gap-4">
                     <div class="relative aspect-video rounded-2xl overflow-hidden flex-shrink-0" style="background: var(--bg-secondary); border: 1px solid var(--border-subtle);">
                         <video id="previewVideo" autoplay playsinline muted class="w-full h-full object-contain"></video>
@@ -1032,7 +1020,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     </div>
                 </div>
 
-                <!-- Right: Configuration -->
                 <div class="lg:w-1/2 space-y-4">
                     <div class="flex flex-col sm:flex-row gap-4">
                         <div class="flex-shrink-0 flex justify-center sm:justify-start">
@@ -1100,7 +1087,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             </div>
 
             <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
-                <!-- Left: Avatar & Nickname -->
+
                 <div class="lg:w-1/2 space-y-4">
                     <div class="flex flex-col items-center gap-4 p-4 rounded-2xl" style="background: var(--bg-secondary); border: 1px solid var(--border-subtle);">
                         <label class="label-text">Avatar</label>
@@ -1119,7 +1106,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     </div>
                 </div>
 
-                <!-- Right: Device Settings -->
                 <div class="lg:w-1/2 space-y-4">
                     <div class="grid grid-cols-1 gap-4">
                          <div>
@@ -1242,7 +1228,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
     </script>
     <script>
-        // Welcome screen simple particle system (lobby-style)
+
         (function() {
             const canvas = document.getElementById('particleCanvas');
             const ctx = canvas.getContext('2d');
@@ -1310,7 +1296,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             animate();
         })();
 
-        // Config screen simple particle system (lobby-style)
         (function() {
             const canvas = document.getElementById('particleCanvasConfig');
             const ctx = canvas.getContext('2d');
@@ -1382,9 +1367,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let parts = window.location.pathname.split('/').filter(p => p !== '');
         let roomId = parts[0] || '';
         let channelId = parts[1] || (roomId ? 'General' : '');
+        if (channelId.length > 32) channelId = channelId.substring(0, 32);
+
+        const currentPath = window.location.pathname;
+        const newPath = `/${roomId}${channelId ? '/' + channelId : ''}`;
+        if (currentPath !== newPath && roomId) {
+            window.history.replaceState({ roomId, channelId }, "", newPath);
+        }
+
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         let wsUrl = roomId ? `${wsProtocol}//${window.location.host}/ws/${roomId}/${channelId}` : '';
-        
+
         let ws;
         let localStream;
         let screenStream;
@@ -1407,32 +1400,29 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let isDeafened = false;
         let roomCreationPassword = sessionStorage.getItem('rustrooms_room_password');
         let workletLoadingPromise = null;
-        
-        // Persistent user ID to prevent duplicates on reconnection
+
         let persistentUserId = localStorage.getItem('rustrooms_user_id');
         if (!persistentUserId) {
             persistentUserId = crypto.randomUUID();
             localStorage.setItem('rustrooms_user_id', persistentUserId);
         }
-        
+
         let reconnectionAttempts = 0;
         const maxReconnectionAttempts = 10;
         const baseReconnectionDelay = 1000;
         const maxReconnectionDelay = 30000;
         let hasLeftRoom = false;
         let isReconnecting = false;
-        
-        // Timer for delayed reconnect status display
-        let reconnectStatusTimeout = null;
-        const reconnectDelayMs = 5000; // 5 second delay before showing reconnecting
 
-        // WebSocket heartbeat/keep-alive
+        let reconnectStatusTimeout = null;
+        const reconnectDelayMs = 5000;
+
         let heartbeatInterval = null;
-        const heartbeatIntervalMs = 8000; // Send ping every 8 seconds
-        const heartbeatTimeoutMs = 5000; // Wait 5 seconds for pong response
+        const heartbeatIntervalMs = 8000;
+        const heartbeatTimeoutMs = 5000;
         let lastPongTime = Date.now();
         let heartbeatTimeout = null;
-        
+
         function getScreenAudioFlag(data) {
             if (!data) return undefined;
             if (data.hasAudio !== undefined) return !!data.hasAudio;
@@ -1473,7 +1463,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             `;
             volControls.appendChild(row);
         }
-        
+
         const rtcConfig = {
             iceServers: [
                 {
@@ -1484,27 +1474,25 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             ]
         };
 
-        // Calculate exponential backoff with jitter to prevent thundering herd
         function getReconnectDelay(attempt) {
             const exponentialDelay = Math.min(
                 baseReconnectionDelay * Math.pow(2, attempt),
                 maxReconnectionDelay
             );
-            // Add jitter: ±25% of the delay
+
             const jitter = exponentialDelay * 0.25 * (Math.random() * 2 - 1);
             return Math.max(exponentialDelay + jitter, baseReconnectionDelay);
         }
 
         function startHeartbeat() {
-            stopHeartbeat(); // Clear any existing heartbeat
+            stopHeartbeat();
             lastPongTime = Date.now();
 
             heartbeatInterval = setInterval(() => {
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    // Send ping
+
                     ws.send(JSON.stringify({ type: 'ping' }));
 
-                    // Set timeout to detect missing pong
                     heartbeatTimeout = setTimeout(() => {
                         const timeSincePong = Date.now() - lastPongTime;
                         if (timeSincePong > heartbeatIntervalMs + heartbeatTimeoutMs) {
@@ -1549,14 +1537,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const videoSelect = document.getElementById('videoSource');
         const avatarPreview = document.getElementById('avatarPreview');
         const avatarPlaceholder = document.getElementById('avatarPlaceholder');
-        
+
         async function initAudioWorklet() {
             if (workletLoadingPromise) return workletLoadingPromise;
-            
+
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
-            
+
             workletLoadingPromise = (async () => {
                 try {
                     await audioContext.audioWorklet.addModule('/rnnoise_processor.js');
@@ -1564,14 +1552,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     return true;
                 } catch (err) {
                     console.error("Failed to load AudioWorklet", err);
-                    workletLoadingPromise = null; // Allow retry
+                    workletLoadingPromise = null;
                     return false;
                 }
             })();
-            
+
             return workletLoadingPromise;
         }
-        
+
         async function requestWakeLock() {
             try {
                 if ('wakeLock' in navigator) {
@@ -1585,7 +1573,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 console.error(`${err.name}, ${err.message}`);
             }
         }
-        
+
         document.addEventListener('visibilitychange', async () => {
             if (wakeLock !== null && document.visibilityState === 'visible') {
                 await requestWakeLock();
@@ -1594,7 +1582,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         async function loadDevices() {
             const btnJoin = document.getElementById('btnJoin');
-            
+
             loadPreferences();
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
@@ -1605,7 +1593,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 await populateDeviceList();
                 navigator.mediaDevices.ondevicechange = populateDeviceList;
 
-                // Start loading worklet early
                 initAudioWorklet();
 
                 await startPreview();
@@ -1622,7 +1609,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      updatePreviewButtons();
                 }
             }
-            
+
             if(btnJoin) {
                  btnJoin.disabled = false;
                  btnJoin.innerHTML = "Join Room";
@@ -1635,17 +1622,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 const currentAudio = audioSelect.value;
                 const currentAudioOutput = currentAudioOutputId;
                 const currentVideo = videoSelect.value;
-                
+
                 const audioTrack = localStream ? localStream.getAudioTracks()[0] : null;
                 const videoTrack = localStream ? localStream.getVideoTracks()[0] : null;
-                
+
                 const activeAudioId = audioTrack ? audioTrack.getSettings().deviceId : null;
                 const activeVideoId = videoTrack ? videoTrack.getSettings().deviceId : null;
 
                 audioSelect.innerHTML = '';
                 audioOutputSelect.innerHTML = '';
                 videoSelect.innerHTML = '';
-                
+
                 devices.forEach(device => {
                     const option = document.createElement('option');
                     option.value = device.deviceId;
@@ -1667,7 +1654,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 if (targetAudioOutputId && [...audioOutputSelect.options].some(o => o.value === targetAudioOutputId)) {
                     audioOutputSelect.value = targetAudioOutputId;
                 }
-                
+
                 const targetVideoId = currentVideoInputId || activeVideoId;
                 if (targetVideoId && [...videoSelect.options].some(o => o.value === targetVideoId)) {
                     videoSelect.value = targetVideoId;
@@ -1677,17 +1664,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 console.error("Enumeration error", e);
             }
         }
-        
+
         async function populateSettingsDeviceList() {
             try {
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const settingsAudio = document.getElementById('settingsAudioSource');
                 const settingsAudioOutput = document.getElementById('settingsAudioOutputSource');
                 const settingsVideo = document.getElementById('settingsVideoSource');
-                
+
                 const audioTrack = localStream ? localStream.getAudioTracks()[0] : null;
                 const videoTrack = localStream ? localStream.getVideoTracks()[0] : null;
-                
+
                 const activeAudioId = audioTrack ? audioTrack.getSettings().deviceId : null;
                 const activeAudioOutputId = currentAudioOutputId;
                 const activeVideoId = videoTrack ? videoTrack.getSettings().deviceId : null;
@@ -1695,7 +1682,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 settingsAudio.innerHTML = '';
                 settingsAudioOutput.innerHTML = '';
                 settingsVideo.innerHTML = '';
-                
+
                 devices.forEach(device => {
                     const option = document.createElement('option');
                     option.value = device.deviceId;
@@ -1707,7 +1694,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                     else if (device.kind === 'videoinput') settingsVideo.appendChild(option);
                 });
-                
+
                 const targetAudioId = currentAudioInputId || activeAudioId;
                 if (targetAudioId && [...settingsAudio.options].some(o => o.value === targetAudioId)) {
                     settingsAudio.value = targetAudioId;
@@ -1717,7 +1704,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 if (targetAudioOutputId && [...settingsAudioOutput.options].some(o => o.value === targetAudioOutputId)) {
                     settingsAudioOutput.value = targetAudioOutputId;
                 }
-                
+
                 const targetVideoId = currentVideoInputId || activeVideoId;
                 if (targetVideoId && [...settingsVideo.options].some(o => o.value === targetVideoId)) {
                     settingsVideo.value = targetVideoId;
@@ -1749,20 +1736,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              const currentVideoTrack = localStream ? localStream.getVideoTracks()[0] : null;
              const currentAudioId = currentAudioTrack ? currentAudioTrack.getSettings().deviceId : "";
              const currentVideoId = currentVideoTrack ? currentVideoTrack.getSettings().deviceId : "";
-             
+
              if (audioId && audioId !== currentAudioId) {
                  try {
-                     const constraints = { 
-                        audio: { 
+                     const constraints = {
+                        audio: {
                             deviceId: { exact: audioId },
                             echoCancellation: true,
                             noiseSuppression: false,
                             autoGainControl: true,
                             sampleRate: 48000
-                        } 
+                        }
                     };
                      let stream = await navigator.mediaDevices.getUserMedia(constraints);
-                     
+
                      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                      await initAudioWorklet();
                      if (audioContext.state === 'suspended') audioContext.resume().catch(e => {});
@@ -1772,9 +1759,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      const dest = audioContext.createMediaStreamDestination();
                      source.connect(worklet);
                      worklet.connect(dest);
-                     
+
                      const newTrack = dest.stream.getAudioTracks()[0];
-                     
+
                      if (localStream && localStream._originalStream) {
                          localStream._originalStream.getTracks().forEach(t => t.stop());
                      }
@@ -1789,7 +1776,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                           if (localVideo) localVideo.srcObject = localStream;
                       }
                       localStream._originalStream = stream;
-                      
+
                       for (const userId in peers) {
                          const pc = peers[userId];
                          const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
@@ -1800,29 +1787,29 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                               negotiate(userId, pc);
                          }
                       }
-                     
+
                      setupAudioMonitor(localStream, 'local');
                      setupVolumeMeter(localStream, 'settingsMicBar');
-                     
+
                  } catch (e) {
                      console.error("Audio switch failed", e);
                      alert("Failed to switch microphone: " + e.message);
                  }
              }
-             
+
              if (videoId && videoId !== currentVideoId) {
                  try {
                      const constraints = { video: { deviceId: { exact: videoId } } };
                      const newVideoStream = await navigator.mediaDevices.getUserMedia(constraints);
                      const newTrack = newVideoStream.getVideoTracks()[0];
-                     
+
                       if (localStream) {
                           localStream.addTrack(newTrack);
                       } else {
                           localStream = new MediaStream([newTrack]);
                           if (localVideo) localVideo.srcObject = localStream;
                       }
-                      
+
                       if (!screenStream) {
                          for (const userId in peers) {
                             const pc = peers[userId];
@@ -1834,7 +1821,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 negotiate(userId, pc);
                             }
                          }
-                         
+
                          if (ws && ws.readyState === WebSocket.OPEN) {
                              ws.send(JSON.stringify({
                                  type: 'cam-toggle',
@@ -1852,7 +1839,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      console.error("Video switch failed", e);
                  }
              }
-             
+
              updateLocalAvatar();
         }
 
@@ -1971,8 +1958,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 audioInputId: audioInputId,
                 videoInputId: videoInputId
             }));
-            
-            // Keep the global variables in sync
+
             currentAudioInputId = audioInputId;
             currentVideoInputId = videoInputId;
             currentAudioOutputId = audioOutputId;
@@ -1982,13 +1968,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const el = document.getElementById(selectId);
             if (!el) return;
             const deviceId = el.value;
-            
+
             if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
             if (audioContext.state === 'suspended') await audioContext.resume();
 
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
-            
+
             osc.connect(gain);
 
             const isSetSinkIdSupported = 'setSinkId' in HTMLMediaElement.prototype;
@@ -1997,28 +1983,28 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (isNonDefaultDevice && isSetSinkIdSupported) {
                 const dest = audioContext.createMediaStreamDestination();
                 gain.connect(dest);
-                
+
                 const audio = new Audio();
                 audio.srcObject = dest.stream;
-                
+
                 try {
                     await audio.setSinkId(deviceId);
                 } catch(e) {
                     console.warn("setSinkId failed", e);
                 }
-                
+
                 audio.play().catch(e => console.warn("Audio play failed", e));
             } else {
                 gain.connect(audioContext.destination);
             }
 
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(523.25, audioContext.currentTime); 
-            osc.frequency.exponentialRampToValueAtTime(1046.5, audioContext.currentTime + 0.1); 
-            
+            osc.frequency.setValueAtTime(523.25, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1046.5, audioContext.currentTime + 0.1);
+
             gain.gain.setValueAtTime(0.2, audioContext.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
-            
+
             osc.start();
             osc.stop(audioContext.currentTime + 0.5);
         }
@@ -2029,7 +2015,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         function setupVolumeMeter(stream, barId) {
             const bar = document.getElementById(barId);
             if (!bar) return;
-            
+
             if (barId === 'setupMicBar') {
                 if (setupMeterFrameId) cancelAnimationFrame(setupMeterFrameId);
             } else if (barId === 'settingsMicBar') {
@@ -2071,9 +2057,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     sum += dataArray[i];
                 }
                 const average = sum / dataArray.length;
-                const val = Math.min(100, (average / 60) * 100); 
+                const val = Math.min(100, (average / 60) * 100);
                 bar.style.width = val + '%';
-                
+
                 if (barId === 'setupMicBar') {
                     setupMeterFrameId = requestAnimationFrame(draw);
                 } else {
@@ -2135,11 +2121,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             const audioSource = audioSelect.value;
             const videoSource = videoSelect.value;
-            
+
             savePreferences();
 
             const constraints = {
-                audio: { 
+                audio: {
                     deviceId: audioSource ? { exact: audioSource } : undefined,
                     echoCancellation: true,
                     noiseSuppression: false,
@@ -2151,16 +2137,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             try {
                 let rawStream = await navigator.mediaDevices.getUserMedia(constraints);
-                
-                // Set up volume meter IMMEDIATELY with raw stream for instant feedback
+
                 setupVolumeMeter(rawStream, 'setupMicBar');
 
                  if (rawStream.getAudioTracks().length > 0) {
                      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                     
-                     // Start loading but don't block the meter OR basic track setup if we can avoid it
+
                      const workletLoaded = await initAudioWorklet();
-                     
+
                      if (audioContext.state === 'suspended') {
                          audioContext.resume().catch(e => {});
                      }
@@ -2169,13 +2153,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                          const source = audioContext.createMediaStreamSource(rawStream);
                          const worklet = new AudioWorkletNode(audioContext, 'rnnoise-processor');
                          const dest = audioContext.createMediaStreamDestination();
-                         
+
                          source.connect(worklet);
                          worklet.connect(dest);
-                         
+
                          const processedAudio = dest.stream.getAudioTracks()[0];
                          const videoTracks = rawStream.getVideoTracks();
-                         
+
                          localStream = new MediaStream([processedAudio, ...videoTracks]);
                          localStream._originalStream = rawStream;
                      } else {
@@ -2188,10 +2172,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 previewVideo.srcObject = localStream;
                 document.getElementById('previewPlaceholder').style.display = 'none';
                 updatePreviewButtons();
-                
-                // If we switched to localStream (processed), we might want to update the meter source, 
-                // but rawStream is usually better for setup menu anyway as it's more sensitive
-                // setupVolumeMeter(localStream, 'setupMicBar'); 
 
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     if (document.getElementById('localVideo')) document.getElementById('localVideo').srcObject = localStream;
@@ -2222,7 +2202,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     for (const userId in peers) {
                         const pc = peers[userId];
                         let negotiationNeeded = false;
-                        
+
                         if (audioTrack) {
                             const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
                             if (sender) {
@@ -2232,7 +2212,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 negotiationNeeded = true;
                             }
                         }
-                        
+
                         if (videoTrack) {
                             const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
                             if (sender) {
@@ -2242,12 +2222,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 negotiationNeeded = true;
                             }
                         }
-                        
+
                         if (negotiationNeeded) {
                             negotiate(userId, pc);
                         }
                     }
-                    
+
                     if (videoTrack) {
                         ws.send(JSON.stringify({
                             type: 'cam-toggle',
@@ -2260,26 +2240,26 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 document.getElementById('previewPlaceholder').style.display = 'flex';
                  try {
                     let rawStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                    
+
                     if (rawStream.getAudioTracks().length > 0) {
                          if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                         
+
                          const workletLoaded = await initAudioWorklet();
-                         
+
                          if (audioContext.state === 'suspended') {
                              audioContext.resume().catch(e => {});
                          }
-    
+
                          if (workletLoaded) {
                              const source = audioContext.createMediaStreamSource(rawStream);
                              const worklet = new AudioWorkletNode(audioContext, 'rnnoise-processor');
                              const dest = audioContext.createMediaStreamDestination();
-                             
+
                              source.connect(worklet);
                              worklet.connect(dest);
-                             
+
                              const processedAudio = dest.stream.getAudioTracks()[0];
-                             
+
                              localStream = new MediaStream([processedAudio]);
                              localStream._originalStream = rawStream;
                          } else {
@@ -2288,7 +2268,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     } else {
                         localStream = rawStream;
                     }
-                    
+
                     previewVideo.srcObject = null;
                     setupVolumeMeter(localStream, 'setupMicBar');
                     updatePreviewButtons();
@@ -2306,14 +2286,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  btnMic.disabled = true;
                  btnMic.classList.add('opacity-50', 'cursor-not-allowed');
                  btnMic.innerText = "No Mic";
-                 
+
                  btnCam.disabled = true;
                  btnCam.classList.add('opacity-50', 'cursor-not-allowed');
                  btnCam.innerText = "No Cam";
                  document.getElementById('previewPlaceholder').style.display = 'flex';
                  return;
              }
-             
+
              const audioTrack = localStream.getAudioTracks()[0];
              const videoTrack = localStream.getVideoTracks()[0];
 
@@ -2372,7 +2352,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         async function joinRoom() {
-            // Reset the left room flag when joining a new room
+
             hasLeftRoom = false;
 
             userNickname = nicknameInput.value.trim() || "Guest";
@@ -2397,7 +2377,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }, 300);
 
             localVideo.srcObject = localStream;
-            
+
             updateLocalLabel();
             updateLocalAvatar();
             const btnMic = document.getElementById('btnMic');
@@ -2405,11 +2385,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             const micOffSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>`;
             const camOffSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
-            
+
              if (localStream) {
                 const audioTrack = localStream.getAudioTracks()[0];
                 const videoTrack = localStream.getVideoTracks()[0];
-                
+
                 if (!audioTrack || !audioTrack.enabled) {
                      btnMic.classList.add('active-red');
                      btnMic.innerHTML = micOffSvg;
@@ -2418,7 +2398,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      btnCam.classList.add('active-red');
                      btnCam.innerHTML = camOffSvg;
                 }
-                
+
                 setupAudioMonitor(localStream, 'local');
             } else {
                  btnMic.classList.add('active-red');
@@ -2434,8 +2414,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     btnDeafen.classList.add('active-red');
                     btnDeafen.innerHTML = deafenOffSvg;
                 }
-                
-                // Ensure all remote audio is muted if joining while deafened
+
                 document.querySelectorAll('video, audio').forEach(el => {
                     if (el.id !== 'localVideo' && el.id !== 'previewVideo') {
                         el.muted = true;
@@ -2444,27 +2423,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             connectWs();
-            
-            // Mark setup as done
-            // Mark setup as done (Session based now)
+
             sessionStorage.setItem('rustrooms_setup_done', 'true');
 
-            // Monitor network connectivity changes (airplane mode, network loss)
             window.addEventListener('offline', () => {
                 console.warn('Network connection lost (offline)');
                 updateStatus('disconnected', 'Network Offline');
-                // Check all peer connections and update their status
+
                 updateConnectionStatus();
             });
 
             window.addEventListener('online', () => {
-                // Don't reconnect if user intentionally left the room
+
                 if (hasLeftRoom) {
                     console.log('User left the room, not reconnecting on network restore');
                     return;
                 }
 
-                // Don't trigger if already reconnecting (avoid race condition)
                 if (isReconnecting) {
                     console.log('Already reconnecting, skipping network restore trigger');
                     return;
@@ -2472,7 +2447,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 console.log('Network connection restored (online)');
                 updateStatus('connecting', 'Reconnecting...');
-                // Reset reconnection attempts and trigger reconnection
+
                 reconnectionAttempts = 0;
                 connectWs();
             });
@@ -2488,40 +2463,40 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
-            
+
             osc.connect(gain);
             gain.connect(audioContext.destination);
-            
+
             const now = audioContext.currentTime;
 
             if (type === 'join') {
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(523.25, now);
                 osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.1);
-                
+
                 gain.gain.setValueAtTime(0.1, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-                
+
                 osc.start(now);
                 osc.stop(now + 0.5);
             } else if (type === 'leave') {
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(440, now); 
+                osc.frequency.setValueAtTime(440, now);
                 osc.frequency.exponentialRampToValueAtTime(220, now + 0.2);
-                
+
                 gain.gain.setValueAtTime(0.1, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-                
+
                 osc.start(now);
                 osc.stop(now + 0.3);
             } else if (type === 'disconnect') {
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(600, now); 
+                osc.frequency.setValueAtTime(600, now);
                 osc.frequency.exponentialRampToValueAtTime(200, now + 0.2);
-                
+
                 gain.gain.setValueAtTime(0.1, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-                
+
                 osc.start(now);
                 osc.stop(now + 0.3);
             } else if (type === 'mute') {
@@ -2547,7 +2522,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function updateConnectionStatus() {
-            // Check if we have any active peer connections
+
             const peerIds = Object.keys(peers);
             let hasConnectedPeers = false;
             let hasConnectingPeers = false;
@@ -2566,7 +2541,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }
             }
 
-            // Only show disconnected if we have peers but none are connected
             if (peerIds.length > 0 && !hasConnectedPeers && !hasConnectingPeers) {
                 updateStatus('disconnected', 'Connection Lost');
             } else if (hasConnectedPeers) {
@@ -2653,16 +2627,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             document.getElementById('confirmMessage').innerText = message;
             const modal = document.getElementById('confirmModal');
             const submitBtn = document.getElementById('confirmSubmit');
-            
-            // Remove old onclick to prevent stacking
+
             const newBtn = submitBtn.cloneNode(true);
             submitBtn.parentNode.replaceChild(newBtn, submitBtn);
-            
+
             newBtn.onclick = () => {
                 onConfirm();
                 closeCustomConfirm();
             };
-            
+
             modal.classList.add('open');
         }
 
@@ -2709,7 +2682,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             let order = JSON.parse(localStorage.getItem('rustrooms_room_order_' + roomId) || '[]');
             const currentRids = Object.keys(globalRoomList);
             if (order.length === 0) order = currentRids.sort();
-            
+
             const fromIndex = order.indexOf(draggedRid);
             const toIndex = order.indexOf(targetRid);
 
@@ -2735,15 +2708,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         async function performChannelSwitch(newRoomId, newChannelId) {
-            // Cleanup existing connection
+            if (newChannelId && newChannelId.length > 32) newChannelId = newChannelId.substring(0, 32);
+
             if (ws) {
-                // Prevent auto-reconnect logic from firing during intentional switch
+
                 ws.onclose = null;
                 ws.close();
             }
             stopHeartbeat();
-            
-            // Clear peers
+
             for (const userId in peers) {
                 removePeer(userId);
             }
@@ -2754,25 +2727,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             peerMicTrackId = {};
             peerScreenAudioTrackId = {};
             remoteGrid.innerHTML = '';
-            
-            // Update state
+
             roomId = newRoomId;
             channelId = newChannelId;
-            
-            // Update URL
+
             const newUrl = `/${roomId}/${channelId}`;
             if (window.location.pathname !== newUrl) {
                 history.pushState({ roomId, channelId }, "", newUrl);
             }
-            
-            // Re-connect
+
             wsUrl = `${wsProtocol}//${window.location.host}/ws/${roomId}/${channelId}`;
             updateStatus('connecting', 'Connecting...');
-            
-            // Update UI
+
             if (typeof updateRoomListUI === 'function') updateRoomListUI();
-            
-            // Re-establish connection
+
             reconnectionAttempts = 0;
             isReconnecting = false;
             connectWs();
@@ -2787,28 +2755,27 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (newRoomId === roomId) return;
             performChannelSwitch(newRoomId, 'General');
         }
-        
+
         window.onpopstate = function(event) {
             const parts = window.location.pathname.split('/').filter(p => p !== '');
             const newRoomId = parts[0] || '';
             const newChannelId = parts[1] || (newRoomId ? 'general' : '');
-            
+
             if (newRoomId && (newRoomId !== roomId || newChannelId !== channelId)) {
                 performChannelSwitch(newRoomId, newChannelId);
             } else if (!newRoomId) {
-                window.location.reload(); // Fallback for root
+                window.location.reload();
             }
         };
 
         function renameRoom(targetRoomId, event) {
             if (event) event.stopPropagation();
-            
+
             if (targetRoomId.toLowerCase() === 'general') {
                 showCustomAlert("Action Not Allowed", "Cannot rename the General room.");
                 return;
             }
 
-            // Check if room is empty
             const roomData = globalRoomList[targetRoomId];
             if (roomData && roomData.users && Object.keys(roomData.users).length > 0) {
                 showCustomAlert("Room Not Empty", "You cannot rename a room that still has users in it.");
@@ -2853,46 +2820,45 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         function updateRoomListUI() {
             const container = document.getElementById('roomListContainer');
             if (!container) return;
-            
+
             container.innerHTML = '';
-            
+
             let order = JSON.parse(localStorage.getItem('rustrooms_room_order_' + roomId) || '[]');
             const currentRids = Object.keys(globalRoomList);
-            
-            // Re-sync order with current rooms
+
             order = order.filter(rid => currentRids.includes(rid));
             currentRids.forEach(rid => {
                 if (!order.includes(rid)) order.push(rid);
             });
-            
+
             order.forEach(rid => {
                 const roomInfo = globalRoomList[rid];
                 if (!roomInfo) return;
                 const isActive = (rid === channelId);
-                
+
                 const roomEl = document.createElement('div');
                 roomEl.className = `room-item ${isActive ? 'active' : ''}`;
                 roomEl.draggable = true;
                 roomEl.dataset.rid = rid;
-                
+
                 roomEl.onclick = () => switchChannel(rid);
-                
+
                 roomEl.ondragstart = (e) => handleRoomDragStart(e, rid);
                 roomEl.ondragend = (e) => handleRoomDragEnd(e);
                 roomEl.ondragover = (e) => handleRoomDragOver(e);
                 roomEl.ondragleave = (e) => handleRoomDragLeave(e);
                 roomEl.ondrop = (e) => handleRoomDrop(e, rid);
-                
+
                 let usersHtml = '';
                 const users = roomInfo.users || {};
                 const userIds = Object.keys(users);
-                
+
                 userIds.forEach(uid => {
                     const u = users[uid];
                     const isMuted = u.isMuted;
                     const isDeafened = u.isDeafened;
                     const isScreenSharing = u.isScreenSharing === true;
-                    
+
                     usersHtml += `
                         <div class="room-user-row">
                             <div class="mini-avatar">
@@ -2918,7 +2884,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         </div>
                     `;
                 });
-                
+
                 roomEl.innerHTML = `
                     <div class="room-name pointer-events-none">
                         <span class="truncate pr-2">${roomInfo.name}</span>
@@ -2941,14 +2907,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         ${userIds.length === 0 ? '<span class="text-[10px] text-zinc-600 italic px-2">Empty</span>' : ''}
                     </div>
                 `;
-                
+
                 container.appendChild(roomEl);
             });
         }
 
         window.addEventListener('keydown', (e) => {
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-            
+
             const key = e.key.toLowerCase();
             if (key === 'r') {
                 toggleSidebar();
@@ -2968,11 +2934,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     const btn = document.getElementById('btnStartRoom');
                     const pw = document.getElementById('passwordInputContainer');
                     const input = document.getElementById('roomPasswordInput');
-                    
+
                     btn.classList.add('opacity-0', 'pointer-events-none', 'scale-90');
                     pw.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
                     pw.classList.add('translate-y-0');
-                    
+
                     setTimeout(() => input.focus(), 100);
                 } else if (res.ok) {
                     window.location.href = `/${crypto.randomUUID()}/General`;
@@ -2989,11 +2955,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const input = document.getElementById('roomPasswordInput');
             const password = input.value;
             if (!password) return;
-            
+
             try {
-                // Save password before redirect
+
                 sessionStorage.setItem('rustrooms_room_password', password);
-                
+
                 const res = await fetch('/new?password=' + encodeURIComponent(password));
                  if (res.ok) {
                      window.location.href = `/${crypto.randomUUID()}/General`;
@@ -3018,7 +2984,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             loadPreferences();
             const setupDone = sessionStorage.getItem('rustrooms_setup_done') === 'true';
             if (setupDone && roomId) {
-                // Auto-join if setup was already done once
+
                 loadDevices().then(() => joinRoom());
             } else {
                 configOverlay.classList.remove('hidden');
@@ -3032,22 +2998,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         function connectWs() {
             updateStatus('connecting', 'Connecting...');
             ws = new WebSocket(wsUrl);
-            
-            
 
-            
                         ws.onopen = () => {
-                            // Clear any pending reconnect status timeout
+
                             if (reconnectStatusTimeout) {
                                 clearTimeout(reconnectStatusTimeout);
                                 reconnectStatusTimeout = null;
                             }
-                            
+
                             playNotificationSound('join');
                             reconnectionAttempts = 0;
                             isReconnecting = false;
                             updateStatus('connected', 'Connected');
-                            startHeartbeat(); // Start heartbeat ping/pong
+                            startHeartbeat();
                             const camEnabled = localStream && localStream.getVideoTracks()[0] && localStream.getVideoTracks()[0].enabled;
                             const screenEnabled = !!screenStream;
                             const screenHasAudio = screenStream && screenStream.getAudioTracks().length > 0;
@@ -3072,17 +3035,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             }));
                             checkEmpty();
                         };
-            
+
                         ws.onmessage = async (event) => {
                             const msg = JSON.parse(event.data);
-                            
+
                             switch (msg.type) {
                                 case 'error':
                                     if (msg.data && msg.data.code === 'PASSWORD_REQUIRED') {
-                                        // Don't set hasLeftRoom = true here, we want to allow re-connection
-                                        // after the password is provided or if the room is created.
-                                        
-                                        // Check if password modal is already visible to avoid duplicates
+
                                         const modal = document.getElementById('passwordModal');
                                         if (modal && !modal.classList.contains('open')) {
                                             showPasswordModal("Room Creation Password", msg.data.message || "Password required to create this room:", (pass) => {
@@ -3091,7 +3051,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                                     sessionStorage.setItem('rustrooms_room_password', pass);
                                                     connectWs();
                                                 } else {
-                                                    hasLeftRoom = true; // User cancelled
+                                                    hasLeftRoom = true;
                                                     window.location.href = "/";
                                                 }
                                             });
@@ -3112,9 +3072,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     playNotificationSound('join');
                                     const joinedScreenAudio = getScreenAudioFlag(msg.data);
                                     updatePeerTrackHints(msg.userId, msg.data);
-                                    // Check for existing peer OR DOM element to prevent duplicates
+
                                     if (peers[msg.userId]) {
-                                        // Update info if peer already exists from signaling
+
                                         if (msg.data.camEnabled !== undefined) {
                                             peerCamStatus[msg.userId] = msg.data.camEnabled;
                                         }
@@ -3129,11 +3089,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         }
                                         updatePeerInfo(msg.userId, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened);
                                     } else {
-                                        // Check for existing DOM element to prevent duplicates
+
                                         if (document.getElementById(`wrapper-${msg.userId}`)) {
                                             removePeer(msg.userId);
                                         }
-                                        
+
                                         if (msg.data.camEnabled !== undefined) {
                                             peerCamStatus[msg.userId] = msg.data.camEnabled;
                                         }
@@ -3148,7 +3108,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                             ensureScreenAudioUI(msg.userId);
                                         }
                                     }
-                                    
+
                                     const myAudioTrack = localStream && localStream.getAudioTracks()[0];
                                     const myMuted = !myAudioTrack || !myAudioTrack.enabled;
                                     const myCamEnabled = localStream && localStream.getVideoTracks()[0] && localStream.getVideoTracks()[0].enabled;
@@ -3160,7 +3120,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         target: msg.userId,
                                         data: {
                                             userId: persistentUserId,
-                                            nickname: userNickname, 
+                                            nickname: userNickname,
                                             avatar: userAvatar,
                                             camEnabled: myCamEnabled,
                                             screenEnabled: myScreenEnabled,
@@ -3173,7 +3133,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     }));
                                     break;
                                 case 'user-left':
-                                    // Don't remove peer if it's our own user ID (reconnection scenario)
+
                                     if (msg.userId !== persistentUserId) {
                                         playNotificationSound('leave');
                                         removePeer(msg.userId);
@@ -3248,25 +3208,22 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     break;
                             }
                         };
-                        
+
                         ws.onclose = () => {
-                            // Stop heartbeat on close
+
                             stopHeartbeat();
 
-                            // Clear any existing reconnect status timeout
                             if (reconnectStatusTimeout) {
                                 clearTimeout(reconnectStatusTimeout);
                                 reconnectStatusTimeout = null;
                             }
 
-                            // Don't reconnect if user intentionally left the room
                             if (hasLeftRoom) {
                                 console.log('User left the room, not reconnecting');
                                 isReconnecting = false;
                                 return;
                             }
 
-                            // Prevent race condition: skip if already reconnecting
                             if (isReconnecting) {
                                 console.log('Reconnection already in progress, skipping duplicate onclose');
                                 return;
@@ -3282,19 +3239,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 console.error('WebSocket disconnected after multiple retries. No further attempts will be made.');
                             } else {
                                 const delay = getReconnectDelay(reconnectionAttempts);
-                                
-                                // Set a timeout to show "Reconnecting..." only after 5 seconds
-                                // Keep status as "Connected" during brief disconnections
+
                                 reconnectStatusTimeout = setTimeout(() => {
-                                    // Only update if we haven't reconnected yet
+
                                     if (isReconnecting && (!ws || ws.readyState !== WebSocket.OPEN)) {
                                         updateStatus('connecting', `Reconnecting... (Attempt ${reconnectionAttempts}/${maxReconnectionAttempts})`);
                                     }
                                 }, reconnectDelayMs);
-                                
+
                                 console.log(`Reconnecting in ${Math.round(delay)}ms...`);
                                 setTimeout(() => {
-                                    // Clear reconnect status timeout since we're reconnecting
+
                                     if (reconnectStatusTimeout) {
                                         clearTimeout(reconnectStatusTimeout);
                                         reconnectStatusTimeout = null;
@@ -3304,7 +3259,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 }, delay);
                             }
                         };
-            
+
                         ws.onerror = (error) => {
                             console.error('WebSocket Error:', error);
                         };
@@ -3321,7 +3276,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     btn.classList.remove('text-green-500', 'bg-green-500/10');
                     btn.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-700');
 
-                    // Reset flags and reconnection attempts when manually reconnecting
                     hasLeftRoom = false;
                     isReconnecting = false;
                     reconnectionAttempts = 0;
@@ -3329,7 +3283,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }, 300);
             }
         }
-        
+
         function setAvatar(layer, avatar) {
             layer.innerHTML = '';
             if (avatar) {
@@ -3374,7 +3328,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (wrapper) {
                 const nameSpan = wrapper.querySelector('.peer-name');
                 if (nameSpan && nickname) nameSpan.innerText = nickname;
-                
+
                 const statusContainer = wrapper.querySelector('.peer-status-icons');
                 if (statusContainer) {
                     statusContainer.innerHTML = '';
@@ -3391,7 +3345,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         statusContainer.classList.remove('flex');
                     }
                 }
-                
+
                 const avatarLayer = wrapper.querySelector('.avatar-layer');
                 if (avatarLayer) {
                      setAvatar(avatarLayer, avatar);
@@ -3623,7 +3577,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
             updateGridLayout(count);
         }
-        
+
         function updateGridLayout(count) {
             remoteGrid.className = 'grid gap-2 md:gap-4 w-full h-full max-w-[1600px] transition-all duration-500 grid-expand';
 
@@ -3675,7 +3629,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             if (opusPayload === -1) return sdp;
-            
+
             let fmtpLineIndex = -1;
             for (let i = 0; i < sdpLines.length; i++) {
                 if (sdpLines[i].startsWith('a=fmtp:' + opusPayload)) {
@@ -3683,7 +3637,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     break;
                 }
             }
-            
+
             if (fmtpLineIndex === -1) {
                 sdpLines.splice(rtpmapLineIndex + 1, 0, 'a=fmtp:' + opusPayload + ' stereo=1;sprop-stereo=1;maxaveragebitrate=510000;useinbandfec=1;cbr=1;usedtx=0');
             } else {
@@ -3706,11 +3660,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function createPeerUI(userId, displayName, avatarUrl, remoteIsDeafened, remoteIsMuted) {
-            // Check if UI already exists
+
             if (document.getElementById(`wrapper-${userId}`)) {
                 return;
             }
-
 
             const container = document.createElement('div');
             container.id = `wrapper-${userId}`;
@@ -3725,7 +3678,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             vid.playsInline = true;
             attachSinkId(vid, currentAudioOutputId);
 
-            // Load persisted volume
             const savedVol = getVolumeSettings(userId, 'main');
             vid.volume = savedVol;
 
@@ -3819,7 +3771,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const pc = new RTCPeerConnection(rtcConfig);
             peers[userId] = pc;
 
-            // Keep mic sender stable across deafen/undeafen; control via track.enabled.
             if (localStream) {
                 localStream.getAudioTracks().forEach(track => pc.addTrack(track, localStream));
             }
@@ -3845,35 +3796,31 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 localStream.getVideoTracks().forEach(track => pc.addTrack(track, localStream));
             }
 
-            // Add recvonly transceivers for tracks we're not sending
             if (!localStream || localStream.getVideoTracks().length === 0) {
                  pc.addTransceiver('video', { direction: 'recvonly' });
             }
-            // For audio: if we're deafened, we're not sending audio, so add a recvonly transceiver
+
             if (!localStream || localStream.getAudioTracks().length === 0 || isDeafened) {
                  pc.addTransceiver('audio', { direction: 'recvonly' });
             }
 
-            // Create the UI element immediately so the user appears even without tracks
             createPeerUI(userId, displayName, avatarUrl, remoteIsDeafened, isMuted);
 
             pc.ontrack = (event) => {
-                // Check if this peer is still valid (hasn't been removed and replaced)
+
                 if (peers[userId] !== pc) {
-                    return; // This peer was removed, ignore track event
+                    return;
                 }
 
                 let container = document.getElementById(`wrapper-${userId}`);
                 let vid = document.getElementById(`vid-${userId}`);
 
-                // Create container if it doesn't exist (shouldn't happen now, but keeping for safety)
                 if (!container || !vid) {
                     createPeerUI(userId, displayName, avatarUrl, remoteIsDeafened, isMuted);
                     container = document.getElementById(`wrapper-${userId}`);
                     vid = document.getElementById(`vid-${userId}`);
                 }
 
-                // Safety check - if vid is still null, skip this track event
                 if (!vid || !vid.srcObject) {
                     console.error('[ontrack] Video element or srcObject is null for', userId);
                     return;
@@ -3886,19 +3833,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      mainStream.getVideoTracks().forEach(t => mainStream.removeTrack(t));
                      mainStream.addTrack(event.track);
                      vid.play().catch(e => console.error("Remote play err", e));
-                     
+
                      event.track.onmute = () => { checkActive(userId); };
                      event.track.onunmute = () => { checkActive(userId); };
                      event.track.onended = () => { checkActive(userId); };
                 }
-                
+
                 if (event.track.kind === 'audio') {
-                    // Check if this track is already in the stream to prevent duplicates
+
                     const existingTracks = mainStream.getAudioTracks();
                     const trackAlreadyExists = existingTracks.some(t => t.id === event.track.id);
 
                     if (trackAlreadyExists) {
-                        // Track already exists, skip adding it again
+
                         return;
                     }
 
@@ -3953,17 +3900,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     if (mainStream.getAudioTracks().length === 0 || isHintedMicTrack) {
                         mainStream.addTrack(event.track);
                         setupAudioMonitor(mainStream, `wrapper-${userId}`);
-                        
-                        // Main volume row is now created unconditionally in createPeerUI.
-                        // We do not remove it when the audio track ends to keep the UI persistent.
+
                     } else {
-                        // A second remote audio track is the screen-share audio track in this app.
-                        // It can arrive before identify/screen-toggle metadata for late joiners.
+
                         peerScreenHasAudio[userId] = true;
 
                         const savedScreenVol = getVolumeSettings(userId, 'screen');
 
-                        // Only create screen audio element if it doesn't exist
                         let screenAud = document.getElementById(`aud-screen-${userId}`);
                         if (!screenAud) {
                             screenAud = document.createElement('audio');
@@ -3978,7 +3921,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         screenAud.srcObject = screenStream;
                         if (isDeafened) screenAud.muted = true;
 
-                        // Only create volume row if it doesn't exist
                         if (!document.getElementById(`vol-row-screen-${userId}`)) {
                             const row = document.createElement('div');
                             row.className = 'vol-row';
@@ -3994,20 +3936,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             volControls.appendChild(row);
                         }
 
-                        setupAudioMonitor(screenStream, `wrapper-${userId}`); // Use setupAudioMonitor for screen audio
+                        setupAudioMonitor(screenStream, `wrapper-${userId}`);
 
                         event.track.onended = () => {
-                            screenAud.remove(); // Remove the screen audio element
+                            screenAud.remove();
                             const row = document.getElementById(`vol-row-screen-${userId}`);
-                            if (row) row.remove(); // Remove its volume control row
+                            if (row) row.remove();
                         };
                     }
                 }
-                
+
                 const checkActive = (uid) => {
                      const v = document.getElementById(`vid-${uid}`);
                      if (!v || !v.srcObject) return;
-                     
+
                      const isCamOff = peerCamStatus[uid] === false;
                      const isScreenOn = peerScreenStatus[uid] === true;
 
@@ -4038,12 +3980,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                          v.classList.remove('active');
                      }
                 };
-                
+
                 if (event.track.kind === 'video') {
                      vid.onloadedmetadata = () => checkActive(userId);
                      vid.onresize = () => checkActive(userId);
                 }
-                
+
                 if (!container.dataset.interval) {
                     const intId = setInterval(() => checkActive(userId), 1000);
                     container.dataset.interval = intId;
@@ -4062,7 +4004,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 if (state === 'failed' || state === 'disconnected' || state === 'closed') {
                     console.warn(`Peer ${userId.substr(0,4)} connection ${state}`);
-                    // Update status to disconnected if all peers are down
+
                     updateConnectionStatus();
                 } else if (state === 'connected') {
                     updateConnectionStatus();
@@ -4074,10 +4016,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 console.log(`Connection state for ${userId.substr(0,4)}: ${state}`);
 
                 if (state === 'disconnected') {
-                    // Disconnected state is often temporary - wait before removing
+
                     console.warn(`Peer ${userId.substr(0,4)} temporarily disconnected, waiting for recovery...`);
                     updateConnectionStatus();
-                    // Set a timeout to remove peer if it doesn't recover within 15 seconds
+
                     if (!pc._disconnectTimeout) {
                         pc._disconnectTimeout = setTimeout(() => {
                             if (pc.connectionState === 'disconnected') {
@@ -4088,7 +4030,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         }, 15000);
                     }
                 } else if (state === 'failed' || state === 'closed') {
-                    // Clear any pending timeout and remove peer immediately
+
                     if (pc._disconnectTimeout) {
                         clearTimeout(pc._disconnectTimeout);
                         pc._disconnectTimeout = null;
@@ -4096,7 +4038,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     console.warn(`Peer ${userId.substr(0,4)} connection ${state}, removing...`);
                     removePeer(userId);
                 } else if (state === 'connected') {
-                    // Clear any pending timeout on successful reconnection
+
                     if (pc._disconnectTimeout) {
                         clearTimeout(pc._disconnectTimeout);
                         pc._disconnectTimeout = null;
@@ -4112,7 +4054,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         async function handleSignal(userId, data) {
-            if (!peers[userId]) initPeer(userId, false, undefined, null); 
+            if (!peers[userId]) initPeer(userId, false, undefined, null);
             const pc = peers[userId];
 
             try {
@@ -4134,7 +4076,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         function removePeer(userId) {
             if (peers[userId]) {
-                // Clear any pending disconnect timeout
+
                 if (peers[userId]._disconnectTimeout) {
                     clearTimeout(peers[userId]._disconnectTimeout);
                     peers[userId]._disconnectTimeout = null;
@@ -4144,7 +4086,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
             const el = document.getElementById(`wrapper-${userId}`);
             if (el) el.remove();
-            // Also remove screen audio element if it exists
+
             const screenAud = document.getElementById(`aud-screen-${userId}`);
             if (screenAud) screenAud.remove();
             const volRow = document.getElementById(`vol-row-screen-${userId}`);
@@ -4158,11 +4100,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             ws.send(JSON.stringify({ type: 'signal', target: toId, data: data }));
         }
 
-
         window.toggleFullscreen = function(userId) {
             const el = document.getElementById(`wrapper-${userId}`);
             if (!el) return;
-            
+
             if (!document.fullscreenElement) {
                 el.requestFullscreen().catch(err => {
                     console.error(`Error attempting to enable fullscreen: ${err.message}`);
@@ -4175,7 +4116,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         window.toggleMute = function(userId, type) {
             let el;
             let btn;
-            
+
             if (type === 'screen') {
                 el = document.getElementById(`aud-screen-${userId}`);
                 if (!el) {
@@ -4190,7 +4131,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (el) {
                 el.muted = !el.muted;
                 const isMuted = el.muted;
-                
+
                 if (type === 'screen') {
                      if (isMuted) {
                         btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="14" rx="2" ry="2"></rect><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
@@ -4226,7 +4167,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 saveVolumeSettings(userId, type, val);
             }
         }
-        
+
         function saveVolumeSettings(userId, type, val) {
             sessionStorage.setItem(`rustrooms_vol_${userId}_${type}`, val);
         }
@@ -4237,38 +4178,33 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function leaveRoom() {
-            // Set flag to prevent auto-reconnection
+
             hasLeftRoom = true;
 
             playNotificationSound('disconnect');
 
-            // Stop all local media tracks
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
             }
 
-            // Stop screen sharing
             if (screenStream) {
                 screenStream.getTracks().forEach(track => track.stop());
                 screenStream = null;
             }
 
-            // Close all peer connections and clean up remote audio/video
             Object.keys(peers).forEach(userId => {
                 if (peers[userId]) {
                     peers[userId].close();
                     delete peers[userId];
                 }
 
-                // Stop and clear remote video elements (which also play audio)
                 const vid = document.getElementById(`vid-${userId}`);
                 if (vid) {
                     vid.pause();
                     vid.srcObject = null;
                 }
 
-                // Remove screen audio elements
                 const screenAud = document.getElementById(`aud-screen-${userId}`);
                 if (screenAud) {
                     screenAud.pause();
@@ -4276,28 +4212,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     screenAud.remove();
                 }
 
-                // Remove volume control rows
                 const volRowScreen = document.getElementById(`vol-row-screen-${userId}`);
                 if (volRowScreen) volRowScreen.remove();
 
-                // Remove DOM elements
                 const el = document.getElementById(`wrapper-${userId}`);
                 if (el) el.remove();
             });
 
-            // Close WebSocket connection
             if (ws) {
                 ws.close();
                 ws = null;
             }
 
-            // Close audio context to stop all audio processing
             if (audioContext && audioContext.state !== 'closed') {
                 audioContext.close().catch(e => console.error('Error closing audio context:', e));
                 audioContext = null;
             }
 
-            // Reset UI to welcome screen
             const welcomeOverlay = document.getElementById('welcomeOverlay');
             const mainApp = document.querySelector('main');
             const taskbar = document.querySelector('.taskbar');
@@ -4308,7 +4239,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             checkEmpty();
 
-            // Redirect to root
             sessionStorage.removeItem('rustrooms_setup_done');
             window.location.href = '/';
         }
@@ -4319,8 +4249,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (tracks.length > 0) {
                 const track = tracks[0];
 
-                // If deafened, the mic button is disabled, so this shouldn't be called
-                // But just in case, prevent toggling when deafened
                 if (isDeafened) {
                     return;
                 }
@@ -4376,7 +4304,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 pc.addTrack(track, localStream);
                             }
                         }
-                        // Always renegotiate after unmuting so peers get a fresh audio send path.
+
                         negotiate(userId, pc);
                     }
                 }
@@ -4411,27 +4339,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 btn.classList.add('active-red');
                 btn.innerHTML = deafenOffSvg;
 
-                // Store the original mic enabled state before deafening
                 if (micAudioTrack && micAudioTrack.enabled) {
                     btn.dataset.micWasEnabled = 'true';
                 }
 
-                // Disable mic button and update UI to show mic is muted
                 if (btnMic) {
                     btnMic.disabled = true;
-                    // Update mic button UI to show muted state
+
                     if (micAudioTrack && micAudioTrack.enabled) {
                         btnMic.classList.add('active-red');
                         btnMic.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>`;
                     }
                 }
 
-                // Deafen keeps sender topology intact; just disable mic track.
                 if (micAudioTrack) {
                     micAudioTrack.enabled = false;
                 }
 
-                // Mute all remote audio and remember state
                 document.querySelectorAll('video, audio').forEach(el => {
                     if (el.id !== 'localVideo' && el.id !== 'previewVideo') {
                         el.dataset.wasMuted = el.muted;
@@ -4443,18 +4367,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 btn.classList.remove('active-red');
                 btn.innerHTML = deafenOnSvg;
 
-                // Enable mic button
                 if (btnMic) {
                     btnMic.disabled = false;
                 }
 
-                // Preserve pre-deafen mic preference.
                 const shouldEnableMic = btn.dataset.micWasEnabled === 'true';
 
-                // Re-enable the mic track only if it was enabled before deafening
                 if (micAudioTrack && shouldEnableMic) {
                     micAudioTrack.enabled = true;
-                    // Update mic button UI to show unmuted state
+
                     if (btnMic) {
                         btnMic.classList.remove('active-red');
                         btnMic.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
@@ -4462,8 +4383,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     delete btn.dataset.micWasEnabled;
                 }
 
-                // Repair sender state if a stale/null sender exists from older sessions,
-                // but do not force-enable mic unless user had it enabled before deafening.
                 if (micAudioTrack) {
                     for (const userId in peers) {
                         const pc = peers[userId];
@@ -4508,7 +4427,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                 }
 
-                // Restore remote audio
                 document.querySelectorAll('video, audio').forEach(el => {
                     if (el.id !== 'localVideo' && el.id !== 'previewVideo') {
                         el.muted = el.dataset.wasMuted === 'true';
@@ -4516,11 +4434,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 });
             }
 
-
-            // Update the local label on usage of toggleDeafen 
             updateLocalLabel();
 
-            // Send update AFTER we've finished deafening/undeafening
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'update-user',
@@ -4537,10 +4452,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         async function toggleCam() {
             const btn = document.getElementById('btnCam');
             if (!localStream) return;
-            
+
             let tracks = localStream.getVideoTracks();
             let justAdded = false;
-            
+
             if (tracks.length === 0) {
                 try {
                     const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -4568,7 +4483,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 if (!justAdded) {
                     track.enabled = !track.enabled;
                 }
-                
+
                 if (!track.enabled) {
                     btn.classList.add('active-red');
                     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
@@ -4577,7 +4492,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
                 }
                 updateLocalAvatar();
-                
+
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
                         type: 'cam-toggle',
@@ -4589,7 +4504,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         async function toggleScreen() {
             const btn = document.getElementById('btnShare');
-            
+
             if (screenStream) {
                 let videoTrack = localStream ? localStream.getVideoTracks()[0] : null;
                 const screenAudioTrack = screenStream.getAudioTracks()[0];
@@ -4597,13 +4512,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 screenStream.getTracks().forEach(t => t.stop());
                 screenStream = null;
                 btn.classList.remove('active-green');
-                
+
                 if (localStream) {
                     localVideo.srcObject = localStream;
                 } else {
                     localVideo.srcObject = null;
                 }
-                
+
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
                         type: 'screen-toggle',
@@ -4615,7 +4530,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     const pc = peers[userId];
                     const senders = pc.getSenders();
                     let shouldNegotiate = false;
-                    
+
                     const vidSender = senders.find(s => s.track && s.track.kind === 'video');
                     if (vidSender) {
                         if (videoTrack) {
@@ -4633,7 +4548,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             shouldNegotiate = true;
                         }
                     }
-                    
+
                     if (shouldNegotiate) {
                         negotiate(userId, pc);
                     }
@@ -4643,7 +4558,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             } else {
                 try {
-                    screenStream = await navigator.mediaDevices.getDisplayMedia({ 
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({
                         video: { cursor: true },
                         systemAudio: "include",
                         audio: {
@@ -4653,17 +4568,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             channelCount: 2,
                             sampleRate: 48000,
                             sampleSize: 16
-                        } 
+                        }
                     });
                     const screenTrack = screenStream.getVideoTracks()[0];
                     const screenAudioTrack = screenStream.getAudioTracks()[0];
-                    
+
                     if (screenAudioTrack) {
                         screenAudioTrack.contentHint = "music";
                     }
 
                     localVideo.srcObject = screenStream;
-                    
+
                     updateLocalAvatar();
 
                     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -4682,7 +4597,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         const senders = pc.getSenders();
                         const vidSender = senders.find(s => s.track && s.track.kind === 'video');
                         let shouldNegotiate = false;
-                        
+
                         if (vidSender) {
                             vidSender.replaceTrack(screenTrack);
                         } else {
@@ -4704,7 +4619,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                             shouldNegotiate = true;
                         }
-                        
+
                         if (shouldNegotiate) {
                             negotiate(userId, pc);
                         }
@@ -4721,7 +4636,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         function updateLocalLabel() {
             const label = document.getElementById('localLabel');
             if (!label) return;
-            
+
             let statusIcons = '';
             if (isDeafened) {
                 statusIcons = `<span class="ml-1.5 inline-flex items-center text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg></span>`;
@@ -4737,15 +4652,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         function copyLink() {
             navigator.clipboard.writeText(window.location.href);
-            
+
             const btn = document.getElementById('btnCopy');
             if (btn.classList.contains('bg-green-600')) return;
 
             const icon = document.getElementById('iconCopy');
-            
+
             const originalHTML = btn.innerHTML;
             const originalClass = btn.className;
-            
+
             btn.innerHTML = `<span class="text-xs md:text-sm font-medium text-white">Copied!</span><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
             btn.classList.add('bg-green-600', 'hover:bg-green-700');
             btn.classList.remove('hover:bg-slate-700/50');
@@ -4769,7 +4684,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         async function openSettings() {
             settingsNicknameInput.value = userNickname;
             newAvatarCandidate = userAvatar;
-            
+
             if (userAvatar) {
                 settingsAvatarPreview.src = userAvatar;
                 settingsAvatarPreview.classList.remove('hidden');
@@ -4778,7 +4693,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 settingsAvatarPreview.classList.add('hidden');
                 settingsAvatarPlaceholder.classList.remove('hidden');
             }
-            
+
             await populateSettingsDeviceList();
             const settingsAudio = document.getElementById('settingsAudioSource');
             const settingsVideo = document.getElementById('settingsVideoSource');
@@ -4853,20 +4768,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             userNickname = settingsNicknameInput.value.trim() || "Guest";
             userAvatar = newAvatarCandidate;
             savePreferences();
-            
+
             updateLocalLabel();
             updateLocalAvatar();
-            
+
             if (ws && ws.readyState === WebSocket.OPEN) {
                  ws.send(JSON.stringify({
-                    type: "update-user", 
+                    type: "update-user",
                     data: {
                         nickname: userNickname,
-                        avatar: userAvatar 
-                    } 
+                        avatar: userAvatar
+                    }
                 }));
             }
-            
+
             closeSettings();
         }
 
@@ -4914,7 +4829,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             let dragOffset = { x: 0, y: 0 };
             let dragBounds = null;
             let pendingFrame = false;
-            let collisionRects = null; // Cached collision rectangles
+            let collisionRects = null;
             let lastX = 0;
             let lastY = 0;
 
@@ -4937,7 +4852,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 lastX = clientX;
                 lastY = clientY;
 
-                // Cache static boundaries that don't change during drag
                 dragBounds = {
                     minX: 16,
                     maxX: window.innerWidth - rect.width - 16,
@@ -4945,7 +4859,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     maxY: window.innerHeight - taskbarRect.height - rect.height - 16
                 };
 
-                // Cache collision rectangles once at drag start
                 const margin = 16;
                 collisionRects = {
                     statusRect: connectionDot && connectionDot.parentElement ? connectionDot.parentElement.getBoundingClientRect() : null,
@@ -4954,23 +4867,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     pipWidth: rect.width
                 };
             }
-            
+
             function onMouseDown(e) {
                 if (e.target.closest('button') || e.target.closest('input')) return;
-                
+
                 e.preventDefault();
-                
+
                 startDrag(e.clientX, e.clientY);
                 document.addEventListener('mousemove', onMouseMove);
                 document.addEventListener('mouseup', onMouseUp);
             }
-            
+
             function onTouchStart(e) {
                 if (e.target.closest('button') || e.target.closest('input')) return;
-                
+
                 const touch = e.touches[0];
                 startDrag(touch.clientX, touch.clientY);
-                
+
                 document.addEventListener('touchmove', onTouchMove, { passive: false });
                 document.addEventListener('touchend', onTouchEnd);
                 document.addEventListener('touchcancel', onTouchEnd);
@@ -4998,7 +4911,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         newY = Math.max(dragBounds.minY, Math.min(newY, dragBounds.maxY));
                     }
 
-                    // Use cached collision rectangles instead of recalculating
                     if (collisionRects) {
                         const { statusRect, copyRect, margin, pipWidth } = collisionRects;
 
@@ -5032,17 +4944,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     pendingFrame = false;
                 });
             }
-            
+
             function onMouseMove(e) {
                 handleMove(e.clientX, e.clientY);
             }
-            
+
             function onTouchMove(e) {
                 if (e.cancelable) e.preventDefault();
                 const touch = e.touches[0];
                 handleMove(touch.clientX, touch.clientY);
             }
-            
+
             function onMouseUp() {
                 isDragging = false;
                 pip.style.cursor = 'grab';
@@ -5059,7 +4971,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 document.removeEventListener('touchend', onTouchEnd);
                 document.removeEventListener('touchcancel', onTouchEnd);
             }
-            
+
             pip.addEventListener('mousedown', onMouseDown);
             pip.addEventListener('touchstart', onTouchStart, { passive: false });
 
@@ -5074,15 +4986,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 const maxX = window.innerWidth - pipRect.width - margin;
                 const minY = margin;
                 const maxY = window.innerHeight - taskbarRect.height - pipRect.height - margin;
-                
+
                 let currentLeft = parseFloat(pip.style.left);
                 let currentTop = parseFloat(pip.style.top);
-                
+
                 if (isNaN(currentLeft) || isNaN(currentTop)) return;
 
                 let newX = Math.max(minX, Math.min(currentLeft, maxX));
                 let newY = Math.max(minY, Math.min(currentTop, maxY));
-                
+
                 pip.style.left = newX + 'px';
                 pip.style.top = newY + 'px';
             });
@@ -5115,11 +5027,11 @@ struct RoomStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct SignalMessage {
     #[serde(rename = "type")]
-    pub msg_type: String,     
+    pub msg_type: String,
     pub target: Option<String>,
-    pub data: Option<serde_json::Value>, 
+    pub data: Option<serde_json::Value>,
     #[serde(rename = "userId")]
-    pub user_id: Option<String>, 
+    pub user_id: Option<String>,
 }
 
 type UserTx = tokio::sync::mpsc::Sender<Result<Message, axum::Error>>;
@@ -5140,8 +5052,7 @@ struct AppState {
 async fn main() {
     let rooms: RoomMap = Arc::new(Mutex::new(HashMap::new()));
     let room_cleanup_generations: RoomCleanupMap = Arc::new(Mutex::new(HashMap::new()));
-    
-    // Initialize Cluster if IROH_KEY is present
+
     let cluster_handle = if let Ok(key) = std::env::var("IROH_KEY") {
         match cluster::start_cluster(key, rooms.clone()).await {
             Ok(h) => {
@@ -5156,7 +5067,6 @@ async fn main() {
     } else {
         None
     };
-
 
     let room_creation_password = std::env::var("ROOM_CREATION_PASSWORD").ok().filter(|s| !s.is_empty());
     let state = AppState { rooms, room_cleanup_generations, cluster_handle, room_creation_password };
@@ -5241,7 +5151,7 @@ async fn index(State(_state): State<AppState>) -> impl IntoResponse {
     let html = get_html_page(&turn_url, &turn_username, &turn_credential);
     (
         [(
-            header::CONTENT_SECURITY_POLICY, 
+            header::CONTENT_SECURITY_POLICY,
             "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
         )],
         Html(html)
@@ -5255,6 +5165,7 @@ async fn ws_handler(
     headers: axum::http::HeaderMap,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    let channel_id = channel_id.chars().take(32).collect::<String>();
     if let (Some(origin), Some(host)) = (headers.get("origin"), headers.get("host")) {
         if let (Ok(origin_str), Ok(host_str)) = (origin.to_str(), host.to_str()) {
              if !origin_str.ends_with(host_str) {
@@ -5288,7 +5199,7 @@ async fn broadcast_channel_list(rooms: &RoomMap, room_id: &str) {
     }
 
     let msg = serde_json::to_string(&SignalMessage {
-        msg_type: "room-list".into(), // Keep same type for frontend compatibility
+        msg_type: "room-list".into(),
         user_id: None,
         target: None,
         data: Some(serde_json::to_value(channel_list).unwrap()),
@@ -5306,8 +5217,8 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
     let room_cleanup_generations = state.room_cleanup_generations.clone();
     let (mut user_ws_tx, mut user_ws_rx) = socket.split();
     let (tx, mut rx) = tokio::sync::mpsc::channel(5000);
-    
-    let mut user_id = String::new(); 
+
+    let mut user_id = String::new();
     let mut is_joined = false;
 
     tokio::spawn(async move {
@@ -5366,7 +5277,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 .and_then(|d| d.get("isDeafened"))
                                 .and_then(|v| v.as_bool())
                                 .unwrap_or(false);
-                            
+
                             let is_screen_sharing = parsed.data.as_ref()
                                 .and_then(|d| d.get("screenEnabled"))
                                 .and_then(|v| v.as_bool())
@@ -5377,11 +5288,10 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     avatar = None;
                                 }
                             }
-                             
+
                              {
                                 let mut rooms_lock = rooms.lock().await;
 
-                                // If password is set, prevent creation of new rooms via WebSocket
                                 if let Some(ref required_pass) = state.room_creation_password {
                                     if !rooms_lock.contains_key(&room_id) {
                                          let pass_match = if let Some(ref data) = parsed.data {
@@ -5404,7 +5314,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                                  })),
                                              }).unwrap();
                                              let _ = tx.send(Ok(Message::Text(error_msg.into()))).await;
-                                             // Allow time for the message to be sent before closing
+
                                              tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                                              return;
                                          }
@@ -5414,7 +5324,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 let room = rooms_lock.entry(room_id.clone()).or_insert_with(HashMap::new);
                                 room.entry("General".to_string()).or_insert_with(HashMap::new);
                                 let channel = room.entry(channel_id.clone()).or_insert_with(HashMap::new);
-                                
+
                                 if channel.contains_key(&user_id) {
                                     let leave_msg = serde_json::to_string(&SignalMessage {
                                         msg_type: "user-left".into(),
@@ -5422,7 +5332,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         target: None,
                                         data: None,
                                     }).unwrap();
-                                    
+
                                     for (uid, (tx, _)) in channel.iter() {
                                         if *uid != user_id {
                                             let _ = tx.try_send(Ok(Message::Text(leave_msg.clone().into())));
@@ -5430,21 +5340,21 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     }
                                     channel.remove(&user_id);
                                 }
-                                
-                                channel.insert(user_id.clone(), (tx.clone(), UserStatus { 
-                                    nickname: nickname.clone(), 
+
+                                channel.insert(user_id.clone(), (tx.clone(), UserStatus {
+                                    nickname: nickname.clone(),
                                     avatar: avatar.clone(),
                                     is_muted,
                                     is_deafened,
                                     is_screen_sharing,
                                 }));
                              }
-                            // Any join cancels pending room deletion for this room.
+
                             if room_cleanup_generations.lock().await.remove(&room_id).is_some() {
                                 println!("CLEANUP: Canceled pending deletion for room '{}'", room_id);
                             }
                             is_joined = true;
-                              
+
                              let mut notify_data = parsed.data.clone();
                              if let Some(serde_json::Value::Object(ref mut map)) = notify_data {
                                  if let Some(serde_json::Value::String(avatar)) = map.get("avatar") {
@@ -5455,8 +5365,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                  map.remove("userId");
                              }
 
-                            
-                             // Broadcast to Cluster
                              if let Some(ch) = &state.cluster_handle {
                                  ch.broadcast(cluster::ClusterMessage::Join {
                                      room_id: room_id.clone(),
@@ -5469,7 +5377,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                      is_screen_sharing,
                                  });
                              }
-                             
+
                              let notify_msg = serde_json::to_string(&SignalMessage {
                                 msg_type: "user-joined".into(),
                                 user_id: Some(user_id.clone()),
@@ -5494,7 +5402,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                     } else {
                         if parsed.msg_type == "update-user" {
                             let data = parsed.data.as_ref().and_then(|d| d.as_object());
-                            
+
                             let mut full_status = None;
                             {
                                 let mut rooms_lock = rooms.lock().await;
@@ -5626,8 +5534,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
 
                             if let Some(new_name_str) = new_name {
                                 let mut rooms_lock = rooms.lock().await;
-                                
-                                // Check if channel is empty
+
                                 let can_rename = if let Some(room) = rooms_lock.get(&room_id) {
                                     if let Some(target_channel) = room.get(&target_channel_id) {
                                         target_channel.is_empty()
@@ -5677,15 +5584,9 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 }
                             }
                         } else if let Some(ref target_id) = parsed.target {
-                            // Forward generic signal (Offer/Answer/Candidate)
-                            // First check if target is valid local?
-                            // Actually, if we forward to a Proxy TX, the proxy takes care of it.
-                            // If target is NOT found locally, we might need to broadcast?
-                            // No, relying on RoomMap logic: If target is in RoomMap (either local or proxy), send to it.
-                            // BUT, we need to populate RoomMap with Proxies.
-                            // So this code block remains largely unchanged, assuming channel.get() returns the Proxy TX.
+
                             let mut found = false;
-                            { 
+                            {
                                 let rooms_lock = rooms.lock().await;
                                 if let Some(room) = rooms_lock.get(&room_id) {
                                     if let Some(channel) = room.get(&channel_id) {
@@ -5699,12 +5600,9 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     }
                                 }
                             }
-                            
+
                             if !found {
-                                // If not found in local map, maybe it's on another instance but we haven't synced?
-                                // Or maybe the user just left.
-                                // We can optionally broadcast Signal here if we wanted "stateless" signaling, 
-                                // but we are using "stateful" proxies. So if not in map, we assume unreachable.
+
                             }
                         }
                     }
@@ -5725,13 +5623,12 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
             if let Some(room) = rooms_lock.get_mut(&room_id) {
                 let mut removed = false;
 
-                // First try to find in the expected channel
                 if let Some(channel) = room.get_mut(&channel_id) {
                     if let Some((stored_tx, _)) = channel.get(&user_id) {
                         if stored_tx.same_channel(&tx) {
                             channel.remove(&user_id);
                             removed = true;
-                            
+
                             if let Some(ch) = &state.cluster_handle {
                                 ch.broadcast(cluster::ClusterMessage::Leave {
                                     room_id: room_id.clone(),
@@ -5739,7 +5636,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     user_id: user_id.clone(),
                                 });
                             }
-                            
+
                             if !channel.is_empty() {
                                 let notify_msg = serde_json::to_string(&SignalMessage {
                                     msg_type: "user-left".into(),
@@ -5755,8 +5652,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                         }
                     }
                 }
-                
-                // If not found (e.g. race condition or rename), scan all channels
+
                 if !removed {
                     for (cid, channel) in room.iter_mut() {
                         if let Some((stored_tx, _)) = channel.get(&user_id) {
@@ -5787,10 +5683,9 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 break;
                             }
                         }
-                    } 
+                    }
                 }
 
-                // Only schedule cleanup when the entire room is empty.
                 if removed && room.values().all(|c| c.is_empty()) {
                     schedule_room_cleanup = true;
                 }
@@ -5886,38 +5781,34 @@ mod cluster {
         let topic_bytes = blake3::hash(key.as_bytes());
         let topic = TopicId::from_bytes(*topic_bytes.as_bytes());
 
-        // Create the channel immediately so we can return the handle
         let (cmd_tx, mut cmd_rx) = tokio::sync::mpsc::channel(100);
-        
+
         let handle = ClusterHandle { cmd_tx, _topic: topic };
         let handle_clone = handle.clone();
 
-        // Spawn the connection and processing loop in the background
         tokio::spawn(async move {
             println!("CLUSTER: Initializing node...");
-            
-            // Setup Iroh node
+
             let endpoint_res = Endpoint::builder().bind().await;
             if let Err(e) = endpoint_res {
                 eprintln!("CLUSTER ERROR: Failed to bind endpoint: {}", e);
                 return;
             }
             let endpoint = endpoint_res.unwrap();
-            
+
             let gossip = Gossip::builder().spawn(endpoint.clone());
 
-            // Join the topic (this can take time, so it's good we're effectively backgrounded)
             println!("CLUSTER: Joining topic {}...", topic);
-            
+
             let topic_io_res = gossip.subscribe_and_join(topic, vec![]).await;
             if let Err(e) = topic_io_res {
                  eprintln!("CLUSTER ERROR: Failed to join topic: {}", e);
                  return;
             }
             let mut stream = topic_io_res.unwrap();
-            
+
             println!("CLUSTER: Joined topic {}, Node ID: {}", topic, endpoint.secret_key().public());
-        
+
             loop {
                 tokio::select! {
                     cmd = cmd_rx.recv() => {
@@ -5960,16 +5851,14 @@ mod cluster {
                  let channel = room.entry(channel_id.clone()).or_insert_with(HashMap::new);
 
                  if channel.contains_key(&user_id) {
-                     // If user exists, we overwrite/update the proxy.
-                     // This handles the case where a node died and the user reconnected elsewhere.
+
                      println!("CLUSTER: Overwriting existing proxy (re-join) {} in {}/{}", user_id, room_id, channel_id);
                  }
 
-                 // Create Proxy
                  let (tx, mut rx) = tokio::sync::mpsc::channel(5000);
                  let h = handle.clone();
                  let target = user_id.clone();
-                 
+
                  tokio::spawn(async move {
                      while let Some(res) = rx.recv().await {
                          if let Ok(Message::Text(text)) = res {
@@ -5982,15 +5871,15 @@ mod cluster {
                      }
                  });
 
-                 channel.insert(user_id.clone(), (tx, UserStatus { 
-                     nickname: nickname.clone(), 
+                 channel.insert(user_id.clone(), (tx, UserStatus {
+                     nickname: nickname.clone(),
                      avatar: avatar.clone(),
                      is_muted,
                      is_deafened,
                      is_screen_sharing,
                  }));
                  println!("CLUSTER: Added proxy user {} in {}/{}", user_id, room_id, channel_id);
-                 
+
                   let notify_msg = serde_json::to_string(&SignalMessage {
                         msg_type: "user-joined".into(),
                         user_id: Some(user_id.clone()),
@@ -6003,7 +5892,7 @@ mod cluster {
                             "screenEnabled": is_screen_sharing
                         })),
                     }).unwrap();
-                 
+
                  for (uid, (tx, _)) in channel.iter() {
                      if *uid != user_id {
                          let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
@@ -6051,7 +5940,7 @@ mod cluster {
                                     }
                                 }
                           }
-                          
+
                           let notify_msg = serde_json::to_string(&SignalMessage {
                                 msg_type: "user-update".into(),
                                 user_id: Some(user_id.clone()),
