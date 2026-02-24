@@ -396,7 +396,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         @media (max-width: 950px) and (orientation: landscape) {
             .pip-wrapper {
-                width: 100px;
+                width: 140px;
                 bottom: 120px;
             }
         }
@@ -4654,7 +4654,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }
             }
 
-            label.innerHTML = `<span class="flex items-center">${userNickname}${statusIcons}</span>`;
+            label.innerHTML = `<span class="flex items-center">${userNickname} (You)${statusIcons}</span>`;
         }
 
         function copyLink() {
