@@ -1063,7 +1063,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 <label class="label-text block mb-2">Avatar</label>
                                 <div onclick="document.getElementById('avatarInput').click()" class="w-20 h-20 rounded-2xl cursor-pointer overflow-hidden flex items-center justify-center transition-all group relative mx-auto" style="background: var(--bg-secondary); border: 2px solid var(--border-subtle);">
                                     <img id="avatarPreview" src="" class="hidden w-full h-full object-cover" draggable="false">
-                                    <span id="avatarPlaceholder" class="text-3xl" style="color: var(--text-muted);">ðŸ‘¤</span>
+                                    <span id="avatarPlaceholder" class="text-3xl" style="color: var(--text-muted);">👤</span>
                                     <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold" style="background: rgba(0, 0, 0, 0.7); color: var(--text-primary);">Edit</div>
                                 </div>
                                 <input type="file" id="avatarInput" hidden accept="image/*" onchange="handleAvatarUpload(this)">
@@ -1130,7 +1130,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         <div class="flex flex-col items-center gap-3">
                             <div onclick="document.getElementById('settingsAvatarInput').click()" class="w-32 h-32 rounded-3xl cursor-pointer overflow-hidden flex items-center justify-center transition-all relative" style="background: var(--bg-tertiary); border: 2px solid var(--border-subtle);">
                                 <img id="settingsAvatarPreview" src="" class="hidden w-full h-full object-cover" draggable="false">
-                                <span id="settingsAvatarPlaceholder" class="text-6xl" style="color: var(--text-muted);">ðŸ‘¤</span>
+                                <span id="settingsAvatarPlaceholder" class="text-6xl" style="color: var(--text-muted);">👤</span>
                                 <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold" style="background: rgba(0, 0, 0, 0.75); color: var(--text-primary);">Change</div>
                             </div>
                                                             <input type="file" id="settingsAvatarInput" hidden accept="image/*" onchange="handleSettingsAvatarUpload(this)">
@@ -1231,7 +1231,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         <img id="localAvatarImg" src="" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-30 hidden" draggable="false">
                         <div class="relative w-14 h-14 md:w-20 md:h-20 rounded-2xl flex items-center justify-center overflow-hidden z-10" style="background: var(--bg-secondary); border: 2px solid var(--border-subtle);">
                              <img id="localAvatarCenterImg" src="" class="w-full h-full object-cover hidden" draggable="false">
-                             <div id="localAvatarPlaceholder" class="text-2xl md:text-3xl flex items-center justify-center w-full h-full" style="color: var(--text-muted); line-height: 1;">ðŸ‘¤</div>
+                             <div id="localAvatarPlaceholder" class="text-2xl md:text-3xl flex items-center justify-center w-full h-full" style="color: var(--text-muted); line-height: 1;">👤</div>
                         </div>
                     </div>
 
@@ -3407,7 +3407,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                text.style.width = '100%';
                text.style.height = '100%';
                text.style.margin = '0';
-               text.innerText = 'ðŸ‘¤';
+               text.innerText = '👤';
 
                centerDiv.appendChild(text);
                layer.appendChild(centerDiv);
