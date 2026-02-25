@@ -3205,21 +3205,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             });
         }
 
-        window.addEventListener('keydown', (e) => {
-            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-
-            const key = e.key.toLowerCase();
-            if (key === 'r') {
-                toggleSidebar();
-            } else if (key === 'm') {
-                toggleMic();
-            } else if (key === 'v') {
-                toggleCam();
-            } else if (key === 'd') {
-                toggleDeafen();
-            }
-        });
-
         async function createRoom() {
             try {
                 const res = await fetch('/new');
