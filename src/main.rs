@@ -4463,12 +4463,30 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             playNotificationSound('disconnect');
 
             if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
+
+                localStream.getVideoTracks().forEach(track => track.stop());
+                if (localStream._originalStream) {
+                    localStream._originalStream.getVideoTracks().forEach(track => track.stop());
+                }
+
+                const aTracks = localStream.getAudioTracks();
+                aTracks.forEach(t => t.enabled = false);
+                const origATracks = localStream._originalStream ? localStream._originalStream.getAudioTracks() : [];
+                origATracks.forEach(t => t.enabled = false);
+
+                setTimeout(() => {
+                    aTracks.forEach(track => track.stop());
+                    origATracks.forEach(track => track.stop());
+                }, 800);
+
                 localStream = null;
             }
 
             if (screenStream) {
-                screenStream.getTracks().forEach(track => track.stop());
+                const sTracks = screenStream.getTracks();
+                setTimeout(() => {
+                    sTracks.forEach(track => track.stop());
+                }, 800);
                 screenStream = null;
             }
 
@@ -4504,8 +4522,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             if (audioContext && audioContext.state !== 'closed') {
-                audioContext.close().catch(e => console.error('Error closing audio context:', e));
-                audioContext = null;
+                setTimeout(() => {
+                    if (audioContext && audioContext.state !== 'closed') {
+                        audioContext.close().catch(e => console.error('Error closing audio context:', e));
+                        audioContext = null;
+                    }
+                }, 800);
             }
 
             const welcomeOverlay = document.getElementById('welcomeOverlay');
@@ -4518,8 +4540,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             checkEmpty();
 
-            sessionStorage.removeItem('rustrooms_setup_done');
-            window.location.href = '/';
+            setTimeout(() => {
+                sessionStorage.removeItem('rustrooms_setup_done');
+                window.location.href = '/';
+            }, 800);
         }
 
         function toggleMic() {
