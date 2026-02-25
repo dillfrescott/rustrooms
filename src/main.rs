@@ -561,13 +561,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .speaking-glow {
-            border: 2px solid rgba(16, 185, 129, 0.9) !important;
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.6), 0 0 0 2px rgba(16, 185, 129, 0.4) !important;
-            transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            outline: 3px solid rgba(16, 185, 129, 0.9) !important;
+            outline-offset: -3px;
+            box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.5), 0 0 15px rgba(16, 185, 129, 0.6) !important;
+            transition: outline 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            z-index: 50;
         }
 
         #localPipWrapper.speaking-glow {
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.6), 0 0 0 2px rgba(16, 185, 129, 0.4);
+            box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.5), 0 0 15px rgba(16, 185, 129, 0.6) !important;
         }
 
         .video-container {
@@ -2016,21 +2018,60 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 const average = sum / bufferLength;
 
                 let targetEl;
+                let isVideoActive = false;
 
                 if (targetId === 'local') {
+                    isVideoActive = localVideo.srcObject && localVideo.srcObject.getVideoTracks().length > 0;
                     targetEl = document.getElementById('localPipWrapper');
                 } else {
+                    const rawUserId = targetId.startsWith('wrapper-') ? targetId.replace('wrapper-', '') : targetId;
+                    const isCamOn = peerCamStatus[rawUserId] !== false;
+                    const isScreenOn = peerScreenStatus[rawUserId] === true;
+
+                    if (isCamOn || isScreenOn) {
+                        const wrapper = document.getElementById(targetId);
+                        if (wrapper) {
+                            const vid = document.getElementById(`vid-${rawUserId}`);
+                            if (vid && vid.classList.contains('active')) {
+                                isVideoActive = true;
+                            }
+                        }
+                    }
+
                     const wrapper = document.getElementById(targetId);
                     if (wrapper) {
-                        targetEl = wrapper.querySelector('.avatar-center');
+                        if (isVideoActive) {
+                            targetEl = wrapper;
+                        } else {
+                            targetEl = wrapper.querySelector('.avatar-center');
+                        }
                     }
                 }
 
                 if (targetEl) {
                     if (average > 10) {
                         targetEl.classList.add('speaking-glow');
+
+                        if (targetId !== 'local' && targetEl.classList.contains('avatar-center')) {
+                            const wrapper = document.getElementById(targetId);
+                            if (wrapper) wrapper.classList.remove('speaking-glow');
+                        }
+
+                        if (targetId !== 'local' && !targetEl.classList.contains('avatar-center')) {
+                            const avatar = document.getElementById(targetId)?.querySelector('.avatar-center');
+                            if (avatar) avatar.classList.remove('speaking-glow');
+                        }
                     } else {
                         targetEl.classList.remove('speaking-glow');
+
+                        if (targetId !== 'local') {
+                            const wrapper = document.getElementById(targetId);
+                            if (wrapper) {
+                                wrapper.classList.remove('speaking-glow');
+                                const avatar = wrapper.querySelector('.avatar-center');
+                                if (avatar) avatar.classList.remove('speaking-glow');
+                            }
+                        }
                     }
                 }
 
@@ -2227,33 +2268,55 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             input.value = '';
         }
 
+        let isPreviewStarting = false;
+        let pendingCamToggle = false;
+
         async function startPreview() {
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-                if (localStream._originalStream) {
-                     localStream._originalStream.getTracks().forEach(track => track.stop());
-                }
-                localStream = null;
+            if (isPreviewStarting) {
+                return;
             }
 
-            const audioSource = audioSelect.value;
-            const videoSource = videoSelect.value;
+            let previousVideoEnabled = true;
+            let previousAudioEnabled = true;
+            if (localStream) {
+                const oldV = localStream.getVideoTracks()[0];
+                const oldA = localStream.getAudioTracks()[0];
+                if (oldV) previousVideoEnabled = oldV.enabled;
+                if (oldA) previousAudioEnabled = oldA.enabled;
+            }
 
-            savePreferences();
-
-            const constraints = {
-                audio: {
-                    deviceId: audioSource ? { exact: audioSource } : undefined,
-                    echoCancellation: true,
-                    noiseSuppression: false,
-                    autoGainControl: true,
-                    sampleRate: 48000
-                },
-                video: { deviceId: videoSource ? { exact: videoSource } : undefined }
-            };
-
+            isPreviewStarting = true;
             try {
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                    if (localStream._originalStream) {
+                         localStream._originalStream.getTracks().forEach(track => track.stop());
+                    }
+                    localStream = null;
+                }
+
+                const audioSource = audioSelect.value;
+                const videoSource = videoSelect.value;
+
+                savePreferences();
+
+                const constraints = {
+                    audio: {
+                        deviceId: audioSource ? { exact: audioSource } : undefined,
+                        echoCancellation: true,
+                        noiseSuppression: false,
+                        autoGainControl: true,
+                        sampleRate: 48000
+                    },
+                    video: { deviceId: videoSource ? { exact: videoSource } : undefined }
+                };
+
                 let rawStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+                const newV = rawStream.getVideoTracks()[0];
+                const newA = rawStream.getAudioTracks()[0];
+                if (newV) newV.enabled = previousVideoEnabled;
+                if (newA) newA.enabled = previousAudioEnabled;
 
                 setupVolumeMeter(rawStream, 'setupMicBar');
 
@@ -2310,7 +2373,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
 
                     const videoTrack = localStream.getVideoTracks()[0];
-                    if (!videoTrack || !videoTrack.enabled) {
+                    let isCamOn = videoTrack && videoTrack.enabled;
+                    if (isPreviewStarting && pendingCamToggle) {
+                        isCamOn = !isCamOn;
+                    }
+                    if (!isCamOn) {
                          if (btnCam) { btnCam.classList.add('active-red'); btnCam.innerHTML = camOffSvg; }
                     } else {
                          if (btnCam) { btnCam.classList.remove('active-red'); btnCam.innerHTML = camOnSvg; }
@@ -2346,9 +2413,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
 
                     if (videoTrack) {
+                        let isCamOn = videoTrack.enabled;
+                        if (isPreviewStarting && pendingCamToggle) {
+                            isCamOn = !isCamOn;
+                        }
                         ws.send(JSON.stringify({
                             type: 'cam-toggle',
-                            data: { enabled: true }
+                            data: { enabled: isCamOn }
                         }));
                     }
                 }
@@ -2357,6 +2428,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 document.getElementById('previewPlaceholder').style.display = 'flex';
                  try {
                     let rawStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+
+                    const newA = rawStream.getAudioTracks()[0];
+                    if (newA) newA.enabled = previousAudioEnabled;
 
                     if (rawStream.getAudioTracks().length > 0) {
                          if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -2390,7 +2464,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     setupVolumeMeter(localStream, 'setupMicBar');
                     updatePreviewButtons();
                 } catch(e2) {
+                    console.error("Mic fallback start err:", e2);
                     updatePreviewButtons();
+                }
+            } finally {
+                const wasPending = pendingCamToggle;
+                pendingCamToggle = false;
+                isPreviewStarting = false;
+
+                if (localStream && wasPending) {
+                    const videoTrack = localStream.getVideoTracks()[0];
+                    if (videoTrack) {
+                        videoTrack.enabled = !videoTrack.enabled;
+                        updatePreviewButtons();
+                    }
                 }
             }
         }
@@ -2438,7 +2525,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              } else {
                  btnCam.disabled = false;
                  btnCam.classList.remove('opacity-50', 'cursor-not-allowed');
-                 if (!videoTrack.enabled) {
+
+                 let isEffectivelyEnabled = videoTrack.enabled;
+                 if (isPreviewStarting && pendingCamToggle) {
+                     isEffectivelyEnabled = !isEffectivelyEnabled;
+                 }
+
+                 if (!isEffectivelyEnabled) {
                      btnCam.classList.add('bg-red-500', 'hover:bg-red-600');
                      btnCam.innerText = "Start Cam";
                      document.getElementById('previewPlaceholder').style.display = 'flex';
@@ -2460,6 +2553,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function togglePreviewCam() {
+             if (isPreviewStarting) {
+                 pendingCamToggle = !pendingCamToggle;
+
+                 const btnCam = document.getElementById('btnPreviewCam');
+                 if (btnCam) {
+                    if (btnCam.innerText.includes("Stop")) {
+                        btnCam.classList.add('bg-red-500', 'hover:bg-red-600');
+                        btnCam.innerText = "Start Cam";
+                        document.getElementById('previewPlaceholder').style.display = 'flex';
+                    } else {
+                        btnCam.classList.remove('bg-red-500', 'hover:bg-red-600');
+                        btnCam.innerText = "Stop Cam";
+                        document.getElementById('previewPlaceholder').style.display = 'none';
+                    }
+                 }
+                 return;
+             }
              if (!localStream) return;
             const track = localStream.getVideoTracks()[0];
             if (track) {
