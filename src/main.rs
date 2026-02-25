@@ -62,7 +62,18 @@ const CACHE_NAME = 'rustrooms-v1';
 const ASSETS = [
     '/icon.svg',
     '/rnnoise.js',
-    '/rnnoise_processor.js'
+    '/rnnoise_processor.js',
+    '/assets/tailwind.js',
+    '/assets/croppie.min.js',
+    '/assets/croppie.min.css',
+    '/assets/inter.css',
+    '/fonts/inter-cyrillic-ext.woff2',
+    '/fonts/inter-cyrillic.woff2',
+    '/fonts/inter-greek-ext.woff2',
+    '/fonts/inter-greek.woff2',
+    '/fonts/inter-vietnamese.woff2',
+    '/fonts/inter-latin-ext.woff2',
+    '/fonts/inter-latin.woff2'
 ];
 
 self.addEventListener('install', (event) => {
@@ -111,6 +122,37 @@ async fn icon_svg() -> impl IntoResponse {
     )
 }
 
+macro_rules! asset_route {
+    ($func:ident, $content_type:expr, $path:expr, str) => {
+        async fn $func() -> impl IntoResponse {
+            (
+                [(header::CONTENT_TYPE, $content_type)],
+                include_str!($path),
+            )
+        }
+    };
+    ($func:ident, $content_type:expr, $path:expr, bytes) => {
+        async fn $func() -> impl IntoResponse {
+            (
+                [(header::CONTENT_TYPE, $content_type)],
+                include_bytes!($path).as_slice(),
+            )
+        }
+    };
+}
+
+asset_route!(tailwind_js, "application/javascript", "assets/tailwind.js", str);
+asset_route!(croppie_js, "application/javascript", "assets/croppie.min.js", str);
+asset_route!(croppie_css, "text/css", "assets/croppie.min.css", str);
+asset_route!(inter_css, "text/css", "assets/inter.css", str);
+asset_route!(inter_cyrillic_ext_woff2, "font/woff2", "assets/fonts/inter-cyrillic-ext.woff2", bytes);
+asset_route!(inter_cyrillic_woff2, "font/woff2", "assets/fonts/inter-cyrillic.woff2", bytes);
+asset_route!(inter_greek_ext_woff2, "font/woff2", "assets/fonts/inter-greek-ext.woff2", bytes);
+asset_route!(inter_greek_woff2, "font/woff2", "assets/fonts/inter-greek.woff2", bytes);
+asset_route!(inter_vietnamese_woff2, "font/woff2", "assets/fonts/inter-vietnamese.woff2", bytes);
+asset_route!(inter_latin_ext_woff2, "font/woff2", "assets/fonts/inter-latin-ext.woff2", bytes);
+asset_route!(inter_latin_woff2, "font/woff2", "assets/fonts/inter-latin.woff2", bytes);
+
 fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> String {
 
     let html = r###"
@@ -123,8 +165,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
     <meta name="theme-color" content="#09090b">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/assets/tailwind.js"></script>
+    <link href="/assets/inter.css" rel="stylesheet">
     <style>
         :root {
 
@@ -947,8 +989,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
     </style>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.js"></script>
+    <link rel="stylesheet" href="/assets/croppie.min.css" />
+    <script src="/assets/croppie.min.js"></script>
 </head>
 <body class="flex flex-col overflow-hidden" style="background-color: var(--bg-primary);">
 
@@ -5258,6 +5300,17 @@ async fn main() {
         .route("/manifest.json", get(manifest_json))
         .route("/service-worker.js", get(service_worker_js))
         .route("/icon.svg", get(icon_svg))
+        .route("/assets/tailwind.js", get(tailwind_js))
+        .route("/assets/croppie.min.js", get(croppie_js))
+        .route("/assets/croppie.min.css", get(croppie_css))
+        .route("/assets/inter.css", get(inter_css))
+        .route("/fonts/inter-cyrillic-ext.woff2", get(inter_cyrillic_ext_woff2))
+        .route("/fonts/inter-cyrillic.woff2", get(inter_cyrillic_woff2))
+        .route("/fonts/inter-greek-ext.woff2", get(inter_greek_ext_woff2))
+        .route("/fonts/inter-greek.woff2", get(inter_greek_woff2))
+        .route("/fonts/inter-vietnamese.woff2", get(inter_vietnamese_woff2))
+        .route("/fonts/inter-latin-ext.woff2", get(inter_latin_ext_woff2))
+        .route("/fonts/inter-latin.woff2", get(inter_latin_woff2))
         .route("/ws/{room_id}/{channel_id}", get(ws_handler))
         .route("/ws/{room_id}/{channel_id}/", get(redirect_ws_trailing_slash))
         .with_state(state);
@@ -5330,7 +5383,7 @@ async fn index(State(_state): State<AppState>) -> impl IntoResponse {
     (
         [(
             header::CONTENT_SECURITY_POLICY,
-            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
         )],
         Html(html)
     )
