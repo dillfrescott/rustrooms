@@ -1734,6 +1734,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             loadPreferences();
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                if (localStream) {
+                    if (pendingCamToggle) {
+                        const videoTrack = localStream.getVideoTracks()[0];
+                        if (videoTrack) videoTrack.enabled = !videoTrack.enabled;
+                        pendingCamToggle = false;
+                    }
+                    if (pendingMicToggle) {
+                        const audioTrack = localStream.getAudioTracks()[0];
+                        if (audioTrack) audioTrack.enabled = !audioTrack.enabled;
+                        pendingMicToggle = false;
+                    }
+                }
                 previewVideo.srcObject = localStream;
                 document.getElementById('previewPlaceholder').style.display = 'none';
                 updatePreviewButtons();
@@ -1749,6 +1761,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 console.warn("Device access failed", e);
                 try {
                     localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    if (localStream && pendingMicToggle) {
+                        const audioTrack = localStream.getAudioTracks()[0];
+                        if (audioTrack) audioTrack.enabled = !audioTrack.enabled;
+                        pendingMicToggle = false;
+                    }
                     updatePreviewButtons();
                     await populateDeviceList();
                     await startPreview();
@@ -2270,6 +2287,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         let isPreviewStarting = false;
         let pendingCamToggle = false;
+        let pendingMicToggle = false;
 
         async function startPreview() {
             if (isPreviewStarting) {
@@ -2338,6 +2356,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                          worklet.connect(dest);
 
                          const processedAudio = dest.stream.getAudioTracks()[0];
+                         if (processedAudio) processedAudio.enabled = previousAudioEnabled;
+
                          const videoTracks = rawStream.getVideoTracks();
 
                          localStream = new MediaStream([processedAudio, ...videoTracks]);
@@ -2366,7 +2386,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     const camOnSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
 
                     const audioTrack = localStream.getAudioTracks()[0];
-                    if (!audioTrack || !audioTrack.enabled) {
+                    let isMicOn = audioTrack && audioTrack.enabled;
+                    if (isPreviewStarting && pendingMicToggle) {
+                        isMicOn = !isMicOn;
+                    }
+                    if (!isMicOn) {
                          if (btnMic) { btnMic.classList.add('active-red'); btnMic.innerHTML = micOffSvg; }
                     } else {
                          if (btnMic) { btnMic.classList.remove('active-red'); btnMic.innerHTML = micOnSvg; }
@@ -2450,6 +2474,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                              worklet.connect(dest);
 
                              const processedAudio = dest.stream.getAudioTracks()[0];
+                             if (processedAudio) processedAudio.enabled = previousAudioEnabled;
 
                              localStream = new MediaStream([processedAudio]);
                              localStream._originalStream = rawStream;
@@ -2468,14 +2493,29 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     updatePreviewButtons();
                 }
             } finally {
-                const wasPending = pendingCamToggle;
+                const wasPendingCam = pendingCamToggle;
+                const wasPendingMic = pendingMicToggle;
                 pendingCamToggle = false;
+                pendingMicToggle = false;
                 isPreviewStarting = false;
 
-                if (localStream && wasPending) {
-                    const videoTrack = localStream.getVideoTracks()[0];
-                    if (videoTrack) {
-                        videoTrack.enabled = !videoTrack.enabled;
+                if (localStream) {
+                    let needsUpdate = false;
+                    if (wasPendingCam) {
+                        const videoTrack = localStream.getVideoTracks()[0];
+                        if (videoTrack) {
+                            videoTrack.enabled = !videoTrack.enabled;
+                            needsUpdate = true;
+                        }
+                    }
+                    if (wasPendingMic) {
+                        const audioTrack = localStream.getAudioTracks()[0];
+                        if (audioTrack) {
+                            audioTrack.enabled = !audioTrack.enabled;
+                            needsUpdate = true;
+                        }
+                    }
+                    if (needsUpdate) {
                         updatePreviewButtons();
                     }
                 }
@@ -2508,7 +2548,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              } else {
                  btnMic.disabled = false;
                  btnMic.classList.remove('opacity-50', 'cursor-not-allowed');
-                 if (!audioTrack.enabled) {
+
+                 let isAudioEffectivelyEnabled = audioTrack.enabled;
+                 if (isPreviewStarting && pendingMicToggle) {
+                     isAudioEffectivelyEnabled = !isAudioEffectivelyEnabled;
+                 }
+
+                 if (!isAudioEffectivelyEnabled) {
                      btnMic.classList.add('bg-red-500', 'hover:bg-red-600');
                      btnMic.innerText = "Unmute";
                  } else {
@@ -2544,7 +2590,22 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function togglePreviewMic() {
-            if (!localStream) return;
+             if (isPreviewStarting) {
+                 pendingMicToggle = !pendingMicToggle;
+
+                 const btnMic = document.getElementById('btnPreviewMic');
+                 if (btnMic) {
+                    if (btnMic.innerText.includes("Mute") && !btnMic.innerText.includes("Unmute")) {
+                        btnMic.classList.add('bg-red-500', 'hover:bg-red-600');
+                        btnMic.innerText = "Unmute";
+                    } else {
+                        btnMic.classList.remove('bg-red-500', 'hover:bg-red-600');
+                        btnMic.innerText = "Mute";
+                    }
+                 }
+                 return;
+             }
+             if (!localStream) return;
             const track = localStream.getAudioTracks()[0];
             if (track) {
                 track.enabled = !track.enabled;
