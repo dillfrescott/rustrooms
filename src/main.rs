@@ -929,7 +929,26 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             color: #ef4444;
             opacity: 1;
         }
+
+        .idle-fullscreen {
+            cursor: none !important;
+        }
+
+        .idle-fullscreen .volume-controls,
+        .idle-fullscreen .name-tag {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .video-container:fullscreen .volume-controls,
+        .video-container:fullscreen .name-tag {
+            transition: opacity 0.2s ease-in;
+        }
     </style>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.6.5/croppie.min.js"></script>
 </head>
 <body class="flex flex-col overflow-hidden" style="background-color: var(--bg-primary);">
 
@@ -1236,7 +1255,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     </div>
 
                     <video id="localVideo" autoplay playsinline muted class="w-full h-full object-cover z-10"></video>
-                    <div id="localLabel" class="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg text-[10px] md:text-xs font-medium backdrop-blur-sm z-30" style="background: rgba(0, 0, 0, 0.6); color: var(--text-primary);">
+                    <div id="localLabel" class="name-tag absolute bottom-2 left-2 px-2.5 py-1 rounded-lg text-[10px] md:text-xs font-medium backdrop-blur-sm z-30" style="background: rgba(0, 0, 0, 0.6); color: var(--text-primary);">
                         You
                     </div>
                 </div>
@@ -2160,39 +2179,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-
-                    const MAX_SIZE = 2048;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > height) {
-                        if (width > MAX_SIZE) {
-                            height *= MAX_SIZE / width;
-                            width = MAX_SIZE;
-                        }
-                    } else {
-                        if (height > MAX_SIZE) {
-                            width *= MAX_SIZE / height;
-                            height = MAX_SIZE;
-                        }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    userAvatar = canvas.toDataURL('image/jpeg', 0.8);
-                    avatarPreview.src = userAvatar;
-                    avatarPreview.classList.remove('hidden');
-                    avatarPlaceholder.classList.add('hidden');
-                };
-                img.src = e.target.result;
+                openCropModal(e.target.result, 'setup');
             };
             reader.readAsDataURL(file);
+            input.value = '';
         }
 
         async function startPreview() {
@@ -3781,7 +3771,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             setAvatar(avatarLayer, avatarUrl);
 
             const label = document.createElement('div');
-            label.className = 'absolute bottom-3 left-3 bg-black/50 px-3 py-1 rounded-full text-sm text-white backdrop-blur-md z-30 flex items-center gap-1.5';
+            label.className = 'name-tag absolute bottom-3 left-3 bg-black/50 px-3 py-1 rounded-full text-sm text-white backdrop-blur-md z-30 flex items-center gap-1.5';
 
             const nameSpan = document.createElement('span');
             nameSpan.className = 'peer-name';
@@ -4809,38 +4799,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    const MAX_SIZE = 2048;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > height) {
-                        if (width > MAX_SIZE) {
-                            height *= MAX_SIZE / width;
-                            width = MAX_SIZE;
-                        }
-                    } else {
-                        if (height > MAX_SIZE) {
-                            width *= MAX_SIZE / height;
-                            height = MAX_SIZE;
-                        }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    newAvatarCandidate = canvas.toDataURL('image/jpeg', 0.8);
-                    settingsAvatarPreview.src = newAvatarCandidate;
-                    settingsAvatarPreview.classList.remove('hidden');
-                    settingsAvatarPlaceholder.classList.add('hidden');
-                };
-                img.src = e.target.result;
+                openCropModal(e.target.result, 'settings');
             };
             reader.readAsDataURL(file);
+            input.value = '';
         }
 
         async function saveSettings() {
@@ -5146,7 +5108,88 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }, 250);
             });
         })();
+
+        let idleTimer = null;
+        document.addEventListener('mousemove', () => {
+            if (document.fullscreenElement && document.fullscreenElement.classList.contains('video-container')) {
+                document.fullscreenElement.classList.remove('idle-fullscreen');
+                clearTimeout(idleTimer);
+                idleTimer = setTimeout(() => {
+                    if (document.fullscreenElement && document.fullscreenElement.classList.contains('video-container')) {
+                        document.fullscreenElement.classList.add('idle-fullscreen');
+                    }
+                }, 2500);
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                clearTimeout(idleTimer);
+                document.querySelectorAll('.video-container.idle-fullscreen').forEach(el => el.classList.remove('idle-fullscreen'));
+            }
+        });
+
+        let currentCroppie = null;
+        let currentCropTarget = null;
+
+        function openCropModal(imageUrl, target) {
+            currentCropTarget = target;
+            const modal = document.getElementById('cropModal');
+            const wrapper = document.getElementById('cropWrapper');
+            wrapper.innerHTML = '';
+            modal.classList.remove('hidden');
+
+            currentCroppie = new Croppie(wrapper, {
+                viewport: { width: 200, height: 200, type: 'square' },
+                boundary: { width: '100%', height: 250 },
+                showZoomer: true,
+                enableOrientation: true
+            });
+            currentCroppie.bind({ url: imageUrl, zoom: 0 });
+        }
+
+        function closeCropModal() {
+            document.getElementById('cropModal').classList.add('hidden');
+            if (currentCroppie) {
+                currentCroppie.destroy();
+                currentCroppie = null;
+            }
+        }
+
+        function applyCrop() {
+            if (!currentCroppie) return;
+            currentCroppie.result({
+                type: 'base64',
+                size: { width: 400, height: 400 },
+                format: 'jpeg',
+                quality: 0.8
+            }).then(function(base64) {
+                if (currentCropTarget === 'setup') {
+                    userAvatar = base64;
+                    avatarPreview.src = userAvatar;
+                    avatarPreview.classList.remove('hidden');
+                    avatarPlaceholder.classList.add('hidden');
+                } else if (currentCropTarget === 'settings') {
+                    newAvatarCandidate = base64;
+                    settingsAvatarPreview.src = newAvatarCandidate;
+                    settingsAvatarPreview.classList.remove('hidden');
+                    settingsAvatarPlaceholder.classList.add('hidden');
+                }
+                closeCropModal();
+            });
+        }
     </script>
+
+    <div id="cropModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 hidden" style="background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px) saturate(140%);">
+        <div class="glass-panel p-6 md:p-8 rounded-3xl w-full max-w-md max-h-[95vh] flex flex-col items-center relative z-10">
+            <h3 class="text-xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">Crop Your Avatar</h3>
+            <div id="cropWrapper" class="w-full relative"></div>
+            <div class="flex gap-4 w-full mt-2">
+                <button onclick="closeCropModal()" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
+                <button onclick="applyCrop()" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all">Crop & Save</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
 "###;
@@ -5287,7 +5330,7 @@ async fn index(State(_state): State<AppState>) -> impl IntoResponse {
     (
         [(
             header::CONTENT_SECURITY_POLICY,
-            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
         )],
         Html(html)
     )
