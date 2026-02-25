@@ -13,8 +13,4 @@ tower-http = { version = "0.6.8", features = ["fs", "trace"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.22"
 futures = "0.3.32"
-iroh = "0.96.1"
-iroh-gossip = "0.96.0"
-anyhow = "1.0.101"
-blake3 = "1.8.3"
 

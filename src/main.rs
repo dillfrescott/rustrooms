@@ -1063,7 +1063,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 <label class="label-text block mb-2">Avatar</label>
                                 <div onclick="document.getElementById('avatarInput').click()" class="w-20 h-20 rounded-2xl cursor-pointer overflow-hidden flex items-center justify-center transition-all group relative mx-auto" style="background: var(--bg-secondary); border: 2px solid var(--border-subtle);">
                                     <img id="avatarPreview" src="" class="hidden w-full h-full object-cover" draggable="false">
-                                    <span id="avatarPlaceholder" class="text-3xl" style="color: var(--text-muted);">👤</span>
+                                    <span id="avatarPlaceholder" class="text-3xl" style="color: var(--text-muted);">ðŸ‘¤</span>
                                     <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold" style="background: rgba(0, 0, 0, 0.7); color: var(--text-primary);">Edit</div>
                                 </div>
                                 <input type="file" id="avatarInput" hidden accept="image/*" onchange="handleAvatarUpload(this)">
@@ -1130,7 +1130,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         <div class="flex flex-col items-center gap-3">
                             <div onclick="document.getElementById('settingsAvatarInput').click()" class="w-32 h-32 rounded-3xl cursor-pointer overflow-hidden flex items-center justify-center transition-all relative" style="background: var(--bg-tertiary); border: 2px solid var(--border-subtle);">
                                 <img id="settingsAvatarPreview" src="" class="hidden w-full h-full object-cover" draggable="false">
-                                <span id="settingsAvatarPlaceholder" class="text-6xl" style="color: var(--text-muted);">👤</span>
+                                <span id="settingsAvatarPlaceholder" class="text-6xl" style="color: var(--text-muted);">ðŸ‘¤</span>
                                 <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold" style="background: rgba(0, 0, 0, 0.75); color: var(--text-primary);">Change</div>
                             </div>
                                                             <input type="file" id="settingsAvatarInput" hidden accept="image/*" onchange="handleSettingsAvatarUpload(this)">
@@ -1231,7 +1231,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         <img id="localAvatarImg" src="" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-30 hidden" draggable="false">
                         <div class="relative w-14 h-14 md:w-20 md:h-20 rounded-2xl flex items-center justify-center overflow-hidden z-10" style="background: var(--bg-secondary); border: 2px solid var(--border-subtle);">
                              <img id="localAvatarCenterImg" src="" class="w-full h-full object-cover hidden" draggable="false">
-                             <div id="localAvatarPlaceholder" class="text-2xl md:text-3xl flex items-center justify-center w-full h-full" style="color: var(--text-muted); line-height: 1;">👤</div>
+                             <div id="localAvatarPlaceholder" class="text-2xl md:text-3xl flex items-center justify-center w-full h-full" style="color: var(--text-muted); line-height: 1;">ðŸ‘¤</div>
                         </div>
                     </div>
 
@@ -3407,7 +3407,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                text.style.width = '100%';
                text.style.height = '100%';
                text.style.margin = '0';
-               text.innerText = '👤';
+               text.innerText = 'ðŸ‘¤';
 
                centerDiv.appendChild(text);
                layer.appendChild(centerDiv);
@@ -5191,7 +5191,6 @@ const ROOM_EMPTY_GRACE_SECS: u64 = 120;
 struct AppState {
     rooms: RoomMap,
     room_cleanup_generations: RoomCleanupMap,
-    cluster_handle: Option<cluster::ClusterHandle>,
     room_creation_password: Option<String>,
 }
 
@@ -5200,23 +5199,8 @@ async fn main() {
     let rooms: RoomMap = Arc::new(Mutex::new(HashMap::new()));
     let room_cleanup_generations: RoomCleanupMap = Arc::new(Mutex::new(HashMap::new()));
 
-    let cluster_handle = if let Ok(key) = std::env::var("IROH_KEY") {
-        match cluster::start_cluster(key, rooms.clone()).await {
-            Ok(h) => {
-                println!("CLUSTER: Enabled");
-                Some(h)
-            },
-            Err(e) => {
-                eprintln!("CLUSTER: Failed to start: {}", e);
-                None
-            }
-        }
-    } else {
-        None
-    };
-
     let room_creation_password = std::env::var("ROOM_CREATION_PASSWORD").ok().filter(|s| !s.is_empty());
-    let state = AppState { rooms, room_cleanup_generations, cluster_handle, room_creation_password };
+    let state = AppState { rooms, room_cleanup_generations, room_creation_password };
 
     let app = Router::new()
         .route("/", get(index))
@@ -5516,19 +5500,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                  map.remove("userId");
                              }
 
-                             if let Some(ch) = &state.cluster_handle {
-                                 ch.broadcast(cluster::ClusterMessage::Join {
-                                     room_id: room_id.clone(),
-                                     channel_id: channel_id.clone(),
-                                     user_id: user_id.clone(),
-                                     nickname: nickname.clone(),
-                                     avatar: avatar.clone(),
-                                     is_muted,
-                                     is_deafened,
-                                     is_screen_sharing,
-                                 });
-                             }
-
                              let notify_msg = serde_json::to_string(&SignalMessage {
                                 msg_type: "user-joined".into(),
                                 user_id: Some(user_id.clone()),
@@ -5582,15 +5553,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         if let Some(status) = full_status {
                                             let full_data = serde_json::to_value(&status).unwrap();
 
-                                            if let Some(ch) = &state.cluster_handle {
-                                                ch.broadcast(cluster::ClusterMessage::Update {
-                                                    room_id: room_id.clone(),
-                                                    channel_id: channel_id.clone(),
-                                                    user_id: user_id.clone(),
-                                                    data: full_data.clone(),
-                                                });
-                                            }
-
                                             let notify_msg = serde_json::to_string(&SignalMessage {
                                                 msg_type: "user-update".into(),
                                                 user_id: Some(user_id.clone()),
@@ -5628,7 +5590,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 }
                             }
                         } else if parsed.msg_type == "screen-toggle" {
-                            let mut full_status = None;
                             {
                                 let mut rooms_lock = rooms.lock().await;
                                 if let Some(room) = rooms_lock.get_mut(&room_id) {
@@ -5640,7 +5601,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                             {
                                                 status.is_screen_sharing = enabled;
                                             }
-                                            full_status = Some(status.clone());
                                         }
 
                                         let notify_msg = serde_json::to_string(&SignalMessage {
@@ -5659,17 +5619,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 }
                             }
 
-                            if let Some(status) = full_status {
-                                let full_data = serde_json::to_value(&status).unwrap();
-                                if let Some(ch) = &state.cluster_handle {
-                                    ch.broadcast(cluster::ClusterMessage::Update {
-                                        room_id: room_id.clone(),
-                                        channel_id: channel_id.clone(),
-                                        user_id: user_id.clone(),
-                                        data: full_data,
-                                    });
-                                }
-                            }
                             broadcast_channel_list(&rooms, &room_id).await;
                         } else if parsed.msg_type == "rename-channel" {
                             let target_channel_id = parsed.data.as_ref()
@@ -5780,14 +5729,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                             channel.remove(&user_id);
                             removed = true;
 
-                            if let Some(ch) = &state.cluster_handle {
-                                ch.broadcast(cluster::ClusterMessage::Leave {
-                                    room_id: room_id.clone(),
-                                    channel_id: channel_id.clone(),
-                                    user_id: user_id.clone(),
-                                });
-                            }
-
                             if !channel.is_empty() {
                                 let notify_msg = serde_json::to_string(&SignalMessage {
                                     msg_type: "user-left".into(),
@@ -5805,19 +5746,11 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                 }
 
                 if !removed {
-                    for (cid, channel) in room.iter_mut() {
+                    for (_, channel) in room.iter_mut() {
                         if let Some((stored_tx, _)) = channel.get(&user_id) {
                             if stored_tx.same_channel(&tx) {
                                 channel.remove(&user_id);
                                 removed = true;
-
-                                if let Some(ch) = &state.cluster_handle {
-                                    ch.broadcast(cluster::ClusterMessage::Leave {
-                                        room_id: room_id.clone(),
-                                        channel_id: cid.clone(),
-                                        user_id: user_id.clone(),
-                                    });
-                                }
 
                                 if !channel.is_empty() {
                                     let notify_msg = serde_json::to_string(&SignalMessage {
@@ -5899,224 +5832,3 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
     broadcast_channel_list(&rooms, &room_id).await;
 }
 
-mod cluster {
-    use super::*;
-    use iroh::Endpoint;
-     use iroh_gossip::api::Event as GossipEvent;
-     use iroh_gossip::{net::Gossip, proto::TopicId};
-    use std::collections::HashMap;
-    use axum::extract::ws::Message;
-    use serde::{Serialize, Deserialize};
-
-    #[derive(Clone, Debug, Serialize, Deserialize)]
-    pub enum ClusterMessage {
-        Join { room_id: String, channel_id: String, user_id: String, nickname: String, avatar: Option<String>, is_muted: bool, is_deafened: bool, is_screen_sharing: bool },
-        Leave { room_id: String, channel_id: String, user_id: String },
-        Update { room_id: String, channel_id: String, user_id: String, data: serde_json::Value },
-        Signal { target_user_id: String, payload: String },
-    }
-
-    #[derive(Clone)]
-    pub struct ClusterHandle {
-        cmd_tx: tokio::sync::mpsc::Sender<ClusterMessage>,
-        _topic: TopicId,
-    }
-
-    impl ClusterHandle {
-        pub fn broadcast(&self, msg: ClusterMessage) {
-             let _ = self.cmd_tx.try_send(msg);
-        }
-    }
-
-    pub async fn start_cluster(key: String, rooms: RoomMap) -> anyhow::Result<ClusterHandle> {
-        let topic_bytes = blake3::hash(key.as_bytes());
-        let topic = TopicId::from_bytes(*topic_bytes.as_bytes());
-
-        let (cmd_tx, mut cmd_rx) = tokio::sync::mpsc::channel(100);
-
-        let handle = ClusterHandle { cmd_tx, _topic: topic };
-        let handle_clone = handle.clone();
-
-        tokio::spawn(async move {
-            println!("CLUSTER: Initializing node...");
-
-            let endpoint_res = Endpoint::builder().bind().await;
-            if let Err(e) = endpoint_res {
-                eprintln!("CLUSTER ERROR: Failed to bind endpoint: {}", e);
-                return;
-            }
-            let endpoint = endpoint_res.unwrap();
-
-            let gossip = Gossip::builder().spawn(endpoint.clone());
-
-            println!("CLUSTER: Joining topic {}...", topic);
-
-            let topic_io_res = gossip.subscribe_and_join(topic, vec![]).await;
-            if let Err(e) = topic_io_res {
-                 eprintln!("CLUSTER ERROR: Failed to join topic: {}", e);
-                 return;
-            }
-            let mut stream = topic_io_res.unwrap();
-
-            println!("CLUSTER: Joined topic {}, Node ID: {}", topic, endpoint.secret_key().public());
-
-            loop {
-                tokio::select! {
-                    cmd = cmd_rx.recv() => {
-                        if let Some(msg) = cmd {
-                            let data = serde_json::to_vec(&msg).unwrap();
-                            let _ = stream.broadcast(data.into()).await;
-                        } else {
-                            break;
-                        }
-                    }
-                    event = stream.next() => {
-                        if let Some(res) = event {
-                            if let Ok(event) = res {
-                                match event {
-                                    GossipEvent::Received(msg) => {
-                                         if let Ok(cluster_msg) = serde_json::from_slice::<ClusterMessage>(&msg.content) {
-                                            handle_cluster_message(cluster_msg, &rooms, &handle_clone).await;
-                                         }
-                                    }
-                                    _ => {}
-                                }
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                }
-            }
-        });
-
-        Ok(handle)
-    }
-
-    async fn handle_cluster_message(msg: ClusterMessage, rooms: &RoomMap, handle: &ClusterHandle) {
-         match msg {
-             ClusterMessage::Join { room_id, channel_id, user_id, nickname, avatar, is_muted, is_deafened, is_screen_sharing } => {
-                 let mut rooms_lock = rooms.lock().await;
-                 let room = rooms_lock.entry(room_id.clone()).or_insert_with(HashMap::new);
-                 room.entry("General".to_string()).or_insert_with(HashMap::new);
-                 let channel = room.entry(channel_id.clone()).or_insert_with(HashMap::new);
-
-                 if channel.contains_key(&user_id) {
-
-                     println!("CLUSTER: Overwriting existing proxy (re-join) {} in {}/{}", user_id, room_id, channel_id);
-                 }
-
-                 let (tx, mut rx) = tokio::sync::mpsc::channel(5000);
-                 let h = handle.clone();
-                 let target = user_id.clone();
-
-                 tokio::spawn(async move {
-                     while let Some(res) = rx.recv().await {
-                         if let Ok(Message::Text(text)) = res {
-                             let sig = ClusterMessage::Signal {
-                                 target_user_id: target.clone(),
-                                 payload: text.to_string(),
-                             };
-                             h.broadcast(sig);
-                         }
-                     }
-                 });
-
-                 channel.insert(user_id.clone(), (tx, UserStatus {
-                     nickname: nickname.clone(),
-                     avatar: avatar.clone(),
-                     is_muted,
-                     is_deafened,
-                     is_screen_sharing,
-                 }));
-                 println!("CLUSTER: Added proxy user {} in {}/{}", user_id, room_id, channel_id);
-
-                  let notify_msg = serde_json::to_string(&SignalMessage {
-                        msg_type: "user-joined".into(),
-                        user_id: Some(user_id.clone()),
-                        target: None,
-                        data: Some(serde_json::json!({
-                            "nickname": nickname,
-                            "avatar": avatar,
-                            "isMuted": is_muted,
-                            "isDeafened": is_deafened,
-                            "screenEnabled": is_screen_sharing
-                        })),
-                    }).unwrap();
-
-                 for (uid, (tx, _)) in channel.iter() {
-                     if *uid != user_id {
-                         let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
-                     }
-                 }
-             }
-             ClusterMessage::Leave { room_id, channel_id, user_id } => {
-                  let mut rooms_lock = rooms.lock().await;
-                  if let Some(room) = rooms_lock.get_mut(&room_id) {
-                      if let Some(channel) = room.get_mut(&channel_id) {
-                          if channel.remove(&user_id).is_some() {
-                               let notify_msg = serde_json::to_string(&SignalMessage {
-                                    msg_type: "user-left".into(),
-                                    user_id: Some(user_id.clone()),
-                                    target: None,
-                                    data: None,
-                                }).unwrap();
-                                for (_, (tx, _)) in channel.iter() {
-                                    let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
-                                }
-                          }
-                      }
-                  }
-             }
-             ClusterMessage::Update { room_id, channel_id, user_id, data } => {
-                  let mut rooms_lock = rooms.lock().await;
-                  if let Some(room) = rooms_lock.get_mut(&room_id) {
-                      if let Some(channel) = room.get_mut(&channel_id) {
-                          if let Some((_, status)) = channel.get_mut(&user_id) {
-                                if let Some(map) = data.as_object() {
-                                    if let Some(serde_json::Value::String(n)) = map.get("nickname") {
-                                        status.nickname = n.clone();
-                                    }
-                                    if let Some(serde_json::Value::String(a)) = map.get("avatar") {
-                                        status.avatar = Some(a.clone());
-                                    }
-                                    if let Some(serde_json::Value::Bool(m)) = map.get("isMuted") {
-                                        status.is_muted = *m;
-                                    }
-                                    if let Some(serde_json::Value::Bool(d)) = map.get("isDeafened") {
-                                        status.is_deafened = *d;
-                                    }
-                                    if let Some(serde_json::Value::Bool(s)) = map.get("isScreenSharing") {
-                                        status.is_screen_sharing = *s;
-                                    }
-                                }
-                          }
-
-                          let notify_msg = serde_json::to_string(&SignalMessage {
-                                msg_type: "user-update".into(),
-                                user_id: Some(user_id.clone()),
-                                target: None,
-                                data: Some(data),
-                            }).unwrap();
-                            for (uid, (tx, _)) in channel.iter() {
-                                if *uid != user_id {
-                                    let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
-                                }
-                            }
-                      }
-                  }
-             }
-             ClusterMessage::Signal { target_user_id, payload } => {
-                  let rooms_lock = rooms.lock().await;
-                  for room in rooms_lock.values() {
-                      for channel in room.values() {
-                          if let Some((tx, _)) = channel.get(&target_user_id) {
-                              let _ = tx.try_send(Ok(Message::Text(payload.clone().into())));
-                              return;
-                          }
-                      }
-                  }
-             }
-         }
-    }
-}
