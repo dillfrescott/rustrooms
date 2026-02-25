@@ -16,8 +16,6 @@ use std::{
 };
 use tokio::sync::Mutex;
 use uuid::Uuid;
-use tokio_tungstenite::{connect_async, tungstenite::protocol::Message as WsMessage};
-use url::Url;
 
 async fn rnnoise_js() -> impl IntoResponse {
     (
@@ -5430,8 +5428,6 @@ struct UserStatus {
     pub is_muted: bool,
     pub is_deafened: bool,
     pub is_screen_sharing: bool,
-    #[serde(default)]
-    pub is_remote: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -5450,21 +5446,7 @@ struct SignalMessage {
     pub user_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct FederationPacket {
-    pub from_instance_id: Uuid,
-    pub room_id: String,
-    pub channel_id: String,
-    pub message: SignalMessage,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct FederationHandshake {
-    pub instance_id: Uuid,
-}
-
 type UserTx = tokio::sync::mpsc::Sender<Result<Message, axum::Error>>;
-type FederationTx = tokio::sync::mpsc::Sender<FederationPacket>;
 type ChannelMap = HashMap<String, HashMap<String, (UserTx, UserStatus)>>;
 type RoomMap = Arc<Mutex<HashMap<String, ChannelMap>>>;
 type RoomCleanupMap = Arc<Mutex<HashMap<String, u64>>>;
@@ -5475,49 +5457,15 @@ struct AppState {
     rooms: RoomMap,
     room_cleanup_generations: RoomCleanupMap,
     room_creation_password: Option<String>,
-    instance_id: Uuid,
-    federation_peers: Arc<Mutex<HashMap<Uuid, FederationTx>>>,
 }
 
 #[tokio::main]
 async fn main() {
-    rustls::crypto::ring::default_provider()
-        .install_default()
-        .expect("Failed to install rustls crypto provider");
-
     let rooms: RoomMap = Arc::new(Mutex::new(HashMap::new()));
     let room_cleanup_generations: RoomCleanupMap = Arc::new(Mutex::new(HashMap::new()));
-    let instance_id = Uuid::new_v4();
-    let federation_peers: Arc<Mutex<HashMap<Uuid, FederationTx>>> = Arc::new(Mutex::new(HashMap::new()));
 
     let room_creation_password = std::env::var("ROOM_CREATION_PASSWORD").ok().filter(|s| !s.is_empty());
-    let state = AppState {
-        rooms,
-        room_cleanup_generations,
-        room_creation_password,
-        instance_id,
-        federation_peers,
-    };
-
-    let federation_enabled = std::env::var("FEDERATION").unwrap_or_default() == "true"
-        || std::env::var("LINK").map(|s| !s.trim().is_empty()).unwrap_or(false);
-
-    if federation_enabled {
-        println!("FEDERATION ENABLED | Instance ID: {}", instance_id);
-    }
-
-    if let Ok(links) = std::env::var("LINK") {
-        for link in links.split(',') {
-            if !link.trim().is_empty() {
-                let state_clone = state.clone();
-                let url = link.trim().to_string();
-                println!("FEDERATION: Connecting to peer -> {}", url);
-                tokio::spawn(async move {
-                    start_federation_client(url, state_clone).await;
-                });
-            }
-        }
-    }
+    let state = AppState { rooms, room_cleanup_generations, room_creation_password };
 
     let app = Router::new()
         .route("/", get(index))
@@ -5545,7 +5493,6 @@ async fn main() {
         .route("/fonts/inter-latin.woff2", get(inter_latin_woff2))
         .route("/ws/{room_id}/{channel_id}", get(ws_handler))
         .route("/ws/{room_id}/{channel_id}/", get(redirect_ws_trailing_slash))
-        .route("/ws/federation", get(federation_ws_handler))
         .with_state(state);
 
     let port = std::env::var("PORT")
@@ -5605,373 +5552,6 @@ async fn redirect_new_trailing_slash() -> Redirect {
 
 async fn redirect_ws_trailing_slash(Path((room_id, channel_id)): Path<(String, String)>) -> Redirect {
     Redirect::to(&format!("/ws/{}/{}", room_id, channel_id))
-}
-
-async fn federation_ws_handler(
-    ws: WebSocketUpgrade,
-    State(state): State<AppState>,
-) -> impl IntoResponse {
-    let federation_enabled = std::env::var("FEDERATION").unwrap_or_default() == "true"
-        || std::env::var("LINK").map(|s| !s.trim().is_empty()).unwrap_or(false);
-
-    if !federation_enabled {
-        return (axum::http::StatusCode::FORBIDDEN, "Federation disabled").into_response();
-    }
-    ws.on_upgrade(move |socket| handle_federation_socket(socket, state))
-}
-
-async fn handle_federation_socket(socket: WebSocket, state: AppState) {
-    let (mut tx, mut rx) = socket.split();
-
-    let handshake = FederationHandshake { instance_id: state.instance_id };
-    if tx.send(Message::Text(serde_json::to_string(&handshake).unwrap().into())).await.is_err() {
-        return;
-    }
-
-    let other_instance_id = match rx.next().await {
-        Some(Ok(Message::Text(text))) => {
-            if let Ok(h) = serde_json::from_str::<FederationHandshake>(&text) {
-                h.instance_id
-            } else {
-                return;
-            }
-        }
-        _ => return,
-    };
-
-    if other_instance_id == state.instance_id {
-        return;
-    }
-
-    println!("FEDERATION: Peer connected (Inbound) | ID: {}", other_instance_id);
-
-    let (fed_tx, mut fed_rx) = tokio::sync::mpsc::channel::<FederationPacket>(1000);
-    state.federation_peers.lock().await.insert(other_instance_id, fed_tx);
-
-    sync_all_local_users_to_peer(other_instance_id, &state).await;
-
-    let state_clone = state.clone();
-    let other_id_clone = other_instance_id;
-
-    let send_task = tokio::spawn(async move {
-        while let Some(packet) = fed_rx.recv().await {
-            let msg = Message::Text(serde_json::to_string(&packet).unwrap().into());
-            if tx.send(msg).await.is_err() {
-                break;
-            }
-        }
-    });
-
-    while let Some(Ok(msg)) = rx.next().await {
-        if let Message::Text(text) = msg {
-            if let Ok(packet) = serde_json::from_str::<FederationPacket>(&text) {
-                process_federation_packet(packet, &state_clone).await;
-            }
-        }
-    }
-
-    state.federation_peers.lock().await.remove(&other_id_clone);
-    send_task.abort();
-}
-
-async fn start_federation_client(url_str: String, state: AppState) {
-    let mut url = match Url::parse(&url_str) {
-        Ok(u) => u,
-        Err(_) => return,
-    };
-
-    if url.scheme() == "http" { let _ = url.set_scheme("ws"); }
-    else if url.scheme() == "https" { let _ = url.set_scheme("wss"); }
-
-    if !url.path().ends_with("/ws/federation") {
-        url.set_path(&format!("{}/ws/federation", url.path().trim_end_matches('/')));
-    }
-
-    loop {
-        match connect_async(url.as_str()).await {
-            Ok((ws_stream, _)) => {
-                let (mut tx, mut rx) = ws_stream.split();
-
-                let handshake = FederationHandshake { instance_id: state.instance_id };
-                if tx.send(WsMessage::Text(serde_json::to_string(&handshake).unwrap().into())).await.is_err() {
-                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-                    continue;
-                }
-
-                let other_instance_id = match rx.next().await {
-                    Some(Ok(WsMessage::Text(text))) => {
-                        if let Ok(h) = serde_json::from_str::<FederationHandshake>(&text) {
-                            h.instance_id
-                        } else {
-                            break;
-                        }
-                    }
-                    _ => break,
-                };
-
-                println!("FEDERATION: Peer connected (Outbound) | ID: {}", other_instance_id);
-
-                let (fed_tx, mut fed_rx) = tokio::sync::mpsc::channel::<FederationPacket>(1000);
-                state.federation_peers.lock().await.insert(other_instance_id, fed_tx);
-
-                sync_all_local_users_to_peer(other_instance_id, &state).await;
-
-                let state_clone = state.clone();
-                let other_id_clone = other_instance_id;
-
-                let send_task = tokio::spawn(async move {
-                    while let Some(packet) = fed_rx.recv().await {
-                        let msg = WsMessage::Text(serde_json::to_string(&packet).unwrap().into());
-                        if tx.send(msg).await.is_err() {
-                            break;
-                        }
-                    }
-                });
-
-                while let Some(Ok(msg)) = rx.next().await {
-                    if let WsMessage::Text(text) = msg {
-                        if let Ok(packet) = serde_json::from_str::<FederationPacket>(&text) {
-                            process_federation_packet(packet, &state_clone).await;
-                        }
-                    }
-                }
-
-                state.federation_peers.lock().await.remove(&other_id_clone);
-                send_task.abort();
-            }
-            Err(_) => {}
-        }
-        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-    }
-}
-
-async fn broadcast_federation(packet: FederationPacket, state: &AppState) {
-    let peers = state.federation_peers.lock().await;
-    for (id, tx) in peers.iter() {
-        if *id != packet.from_instance_id {
-            let _ = tx.try_send(packet.clone());
-        }
-    }
-}
-
-async fn sync_all_local_users_to_peer(peer_id: Uuid, state: &AppState) {
-    let rooms_lock = state.rooms.lock().await;
-    let peers = state.federation_peers.lock().await;
-    let tx = match peers.get(&peer_id) {
-        Some(t) => t,
-        None => return,
-    };
-
-    for (room_id, channels) in rooms_lock.iter() {
-        for (channel_id, users) in channels.iter() {
-            for (user_id, (_, status)) in users.iter() {
-                if !status.is_remote {
-                    let _ = tx.try_send(FederationPacket {
-                        from_instance_id: state.instance_id,
-                        room_id: room_id.clone(),
-                        channel_id: channel_id.clone(),
-                        message: SignalMessage {
-                            msg_type: "user-joined".into(),
-                            user_id: Some(user_id.clone()),
-                            target: None,
-                            data: Some(serde_json::to_value(status).unwrap()),
-                        },
-                    });
-                }
-            }
-        }
-    }
-}
-
-async fn process_federation_packet(packet: FederationPacket, state: &AppState) {
-    let msg = packet.message;
-    let room_id = packet.room_id;
-    let channel_id = packet.channel_id;
-
-    match msg.msg_type.as_str() {
-                "user-joined" => {
-                     let user_id = msg.user_id.unwrap_or_else(|| Uuid::new_v4().to_string());
-
-                     {
-                         let rooms_lock = state.rooms.lock().await;
-                         if let Some(room) = rooms_lock.get(&room_id) {
-                             if let Some(channel) = room.get(&channel_id) {
-                                 if let Some((_, status)) = channel.get(&user_id) {
-                                     if !status.is_remote {
-                                         return;
-                                     }
-                                 }
-                             }
-                         }
-                     }
-
-                     let status: UserStatus = serde_json::from_value(msg.data.unwrap_or_default()).unwrap_or(UserStatus {
-                         nickname: "Guest".to_string(),
-                         avatar: None,
-                         is_muted: false,
-                         is_deafened: false,
-                         is_screen_sharing: false,
-                         is_remote: true,
-                     });
-
-                     let mut status = status;
-                     status.is_remote = true;
-
-                     let (tx, mut rx) = tokio::sync::mpsc::channel::<Result<Message, axum::Error>>(1000);
-                     let instance_id = packet.from_instance_id;
-                     let state_clone = state.clone();
-                     let room_id_clone = room_id.clone();
-                     let channel_id_clone = channel_id.clone();
-
-                     tokio::spawn(async move {
-                         while let Some(result) = rx.recv().await {
-                             if let Ok(Message::Text(text)) = result {
-                                 if let Ok(inner_msg) = serde_json::from_str::<SignalMessage>(&text) {
-
-                                     if inner_msg.target.is_some() {
-                                         let peers = state_clone.federation_peers.lock().await;
-                                         if let Some(peer_tx) = peers.get(&instance_id) {
-                                             let _ = peer_tx.try_send(FederationPacket {
-                                                 from_instance_id: state_clone.instance_id,
-                                                 room_id: room_id_clone.clone(),
-                                                 channel_id: channel_id_clone.clone(),
-                                                 message: inner_msg,
-                                             });
-                                         }
-                                     }
-                                 }
-                             }
-                         }
-                     });
-                     {
-                 let mut rooms_lock = state.rooms.lock().await;
-                 let room = rooms_lock.entry(room_id.clone()).or_insert_with(HashMap::new);
-                 let channel = room.entry(channel_id.clone()).or_insert_with(HashMap::new);
-                 channel.insert(user_id.clone(), (tx, status.clone()));
-             }
-
-             broadcast_user_joined_locally(room_id.clone(), channel_id.clone(), user_id, status, state).await;
-             broadcast_channel_list(&state.rooms, &room_id).await;
-        }
-        "user-left" => {
-            let user_id = msg.user_id.unwrap();
-            {
-                let mut rooms_lock = state.rooms.lock().await;
-                if let Some(room) = rooms_lock.get_mut(&room_id) {
-                    if let Some(channel) = room.get_mut(&channel_id) {
-                        channel.remove(&user_id);
-                    }
-                }
-            }
-            broadcast_user_left_locally(room_id.clone(), channel_id.clone(), user_id, state).await;
-            broadcast_channel_list(&state.rooms, &room_id).await;
-        }
-        "user-update" | "cam-toggle" | "screen-toggle" => {
-            let user_id = msg.user_id.clone().unwrap();
-            let data = msg.data.clone();
-
-            {
-                let mut rooms_lock = state.rooms.lock().await;
-                if let Some(room) = rooms_lock.get_mut(&room_id) {
-                    if let Some(channel) = room.get_mut(&channel_id) {
-                        if let Some((_, status)) = channel.get_mut(&user_id) {
-                             if msg.msg_type == "user-update" {
-                                 if let Ok(new_status) = serde_json::from_value::<UserStatus>(data.clone().unwrap_or_default()) {
-                                     *status = new_status;
-                                     status.is_remote = true;
-                                 }
-                             } else if msg.msg_type == "screen-toggle" {
-                                 if let Some(enabled) = data.as_ref().and_then(|d| d.get("enabled")).and_then(|v| v.as_bool()) {
-                                     status.is_screen_sharing = enabled;
-                                 }
-                             }
-                        }
-                    }
-                }
-            }
-
-            broadcast_to_channel_locally(room_id.clone(), channel_id.clone(), msg.clone(), state).await;
-            if msg.msg_type == "user-update" || msg.msg_type == "screen-toggle" {
-                broadcast_channel_list(&state.rooms, &room_id).await;
-            }
-        }
-        "rename-channel" | "delete-channel" => {
-            broadcast_to_room_locally(room_id.clone(), msg, state).await;
-            broadcast_channel_list(&state.rooms, &room_id).await;
-        }
-        _ => {
-            if let Some(target_id) = msg.target.clone() {
-                let rooms_lock = state.rooms.lock().await;
-                if let Some(room) = rooms_lock.get(&room_id) {
-                    if let Some(channel) = room.get(&channel_id) {
-                        if let Some((tx, _)) = channel.get(&target_id) {
-                            let _ = tx.try_send(Ok(Message::Text(serde_json::to_string(&msg).unwrap().into())));
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-async fn broadcast_user_joined_locally(room_id: String, channel_id: String, user_id: String, status: UserStatus, state: &AppState) {
-    let notify_msg = serde_json::to_string(&SignalMessage {
-        msg_type: "user-joined".into(),
-        user_id: Some(user_id),
-        target: None,
-        data: Some(serde_json::to_value(status).unwrap()),
-    }).unwrap();
-
-    let rooms_lock = state.rooms.lock().await;
-    if let Some(room) = rooms_lock.get(&room_id) {
-        if let Some(channel) = room.get(&channel_id) {
-            for (_, (tx, _)) in channel.iter() {
-                let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
-            }
-        }
-    }
-}
-
-async fn broadcast_user_left_locally(room_id: String, channel_id: String, user_id: String, state: &AppState) {
-    let notify_msg = serde_json::to_string(&SignalMessage {
-        msg_type: "user-left".into(),
-        user_id: Some(user_id),
-        target: None,
-        data: None,
-    }).unwrap();
-
-    let rooms_lock = state.rooms.lock().await;
-    if let Some(room) = rooms_lock.get(&room_id) {
-        if let Some(channel) = room.get(&channel_id) {
-            for (_, (tx, _)) in channel.iter() {
-                let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
-            }
-        }
-    }
-}
-
-async fn broadcast_to_channel_locally(room_id: String, channel_id: String, msg: SignalMessage, state: &AppState) {
-    let text = serde_json::to_string(&msg).unwrap();
-    let rooms_lock = state.rooms.lock().await;
-    if let Some(room) = rooms_lock.get(&room_id) {
-        if let Some(channel) = room.get(&channel_id) {
-            for (_, (tx, _)) in channel.iter() {
-                let _ = tx.try_send(Ok(Message::Text(text.clone().into())));
-            }
-        }
-    }
-}
-
-async fn broadcast_to_room_locally(room_id: String, msg: SignalMessage, state: &AppState) {
-    let text = serde_json::to_string(&msg).unwrap();
-    let rooms_lock = state.rooms.lock().await;
-    if let Some(room) = rooms_lock.get(&room_id) {
-        for channel in room.values() {
-            for (_, (tx, _)) in channel.iter() {
-                let _ = tx.try_send(Ok(Message::Text(text.clone().into())));
-            }
-        }
-    }
 }
 
 async fn index(State(_state): State<AppState>) -> impl IntoResponse {
@@ -6178,7 +5758,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     is_muted,
                                     is_deafened,
                                     is_screen_sharing,
-                                    is_remote: false,
                                 }));
                              }
 
@@ -6217,26 +5796,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 }
                             }
                             broadcast_channel_list(&rooms, &room_id).await;
-
-                            let fed_msg = SignalMessage {
-                                msg_type: "user-joined".into(),
-                                user_id: Some(user_id.clone()),
-                                target: None,
-                                data: Some(serde_json::to_value(&UserStatus {
-                                    nickname: nickname.clone(),
-                                    avatar: avatar.clone(),
-                                    is_muted,
-                                    is_deafened,
-                                    is_screen_sharing,
-                                    is_remote: false,
-                                }).unwrap()),
-                            };
-                            broadcast_federation(FederationPacket {
-                                from_instance_id: state.instance_id,
-                                room_id: room_id.clone(),
-                                channel_id: channel_id.clone(),
-                                message: fed_msg,
-                            }, &state).await;
                         }
                     } else {
                         if parsed.msg_type == "update-user" {
@@ -6267,7 +5826,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                             full_status = Some(status.clone());
                                         }
 
-                                        if let Some(ref status) = full_status {
+                                        if let Some(status) = full_status {
                                             let full_data = serde_json::to_value(&status).unwrap();
 
                                             let notify_msg = serde_json::to_string(&SignalMessage {
@@ -6287,21 +5846,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 }
                             }
                             broadcast_channel_list(&rooms, &room_id).await;
-
-                            if let Some(status) = full_status {
-                                let fed_msg = SignalMessage {
-                                    msg_type: "user-update".into(),
-                                    user_id: Some(user_id.clone()),
-                                    target: None,
-                                    data: Some(serde_json::to_value(&status).unwrap()),
-                                };
-                                broadcast_federation(FederationPacket {
-                                    from_instance_id: state.instance_id,
-                                    room_id: room_id.clone(),
-                                    channel_id: channel_id.clone(),
-                                    message: fed_msg,
-                                }, &state).await;
-                            }
                         }
  else if parsed.msg_type == "cam-toggle" {
                             let rooms_lock = rooms.lock().await;
@@ -6320,18 +5864,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         }
                                     }
                                 }
-
-                                broadcast_federation(FederationPacket {
-                                    from_instance_id: state.instance_id,
-                                    room_id: room_id.clone(),
-                                    channel_id: channel_id.clone(),
-                                    message: SignalMessage {
-                                        msg_type: "cam-toggle".into(),
-                                        user_id: Some(user_id.clone()),
-                                        target: None,
-                                        data: parsed.data.clone(),
-                                    },
-                                }, &state).await;
                             }
                         } else if parsed.msg_type == "screen-toggle" {
                             {
@@ -6364,18 +5896,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                             }
 
                             broadcast_channel_list(&rooms, &room_id).await;
-
-                            broadcast_federation(FederationPacket {
-                                from_instance_id: state.instance_id,
-                                room_id: room_id.clone(),
-                                channel_id: channel_id.clone(),
-                                message: SignalMessage {
-                                    msg_type: "screen-toggle".into(),
-                                    user_id: Some(user_id.clone()),
-                                    target: None,
-                                    data: parsed.data.clone(),
-                                },
-                            }, &state).await;
                         } else if parsed.msg_type == "rename-channel" {
                             let target_channel_id = parsed.data.as_ref()
                                 .and_then(|d| d.get("channelId"))
@@ -6409,18 +5929,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                      }
                                      drop(rooms_lock);
                                      broadcast_channel_list(&rooms, &room_id).await;
-
-                                     broadcast_federation(FederationPacket {
-                                         from_instance_id: state.instance_id,
-                                         room_id: room_id.clone(),
-                                         channel_id: channel_id.clone(),
-                                         message: SignalMessage {
-                                             msg_type: "rename-channel".into(),
-                                             user_id: Some(user_id.clone()),
-                                             target: None,
-                                             data: parsed.data.clone(),
-                                         },
-                                     }, &state).await;
                                 }
                             }
                         } else if parsed.msg_type == "delete-channel" {
@@ -6449,18 +5957,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     }
                                     drop(rooms_lock);
                                     broadcast_channel_list(&rooms, &room_id).await;
-
-                                    broadcast_federation(FederationPacket {
-                                        from_instance_id: state.instance_id,
-                                        room_id: room_id.clone(),
-                                        channel_id: channel_id.clone(),
-                                        message: SignalMessage {
-                                            msg_type: "delete-channel".into(),
-                                            user_id: Some(user_id.clone()),
-                                            target: None,
-                                            data: parsed.data.clone(),
-                                        },
-                                    }, &state).await;
                                 }
                             }
                         } else if let Some(ref target_id) = parsed.target {
@@ -6482,14 +5978,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                             }
 
                             if !found {
-                                let mut forwarded_msg = parsed.clone();
-                                forwarded_msg.user_id = Some(user_id.clone());
-                                broadcast_federation(FederationPacket {
-                                    from_instance_id: state.instance_id,
-                                    room_id: room_id.clone(),
-                                    channel_id: channel_id.clone(),
-                                    message: forwarded_msg,
-                                }, &state).await;
+
                             }
                         }
                     }
@@ -6559,21 +6048,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
 
                 if removed && room.values().all(|c| c.is_empty()) {
                     schedule_room_cleanup = true;
-                }
-
-                if removed {
-                    let fed_msg = SignalMessage {
-                        msg_type: "user-left".into(),
-                        user_id: Some(user_id.clone()),
-                        target: None,
-                        data: None,
-                    };
-                    broadcast_federation(FederationPacket {
-                        from_instance_id: state.instance_id,
-                        room_id: room_id.clone(),
-                        channel_id: channel_id.clone(),
-                        message: fed_msg,
-                    }, &state).await;
                 }
             }
         }
