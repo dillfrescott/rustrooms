@@ -1534,7 +1534,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const reconnectDelayMs = 5000;
 
         let heartbeatInterval = null;
-        const heartbeatIntervalMs = 8000;
+        const heartbeatIntervalMs = 3000;
         const heartbeatTimeoutMs = 5000;
         let lastPingSentTime = 0;
         let lastPongTime = Date.now();
