@@ -20,9 +20,7 @@ RustRooms requires a TURN/STUN server for WebRTC connections to work properly, e
 *   `TURN_USERNAME`: The TURN server username
 *   `TURN_CREDENTIAL`: The TURN server password/credential
 
-If these environment variables are not set, the application will default to using a public TURN server.
-
-For self-hosted TURN servers, you can use [coturn](https://github.com/coturn/coturn) or use a service like [metered.ca](https://www.metered.ca).
+For self-hosted TURN servers, you can use [coturn](https://github.com/coturn/coturn) or use a hosted service like [metered.ca](https://www.metered.ca).
 
 ### Security:
 
