@@ -2131,6 +2131,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     if (data.videoInputId) {
                         currentVideoInputId = data.videoInputId;
                     }
+                    if (data.isMuted !== undefined) {
+                        pendingMicToggle = data.isMuted;
+                    }
+                    if (data.isCamOff !== undefined) {
+                        pendingCamToggle = data.isCamOff;
+                    }
+                    if (data.isDeafened !== undefined) {
+                        isDeafened = data.isDeafened;
+                    }
                 } catch (e) { console.error("Load pref error", e); }
             }
         }
@@ -2156,12 +2165,25 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 if (audioOutputSelect) audioOutputId = audioOutputSelect.value;
             }
 
+            let isMuted = pendingMicToggle;
+            let isCamOff = pendingCamToggle;
+
+            if (localStream) {
+                const audioTrack = localStream.getAudioTracks()[0];
+                const videoTrack = localStream.getVideoTracks()[0];
+                if (audioTrack) isMuted = !audioTrack.enabled;
+                if (videoTrack) isCamOff = !videoTrack.enabled;
+            }
+
             localStorage.setItem('rustrooms_profile', JSON.stringify({
                 nickname: userNickname,
                 avatar: userAvatar,
                 audioOutputId: audioOutputId,
                 audioInputId: audioInputId,
-                videoInputId: videoInputId
+                videoInputId: videoInputId,
+                isMuted: isMuted,
+                isCamOff: isCamOff,
+                isDeafened: isDeafened
             }));
 
             currentAudioInputId = audioInputId;
@@ -2604,6 +2626,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         btnMic.innerText = "Mute";
                     }
                  }
+                 savePreferences();
                  return;
              }
              if (!localStream) return;
@@ -2611,6 +2634,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (track) {
                 track.enabled = !track.enabled;
                 updatePreviewButtons();
+                savePreferences();
             }
         }
 
@@ -2630,6 +2654,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         document.getElementById('previewPlaceholder').style.display = 'none';
                     }
                  }
+                 savePreferences();
                  return;
              }
              if (!localStream) return;
@@ -2637,6 +2662,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (track) {
                 track.enabled = !track.enabled;
                 updatePreviewButtons();
+                savePreferences();
             }
         }
 
@@ -4624,6 +4650,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         }
                     }));
                 }
+                savePreferences();
             }
         }
 
@@ -4751,6 +4778,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                 }));
             }
+            savePreferences();
         }
 
         async function toggleCam() {
@@ -4803,6 +4831,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         data: { enabled: track.enabled }
                     }));
                 }
+                savePreferences();
             }
         }
 
