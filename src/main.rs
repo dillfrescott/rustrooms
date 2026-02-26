@@ -423,7 +423,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             border-radius: 10px;
             border: 1px solid var(--border-subtle);
             overflow: hidden;
-            z-index: 30;
+            z-index: 1100;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             background: var(--bg-secondary);
         }
@@ -570,6 +570,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         #localPipWrapper.speaking-glow {
             box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.5), 0 0 15px rgba(16, 185, 129, 0.6) !important;
+            z-index: 1100;
         }
 
         .video-container {
