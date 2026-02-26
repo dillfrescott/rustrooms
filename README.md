@@ -10,11 +10,11 @@
 
 ### Notes:
 
-It uses port 3000 TCP (for the web interface).
+It uses port 3000 TCP (for the web interface) but can be changed by specifying the PORT env variable to a different value.
 
-### TURN/STUN Configuration:
+### TURN Configuration:
 
-RustRooms requires a TURN/STUN server for WebRTC connections to work properly, especially when users are behind restrictive NATs or firewalls. You can configure a third-party TURN server using the following environment variables:
+RustRooms requires a TURN server for WebRTC connections to work properly, especially when users are behind restrictive NATs or firewalls. You can configure a third-party TURN server using the following environment variables:
 
 *   `TURN_URL`: The TURN server URL (e.g., `turn:your-turn-server.com:3478`)
 *   `TURN_USERNAME`: The TURN server username
