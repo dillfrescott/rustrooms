@@ -804,8 +804,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             z-index: 100;
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             background: #000000;
-            backdrop-filter: blur(24px) saturate(160%);
-            -webkit-backdrop-filter: blur(24px) saturate(160%);
             border-right: 1px solid var(--border-medium);
             display: flex;
             flex-direction: column;
@@ -813,6 +811,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         #roomSidebar.open {
             transform: translateX(320px);
+        }
+
+        @media (min-width: 768px) {
+            body.sidebar-open #appLayout {
+                margin-left: 320px;
+                width: calc(100% - 320px);
+                transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            body.sidebar-open #sidebarOverlay {
+                display: none;
+            }
         }
 
         .sidebar-header {
@@ -902,7 +912,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(4px);
             z-index: 90;
             opacity: 0;
             pointer-events: none;
@@ -912,6 +921,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .sidebar-overlay.open {
             opacity: 1;
             pointer-events: auto;
+        }
+
+        @media (min-width: 768px) {
+            body.sidebar-open .sidebar-overlay {
+                display: none !important;
+            }
         }
 
         .modal-overlay {
@@ -1013,7 +1028,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     <div id="roomSidebar">
         <div class="sidebar-header">
             <h2 id="sidebarTitle" class="text-xl font-bold text-white">Channels</h2>
-            <button onclick="toggleSidebar()" class="text-zinc-400 hover:text-white transition-colors">
+            <button id="btnCloseSidebar" onclick="toggleSidebar()" class="text-zinc-400 hover:text-white transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
@@ -1255,7 +1270,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     <div id="appLayout" class="hidden flex-col h-full w-full">
         <div class="flex-none p-3 sm:p-4 md:p-5 z-40 flex justify-between items-center gap-2 md:gap-4">
             <div class="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-                <button id="sidebarToggle" onclick="toggleSidebar()" class="control-btn shadow-xl hidden !w-10 !h-10 md:!w-14 md:!h-14 flex-shrink-0" title="Channels (R)">
+                <button id="sidebarToggle" onclick="toggleSidebar()" class="control-btn shadow-xl hidden !w-10 !h-10 md:!w-14 md:!h-14 flex-shrink-0" title="Channels">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </button>
                 <div id="currentChannelName" class="text-white font-semibold text-lg md:text-xl truncate min-w-0"></div>
@@ -2700,6 +2715,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 appLayout.classList.remove('hidden');
                 appLayout.classList.add('flex');
                 document.getElementById('sidebarToggle').classList.remove('hidden');
+                applySidebarState(true);
             }, 300);
 
             localVideo.srcObject = localStream;
@@ -2875,10 +2891,58 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function toggleSidebar() {
+            const body = document.body;
             const sidebar = document.getElementById('roomSidebar');
             const overlay = document.getElementById('sidebarOverlay');
+            const isDesktop = window.innerWidth >= 768;
+            const wasOpen = sidebar.classList.contains('open');
+
             sidebar.classList.toggle('open');
-            overlay.classList.toggle('open');
+
+            if (isDesktop) {
+                overlay.classList.remove('open');
+            } else {
+                overlay.classList.toggle('open');
+            }
+
+            const isOpen = sidebar.classList.contains('open');
+            if (isOpen) {
+                body.classList.add('sidebar-open');
+            } else {
+                body.classList.remove('sidebar-open');
+            }
+            localStorage.setItem('rustrooms_sidebar_open', isOpen ? 'true' : 'false');
+        }
+
+        function applySidebarState(noTransition = false) {
+            const savedState = localStorage.getItem('rustrooms_sidebar_open');
+            const isOpen = savedState === 'true';
+            const isDesktop = window.innerWidth >= 768;
+
+            if (isOpen) {
+                const body = document.body;
+                const sidebar = document.getElementById('roomSidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+
+                if (noTransition) {
+                    sidebar.style.transition = 'none';
+                }
+                body.classList.add('sidebar-open');
+                sidebar.classList.add('open');
+
+                if (isDesktop) {
+                    overlay.classList.remove('open');
+                }
+
+                if (noTransition) {
+
+                    sidebar.offsetHeight;
+
+                    setTimeout(() => {
+                        sidebar.style.transition = '';
+                    }, 50);
+                }
+            }
         }
 
         function showNameModal(title, placeholder, callback) {
