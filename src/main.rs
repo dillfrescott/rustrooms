@@ -680,6 +680,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
+        @media (max-width: 1024px) {
+            #btnShare {
+                display: none !important;
+            }
+        }
+        @supports (-webkit-touch-callout: none) {
+            #btnShare {
+                display: none !important;
+            }
+        }
+
         input[type="text"],
         input[type="password"],
         select {
@@ -4835,7 +4846,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
+        function isMobileDevice() {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const isAndroid = /Android/.test(ua);
+            const isMobile = /Mobile|Android|Silk/.test(ua) || isIOS || isAndroid;
+            return isMobile;
+        }
+
         async function toggleScreen() {
+
+            if (isMobileDevice()) {
+                alert('Screen sharing is not supported on mobile devices.');
+                return;
+            }
+
             const btn = document.getElementById('btnShare');
 
             if (screenStream) {
