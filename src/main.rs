@@ -423,7 +423,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             border-radius: 10px;
             border: 1px solid var(--border-subtle);
             overflow: hidden;
-            z-index: 1100;
+            z-index: 75;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             background: var(--bg-secondary);
         }
@@ -570,7 +570,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         #localPipWrapper.speaking-glow {
             box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.5), 0 0 15px rgba(16, 185, 129, 0.6) !important;
-            z-index: 1100;
+            z-index: 75;
         }
 
         .video-container {
@@ -1175,7 +1175,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="settingsOverlay" class="fixed inset-0 z-[80] flex items-center justify-center p-4 hidden" style="background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px) saturate(140%);">
+    <div id="settingsOverlay" class="fixed inset-0 z-[80] flex items-center justify-center p-4 hidden" style="background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px) saturate(140%);" onclick="if(event.target === this) closeSettings()">
         <div class="glass-panel p-6 md:p-8 rounded-3xl max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
              <button onclick="closeSettings()" class="absolute top-5 right-5 transition-colors p-1 rounded-lg hover:bg-white/10" style="color: var(--text-muted);">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
