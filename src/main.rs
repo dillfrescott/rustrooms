@@ -1769,6 +1769,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             workletLoadingPromise = (async () => {
                 try {
+                    if (audioContext.state === 'suspended') {
+                        await audioContext.resume();
+                    }
                     await audioContext.audioWorklet.addModule('/rnnoise_processor.js');
                     console.log("AudioWorklet loaded");
                     return true;
@@ -2046,8 +2049,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                          }
                       }
 
-                     setupAudioMonitor(localStream, 'local');
-                     setupVolumeMeter(localStream, 'settingsMicBar');
+                     await setupAudioMonitor(localStream, 'local');
+                     await setupVolumeMeter(localStream, 'settingsMicBar');
 
                  } catch (e) {
                      console.error("Audio switch failed", e);
@@ -2106,12 +2109,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              updateLocalAvatar();
         }
 
-        function setupAudioMonitor(stream, targetId) {
+        async function setupAudioMonitor(stream, targetId) {
             if (!audioContext) return;
             if (!stream.getAudioTracks().length) return;
 
             if (audioContext.state === 'suspended') {
-                audioContext.resume();
+                await audioContext.resume();
             }
 
             const source = audioContext.createMediaStreamSource(stream);
@@ -2360,7 +2363,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let setupMeterFrameId = null;
         let settingsMeterFrameId = null;
 
-        function setupVolumeMeter(stream, barId) {
+        async function setupVolumeMeter(stream, barId) {
             const bar = document.getElementById(barId);
             if (!bar) return;
 
@@ -2385,7 +2388,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioContext.state === 'suspended') audioContext.resume();
+            if (audioContext.state === 'suspended') await audioContext.resume();
 
             const source = audioContext.createMediaStreamSource(stream);
             const analyser = audioContext.createAnalyser();
@@ -2518,7 +2521,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                 }
 
-                setupVolumeMeter(rawStream, 'setupMicBar');
+                await setupVolumeMeter(rawStream, 'setupMicBar');
 
                  if (rawStream.getAudioTracks().length > 0) {
                      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -2667,7 +2670,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
 
                     previewVideo.srcObject = null;
-                    setupVolumeMeter(localStream, 'setupMicBar');
+                    await setupVolumeMeter(localStream, 'setupMicBar');
                     updatePreviewButtons();
                 } catch(e2) {
                     console.error("Mic fallback start err:", e2);
@@ -2979,7 +2982,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      btnCam.innerHTML = camOnSvg;
                 }
 
-                setupAudioMonitor(localStream, 'local');
+                await setupAudioMonitor(localStream, 'local');
             } else {
                  btnMic.classList.add('active-red');
                  btnMic.innerHTML = micOffSvg;
@@ -4667,7 +4670,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             volControls.appendChild(row);
                         }
 
-                        setupAudioMonitor(screenStream, `wrapper-${userId}`);
+                        (async () => { await setupAudioMonitor(screenStream, `wrapper-${userId}`); })();
                         event.track.onended = () => {
                             const row = document.getElementById(`vol-row-screen-${userId}`);
                             if (row) row.remove();
@@ -4679,7 +4682,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                     if (mainStream.getAudioTracks().length === 0 || isHintedMicTrack) {
                         mainStream.addTrack(event.track);
-                        setupAudioMonitor(mainStream, `wrapper-${userId}`);
+                        (async () => { await setupAudioMonitor(mainStream, `wrapper-${userId}`); })();
 
                     } else {
 
@@ -4716,7 +4719,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             volControls.appendChild(row);
                         }
 
-                        setupAudioMonitor(screenStream, `wrapper-${userId}`);
+                        (async () => { await setupAudioMonitor(screenStream, `wrapper-${userId}`); })();
 
                         event.track.onended = () => {
                             screenAud.remove();
@@ -5687,7 +5690,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             settingsInitialAudioOutputId = settingsAudioOutput ? settingsAudioOutput.value : '';
             settingsOverlay.classList.remove('hidden');
             if (localStream) {
-                setupVolumeMeter(localStream, 'settingsMicBar');
+                await setupVolumeMeter(localStream, 'settingsMicBar');
             }
         }
 
