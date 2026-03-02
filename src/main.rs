@@ -5068,122 +5068,132 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             savePreferences();
         }
 
+        let camToggleInProgress = false;
+
         async function toggleCam() {
+            if (camToggleInProgress) return;
+
             const btn = document.getElementById('btnCam');
             if (!localStream) return;
 
-            let tracks = localStream.getVideoTracks();
+            camToggleInProgress = true;
 
-            if (tracks.length === 0) {
+            try {
+                let tracks = localStream.getVideoTracks();
 
-                btn.innerHTML = `<svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
+                if (tracks.length === 0) {
 
-                try {
-                    const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    const newTrack = newStream.getVideoTracks()[0];
-                    localStream.addTrack(newTrack);
-                    tracks = localStream.getVideoTracks();
+                    btn.innerHTML = `<svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
 
-                    if (!screenStream) {
-                        for (const userId in peers) {
-                            const pc = peers[userId];
-                            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                            if (sender) {
-                                sender.replaceTrack(newTrack);
-                            } else {
-                                pc.addTrack(newTrack, localStream);
+                    try {
+                        const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        const newTrack = newStream.getVideoTracks()[0];
+                        localStream.addTrack(newTrack);
+                        tracks = localStream.getVideoTracks();
+
+                        if (!screenStream) {
+                            for (const userId in peers) {
+                                const pc = peers[userId];
+                                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                                if (sender) {
+                                    sender.replaceTrack(newTrack);
+                                } else {
+                                    pc.addTrack(newTrack, localStream);
+                                }
+                                negotiate(userId, pc);
                             }
-                            negotiate(userId, pc);
+                        }
+
+                        btn.classList.remove('active-red');
+                        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
+
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({
+                                type: 'cam-toggle',
+                                data: { enabled: true }
+                            }));
+                        }
+
+                        updateLocalAvatar();
+                        savePreferences();
+                        return;
+                    } catch (e) {
+                        console.error("Could not add camera", e);
+                        alert("Could not access camera. Please check permissions.");
+                        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
+                        return;
+                    }
+                }
+
+                const track = tracks[0];
+
+                if (track.enabled) {
+
+                    for (const userId in peers) {
+                        const pc = peers[userId];
+                        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                        if (sender) {
+                            pc.removeTrack(sender);
                         }
                     }
 
-                    btn.classList.remove('active-red');
-                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
+                    track.stop();
+                    localStream.removeTrack(track);
 
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({
-                            type: 'cam-toggle',
-                            data: { enabled: true }
-                        }));
-                    }
-
-                    updateLocalAvatar();
-                    savePreferences();
-                    return;
-                } catch (e) {
-                    console.error("Could not add camera", e);
-                    alert("Could not access camera. Please check permissions.");
-                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
-                    return;
-                }
-            }
-
-            const track = tracks[0];
-
-            if (track.enabled) {
-
-                for (const userId in peers) {
-                    const pc = peers[userId];
-                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                    if (sender) {
-                        pc.removeTrack(sender);
-                    }
-                }
-
-                track.stop();
-                localStream.removeTrack(track);
-
-                btn.classList.add('active-red');
-                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
-
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({
-                        type: 'cam-toggle',
-                        data: { enabled: false }
-                    }));
-                }
-            } else {
-
-                btn.classList.remove('active-red');
-                btn.innerHTML = `<svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
-
-                try {
-                    const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    const newTrack = newStream.getVideoTracks()[0];
-                    localStream.addTrack(newTrack);
-
-                    if (!screenStream) {
-                        for (const userId in peers) {
-                            const pc = peers[userId];
-                            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                            if (sender) {
-                                sender.replaceTrack(newTrack);
-                            } else {
-                                pc.addTrack(newTrack, localStream);
-                            }
-                            negotiate(userId, pc);
-                        }
-                    }
-
-                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
-
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({
-                            type: 'cam-toggle',
-                            data: { enabled: true }
-                        }));
-                    }
-                } catch (e) {
-                    console.error("Could not re-add camera", e);
-                    alert("Could not access camera. Please check permissions.");
                     btn.classList.add('active-red');
                     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
-                    return;
-                }
-            }
 
-            updateLocalAvatar();
-            savePreferences();
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'cam-toggle',
+                            data: { enabled: false }
+                        }));
+                    }
+                } else {
+
+                    btn.classList.remove('active-red');
+                    btn.innerHTML = `<svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
+
+                    try {
+                        const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        const newTrack = newStream.getVideoTracks()[0];
+                        localStream.addTrack(newTrack);
+
+                        if (!screenStream) {
+                            for (const userId in peers) {
+                                const pc = peers[userId];
+                                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                                if (sender) {
+                                    sender.replaceTrack(newTrack);
+                                } else {
+                                    pc.addTrack(newTrack, localStream);
+                                }
+                                negotiate(userId, pc);
+                            }
+                        }
+
+                        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
+
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({
+                                type: 'cam-toggle',
+                                data: { enabled: true }
+                            }));
+                        }
+                    } catch (e) {
+                        console.error("Could not re-add camera", e);
+                        alert("Could not access camera. Please check permissions.");
+                        btn.classList.add('active-red');
+                        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
+                        return;
+                    }
+                }
+
+                updateLocalAvatar();
+                savePreferences();
+            } finally {
+                camToggleInProgress = false;
+            }
         }
 
         function isMobileDevice() {
