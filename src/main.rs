@@ -412,6 +412,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             border-color: #16a34a;
         }
 
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .control-btn:disabled:hover {
+            background: var(--bg-elevated);
+            border-color: var(--border-subtle);
+            transform: none;
+        }
+
+        .control-btn:disabled:hover::before {
+            opacity: 0;
+        }
+
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
@@ -1366,7 +1381,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 <button class="control-btn" id="btnDeafen" onclick="toggleDeafen()" title="Deafen (D)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
                 </button>
-                <button class="control-btn" id="btnCam" onclick="toggleCam()" title="Toggle Camera">
+                <button class="control-btn" id="btnCam" onclick="toggleCam()" title="Toggle Camera" disabled>
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
                 </button>
                 <button class="control-btn" id="btnShare" onclick="toggleScreen()" title="Share Screen">
@@ -1782,6 +1797,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         async function loadDevices() {
             const btnJoin = document.getElementById('btnJoin');
+            const btnCam = document.getElementById('btnCam');
+
+            isCameraReady = false;
+            if (btnCam) btnCam.disabled = true;
 
             loadPreferences();
             try {
@@ -1830,6 +1849,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if(btnJoin) {
                  btnJoin.disabled = false;
                  btnJoin.innerHTML = "Join Room";
+            }
+
+            isCameraReady = true;
+            if(btnCam) {
+                 btnCam.disabled = false;
+                 if (pendingCamToggle) {
+                     btnCam.classList.add('active-red');
+                     btnCam.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
+                 }
             }
         }
 
@@ -2397,6 +2425,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let isPreviewStarting = false;
         let pendingCamToggle = false;
         let pendingMicToggle = false;
+        let isCameraReady = true;
 
         async function startPreview() {
             if (isPreviewStarting) {
@@ -2761,8 +2790,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  pendingCamToggle = !pendingCamToggle;
 
                  const btnCam = document.getElementById('btnPreviewCam');
+                 const videoTrack = localStream ? localStream.getVideoTracks()[0] : null;
+                 const willBeEnabled = videoTrack ? !videoTrack.enabled : !pendingCamToggle;
+
                  if (btnCam) {
-                    if (btnCam.innerText.includes("Stop")) {
+                    if (!willBeEnabled) {
                         btnCam.classList.add('bg-red-500', 'hover:bg-red-600');
                         btnCam.innerText = "Start Cam";
                         document.getElementById('previewPlaceholder').style.display = 'flex';
@@ -5129,12 +5161,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let camToggleInProgress = false;
 
         async function toggleCam() {
-            if (camToggleInProgress) return;
+            if (camToggleInProgress || !isCameraReady) return;
 
             const btn = document.getElementById('btnCam');
             if (!localStream) return;
 
             camToggleInProgress = true;
+            isCameraReady = false;
+            btn.disabled = true;
 
             try {
                 let tracks = localStream.getVideoTracks();
@@ -5324,6 +5358,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 savePreferences();
             } finally {
                 camToggleInProgress = false;
+                isCameraReady = true;
+                btn.disabled = false;
             }
         }
 
