@@ -415,6 +415,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .control-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+            pointer-events: none;
+            -webkit-pointer-events: none;
         }
 
         .control-btn:disabled:hover {
@@ -425,6 +427,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .control-btn:disabled:hover::before {
             opacity: 0;
+        }
+
+        .control-btn:disabled:active {
+            transform: none !important;
+            background: var(--bg-elevated) !important;
         }
 
         @keyframes spin {
@@ -5009,6 +5016,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 const track = tracks[0];
 
                 if (isDeafened) {
+
                     return;
                 }
 
