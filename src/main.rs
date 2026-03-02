@@ -3029,6 +3029,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (isOpen) {
                 body.classList.add('sidebar-open');
                 sidebarToggle.classList.add('hidden');
+
+                const pip = document.getElementById('localPipWrapper');
+                if (pip) {
+                    const pipRect = pip.getBoundingClientRect();
+                    const sidebarWidth = 320;
+                    const margin = 16;
+
+                    if (pipRect.left < sidebarWidth + margin) {
+
+                        const newLeft = sidebarWidth + margin;
+                        pip.style.left = newLeft + 'px';
+                        pip.style.bottom = '';
+                        pip.style.right = '';
+                    }
+                }
             } else {
                 body.classList.remove('sidebar-open');
                 sidebarToggle.classList.remove('hidden');
@@ -3056,6 +3071,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 if (isDesktop) {
                     overlay.classList.remove('open');
+                }
+
+                const pip = document.getElementById('localPipWrapper');
+                if (pip) {
+                    const pipRect = pip.getBoundingClientRect();
+                    const sidebarWidth = 320;
+                    const margin = 16;
+
+                    if (pipRect.left < sidebarWidth + margin) {
+
+                        const newLeft = sidebarWidth + margin;
+                        pip.style.left = newLeft + 'px';
+                        pip.style.bottom = '';
+                        pip.style.right = '';
+                    }
                 }
 
                 if (noTransition) {
@@ -5081,7 +5111,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             try {
                 let tracks = localStream.getVideoTracks();
 
-                if (tracks.length === 0) {
+                let trackIsBroken = false;
+                if (tracks.length > 0) {
+                    const track = tracks[0];
+                    if (track.readyState === 'ended' || track.muted) {
+                        trackIsBroken = true;
+                        console.warn("Camera track is broken, cleaning up");
+                        track.stop();
+                        localStream.removeTrack(track);
+                        tracks = [];
+                    }
+                }
+
+                if (tracks.length === 0 || trackIsBroken) {
 
                     btn.innerHTML = `<svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
 
@@ -5107,6 +5149,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         btn.classList.remove('active-red');
                         btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
 
+                        const localVideo = document.getElementById('localVideo');
+                        if (localVideo) {
+                            localVideo.srcObject = localStream;
+                        }
+
                         if (ws && ws.readyState === WebSocket.OPEN) {
                             ws.send(JSON.stringify({
                                 type: 'cam-toggle',
@@ -5120,7 +5167,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     } catch (e) {
                         console.error("Could not add camera", e);
                         alert("Could not access camera. Please check permissions.");
+                        btn.classList.add('active-red');
                         btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
+                        updateLocalAvatar();
                         return;
                     }
                 }
@@ -5139,6 +5188,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                     track.stop();
                     localStream.removeTrack(track);
+
+                    const localVideo = document.getElementById('localVideo');
+                    if (localVideo) {
+                        localVideo.srcObject = null;
+                    }
 
                     btn.classList.add('active-red');
                     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
@@ -5174,6 +5228,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                         btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
 
+                        const localVideo = document.getElementById('localVideo');
+                        if (localVideo) {
+                            localVideo.srcObject = localStream;
+                        }
+
                         if (ws && ws.readyState === WebSocket.OPEN) {
                             ws.send(JSON.stringify({
                                 type: 'cam-toggle',
@@ -5185,7 +5244,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         alert("Could not access camera. Please check permissions.");
                         btn.classList.add('active-red');
                         btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
-                        return;
                     }
                 }
 
@@ -5504,6 +5562,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const taskbar = document.querySelector('.taskbar');
             const connectionDot = document.getElementById('connectionDot');
             const btnCopy = document.getElementById('btnCopy');
+            const sidebar = document.getElementById('roomSidebar');
 
             let isDragging = false;
             let dragOffset = { x: 0, y: 0 };
@@ -5520,6 +5579,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 const rect = pip.getBoundingClientRect();
                 const taskbarRect = taskbar.getBoundingClientRect();
+                const sidebarRect = sidebar && sidebar.classList.contains('open') ? sidebar.getBoundingClientRect() : null;
 
                 pip.style.bottom = 'auto';
                 pip.style.right = 'auto';
@@ -5532,9 +5592,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 lastX = clientX;
                 lastY = clientY;
 
+                let minX = 16;
+                let maxX = window.innerWidth - rect.width - 16;
+                if (sidebarRect) {
+                    minX = sidebarRect.right + 16;
+                }
+
                 dragBounds = {
-                    minX: 16,
-                    maxX: window.innerWidth - rect.width - 16,
+                    minX: minX,
+                    maxX: maxX,
                     minY: 16,
                     maxY: window.innerHeight - taskbarRect.height - rect.height - 16
                 };
@@ -5543,6 +5609,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 collisionRects = {
                     statusRect: connectionDot && connectionDot.parentElement ? connectionDot.parentElement.getBoundingClientRect() : null,
                     copyRect: btnCopy ? btnCopy.getBoundingClientRect() : null,
+                    sidebarRect: sidebarRect,
                     margin: margin,
                     pipWidth: rect.width
                 };
@@ -5592,7 +5659,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
 
                     if (collisionRects) {
-                        const { statusRect, copyRect, margin, pipWidth } = collisionRects;
+                        const { statusRect, copyRect, sidebarRect, margin, pipWidth } = collisionRects;
 
                         if (statusRect) {
                             const dangerRight = statusRect.right + margin;
@@ -5614,6 +5681,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 const distToLeft = newX - dangerLeft;
                                 const distToBottom = dangerBottom - newY;
                                 if (distToLeft < distToBottom) newX = dangerLeft;
+                                else newY = dangerBottom;
+                            }
+                        }
+
+                        if (sidebarRect) {
+                            const dangerRight = sidebarRect.right + margin;
+                            const dangerBottom = sidebarRect.bottom + margin;
+
+                            if (newX < dangerRight && newY < dangerBottom) {
+                                const distToRight = dangerRight - newX;
+                                const distToBottom = dangerBottom - newY;
+                                if (distToRight < distToBottom) newX = dangerRight;
                                 else newY = dangerBottom;
                             }
                         }
@@ -5665,73 +5744,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     const isScreenFlip = currentOrientation !== lastOrientation;
                     lastOrientation = currentOrientation;
 
+                    pip.style.left = '';
+                    pip.style.top = '';
+                    pip.style.bottom = '';
+                    pip.style.right = '';
+
                     if (isScreenFlip) {
-                        pip.style.left = '';
-                        pip.style.top = '';
-                        pip.style.bottom = '';
-                        pip.style.right = '';
                         return;
                     }
 
-                    if (!pip.style.left) return;
-
-                    const pipRect = pip.getBoundingClientRect();
-                    const taskbarRect = taskbar.getBoundingClientRect();
-                    const margin = 16;
-
-                    const pipWidth = pip.offsetWidth;
-                    const pipHeight = pip.offsetHeight;
-
-                    const minX = margin;
-                    const maxX = window.innerWidth - pipWidth - margin;
-                    const minY = margin;
-                    const maxY = window.innerHeight - taskbarRect.height - pipHeight - margin;
-
-                    let currentLeft = parseFloat(pip.style.left);
-                    let currentTop = parseFloat(pip.style.top);
-
-                    if (isNaN(currentLeft) || isNaN(currentTop)) {
-                        currentLeft = pipRect.left;
-                        currentTop = pipRect.top;
-                        pip.style.bottom = 'auto';
-                        pip.style.right = 'auto';
-                    }
-
-                    let newX = Math.max(minX, Math.min(currentLeft, maxX));
-                    let newY = Math.max(minY, Math.min(currentTop, maxY));
-
-                    const statusRect = connectionDot && connectionDot.parentElement ? connectionDot.parentElement.getBoundingClientRect() : null;
-                    const copyRect = btnCopy ? btnCopy.getBoundingClientRect() : null;
-
-                    if (statusRect) {
-                        const dangerRight = statusRect.right + margin;
-                        const dangerBottom = statusRect.bottom + margin;
-
-                        if (newX < dangerRight && newY < dangerBottom) {
-                            const distToRight = dangerRight - newX;
-                            const distToBottom = dangerBottom - newY;
-                            if (distToRight < distToBottom) newX = dangerRight;
-                            else newY = dangerBottom;
-                        }
-                    }
-
-                    if (copyRect) {
-                        const dangerLeft = copyRect.left - margin - pipWidth;
-                        const dangerBottom = copyRect.bottom + margin;
-
-                        if (newX > dangerLeft && newY < dangerBottom) {
-                            const distToLeft = newX - dangerLeft;
-                            const distToBottom = dangerBottom - newY;
-                            if (distToLeft < distToBottom) newX = dangerLeft;
-                            else newY = dangerBottom;
-                        }
-                    }
-
-                    newX = Math.max(minX, Math.min(newX, maxX));
-                    newY = Math.max(minY, Math.min(newY, maxY));
-
-                    pip.style.left = newX + 'px';
-                    pip.style.top = newY + 'px';
                 }, 250);
             });
         })();
