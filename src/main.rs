@@ -2797,7 +2797,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                          };
                          const newStream = await navigator.mediaDevices.getUserMedia(constraints);
                          const newTrack = newStream.getVideoTracks()[0];
-                         localStream.addTrack(newTrack);
+
+                         if (!newTrack || newTrack.readyState !== 'live') {
+                             console.warn("Camera track not properly initialized, retrying...");
+                             newTrack?.stop();
+                             await new Promise(r => setTimeout(r, 100));
+                             const retryStream = await navigator.mediaDevices.getUserMedia(constraints);
+                             const retryTrack = retryStream.getVideoTracks()[0];
+                             if (retryTrack) {
+                                 retryTrack.enabled = true;
+                                 localStream.addTrack(retryTrack);
+                                 retryStream.getTracks().forEach(t => { if (t !== retryTrack) t.stop(); });
+                             }
+                         } else {
+                             newTrack.enabled = true;
+                             localStream.addTrack(newTrack);
+                         }
+
                          pendingCamToggle = false;
                          previewVideo.srcObject = localStream;
                          updatePreviewButtons();
@@ -2837,7 +2853,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 applySidebarState(true);
             }, 300);
 
-            localVideo.srcObject = localStream;
+            const videoTrack = localStream ? localStream.getVideoTracks()[0] : null;
+            if (localVideo) {
+                if (videoTrack && videoTrack.enabled) {
+                    localVideo.srcObject = localStream;
+                } else {
+                    localVideo.srcObject = null;
+                }
+            }
 
             updateLocalLabel();
             updateLocalAvatar();
@@ -2849,7 +2872,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
              if (localStream) {
                 const audioTrack = localStream.getAudioTracks()[0];
-                const videoTrack = localStream.getVideoTracks()[0];
 
                 if (!audioTrack || !audioTrack.enabled) {
                      btnMic.classList.add('active-red');
@@ -5114,9 +5136,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 let trackIsBroken = false;
                 if (tracks.length > 0) {
                     const track = tracks[0];
-                    if (track.readyState === 'ended' || track.muted) {
+                    if (track.readyState === 'ended' || track.muted || !track.enabled) {
                         trackIsBroken = true;
-                        console.warn("Camera track is broken, cleaning up");
+                        console.warn("Camera track is broken/disabled, cleaning up");
                         track.stop();
                         localStream.removeTrack(track);
                         tracks = [];
@@ -5130,7 +5152,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     try {
                         const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
                         const newTrack = newStream.getVideoTracks()[0];
-                        localStream.addTrack(newTrack);
+
+                        if (!newTrack || newTrack.readyState !== 'live') {
+                            console.warn("Camera track not properly initialized, retrying...");
+                            newTrack?.stop();
+                            await new Promise(r => setTimeout(r, 100));
+                            const retryStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                            const retryTrack = retryStream.getVideoTracks()[0];
+                            if (retryTrack) {
+                                retryTrack.enabled = true;
+                                localStream.addTrack(retryTrack);
+                                retryStream.getTracks().forEach(t => { if (t !== retryTrack) t.stop(); });
+                            }
+                        } else {
+                            newTrack.enabled = true;
+                            localStream.addTrack(newTrack);
+                        }
+
                         tracks = localStream.getVideoTracks();
 
                         if (!screenStream) {
@@ -5151,6 +5189,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                         const localVideo = document.getElementById('localVideo');
                         if (localVideo) {
+                            localVideo.srcObject = null;
                             localVideo.srcObject = localStream;
                         }
 
@@ -5209,9 +5248,30 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     btn.innerHTML = `<svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
 
                     try {
+                        const oldTrack = localStream.getVideoTracks()[0];
+                        if (oldTrack) {
+                            oldTrack.stop();
+                            localStream.removeTrack(oldTrack);
+                        }
+
                         const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
                         const newTrack = newStream.getVideoTracks()[0];
-                        localStream.addTrack(newTrack);
+
+                        if (!newTrack || newTrack.readyState !== 'live') {
+                            console.warn("Camera track not properly initialized, retrying...");
+                            newTrack?.stop();
+                            await new Promise(r => setTimeout(r, 100));
+                            const retryStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                            const retryTrack = retryStream.getVideoTracks()[0];
+                            if (retryTrack) {
+                                retryTrack.enabled = true;
+                                localStream.addTrack(retryTrack);
+                                retryStream.getTracks().forEach(t => { if (t !== retryTrack) t.stop(); });
+                            }
+                        } else {
+                            newTrack.enabled = true;
+                            localStream.addTrack(newTrack);
+                        }
 
                         if (!screenStream) {
                             for (const userId in peers) {
@@ -5230,6 +5290,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                         const localVideo = document.getElementById('localVideo');
                         if (localVideo) {
+                            localVideo.srcObject = null;
                             localVideo.srcObject = localStream;
                         }
 
