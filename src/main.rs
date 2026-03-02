@@ -1760,13 +1760,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             loadPreferences();
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+
+                if (pendingCamToggle) {
+                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                } else {
+                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                }
                 if (localStream) {
-                    if (pendingCamToggle) {
-                        const videoTrack = localStream.getVideoTracks()[0];
-                        if (videoTrack) videoTrack.enabled = !videoTrack.enabled;
-                        pendingCamToggle = false;
-                    }
                     if (pendingMicToggle) {
                         const audioTrack = localStream.getAudioTracks()[0];
                         if (audioTrack) audioTrack.enabled = !audioTrack.enabled;
@@ -2367,6 +2367,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 savePreferences();
 
+                const shouldGetVideo = !pendingCamToggle;
+
                 const constraints = {
                     audio: {
                         deviceId: audioSource ? { exact: audioSource } : undefined,
@@ -2375,7 +2377,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         autoGainControl: true,
                         sampleRate: 48000
                     },
-                    video: { deviceId: videoSource ? { exact: videoSource } : undefined }
+                    video: shouldGetVideo ? { deviceId: videoSource ? { exact: videoSource } : undefined } : false
                 };
 
                 let rawStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -2419,7 +2421,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }
 
                 previewVideo.srcObject = localStream;
-                document.getElementById('previewPlaceholder').style.display = 'none';
                 updatePreviewButtons();
 
                 if (ws && ws.readyState === WebSocket.OPEN) {
@@ -2436,7 +2437,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                     const audioTrack = localStream.getAudioTracks()[0];
                     let isMicOn = audioTrack && audioTrack.enabled;
-                    if (isPreviewStarting && pendingMicToggle) {
+                    if (pendingMicToggle) {
                         isMicOn = !isMicOn;
                     }
                     if (!isMicOn) {
@@ -2447,7 +2448,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                     const videoTrack = localStream.getVideoTracks()[0];
                     let isCamOn = videoTrack && videoTrack.enabled;
-                    if (isPreviewStarting && pendingCamToggle) {
+                    if (pendingCamToggle) {
                         isCamOn = !isCamOn;
                     }
                     if (!isCamOn) {
@@ -2599,7 +2600,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  btnMic.classList.remove('opacity-50', 'cursor-not-allowed');
 
                  let isAudioEffectivelyEnabled = audioTrack.enabled;
-                 if (isPreviewStarting && pendingMicToggle) {
+                 if (pendingMicToggle) {
                      isAudioEffectivelyEnabled = !isAudioEffectivelyEnabled;
                  }
 
@@ -2613,16 +2614,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              }
 
              if (!videoTrack) {
-                 btnCam.disabled = true;
-                 btnCam.classList.add('opacity-50', 'cursor-not-allowed');
-                 btnCam.innerText = "No Cam";
+
+                 btnCam.disabled = false;
+                 btnCam.classList.remove('opacity-50', 'cursor-not-allowed');
+                 btnCam.classList.add('bg-red-500', 'hover:bg-red-600');
+                 btnCam.innerText = "Start Cam";
                  document.getElementById('previewPlaceholder').style.display = 'flex';
              } else {
+
                  btnCam.disabled = false;
                  btnCam.classList.remove('opacity-50', 'cursor-not-allowed');
 
                  let isEffectivelyEnabled = videoTrack.enabled;
-                 if (isPreviewStarting && pendingCamToggle) {
+                 if (pendingCamToggle) {
                      isEffectivelyEnabled = !isEffectivelyEnabled;
                  }
 
@@ -2684,12 +2688,37 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  return;
              }
              if (!localStream) return;
-            const track = localStream.getVideoTracks()[0];
-            if (track) {
-                track.enabled = !track.enabled;
-                updatePreviewButtons();
-                savePreferences();
-            }
+
+             const videoTrack = localStream.getVideoTracks()[0];
+
+             if (videoTrack) {
+
+                 videoTrack.stop();
+                 localStream.removeTrack(videoTrack);
+                 pendingCamToggle = true;
+                 updatePreviewButtons();
+                 savePreferences();
+             } else {
+
+                 (async () => {
+                     try {
+                         const videoSource = videoSelect.value;
+                         const constraints = {
+                             video: { deviceId: videoSource ? { exact: videoSource } : undefined }
+                         };
+                         const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+                         const newTrack = newStream.getVideoTracks()[0];
+                         localStream.addTrack(newTrack);
+                         pendingCamToggle = false;
+                         previewVideo.srcObject = localStream;
+                         updatePreviewButtons();
+                         savePreferences();
+                     } catch (e) {
+                         console.error("Could not add camera", e);
+                         alert("Could not access camera. Please check permissions.");
+                     }
+                 })();
+             }
         }
 
         async function joinRoom() {
@@ -3101,9 +3130,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (newChannelId && newChannelId.length > 32) newChannelId = newChannelId.substring(0, 32);
 
             if (ws) {
-
                 ws.onclose = null;
                 ws.close();
+
+                await new Promise(resolve => setTimeout(resolve, 200));
             }
             stopHeartbeat();
 
@@ -4635,12 +4665,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const welcomeOverlay = document.getElementById('welcomeOverlay');
             const mainApp = document.querySelector('main');
             const taskbar = document.querySelector('.taskbar');
+            const sidebar = document.getElementById('roomSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            if (sidebar) {
+                sidebar.style.transition = 'none';
+                sidebar.classList.remove('open');
+            }
+            if (overlay) overlay.classList.remove('open');
+            document.body.classList.remove('sidebar-open');
 
             if (welcomeOverlay) welcomeOverlay.style.display = 'flex';
             if (mainApp) mainApp.style.display = 'none';
             if (taskbar) taskbar.style.display = 'none';
-
-            checkEmpty();
 
             setTimeout(() => {
                 sessionStorage.removeItem('rustrooms_setup_done');
@@ -4861,7 +4898,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (!localStream) return;
 
             let tracks = localStream.getVideoTracks();
-            let justAdded = false;
 
             if (tracks.length === 0) {
                 try {
@@ -4869,15 +4905,33 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     const newTrack = newStream.getVideoTracks()[0];
                     localStream.addTrack(newTrack);
                     tracks = localStream.getVideoTracks();
-                    justAdded = true;
 
                     if (!screenStream) {
                         for (const userId in peers) {
                             const pc = peers[userId];
-                            pc.addTrack(newTrack, localStream);
+                            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                            if (sender) {
+                                sender.replaceTrack(newTrack);
+                            } else {
+                                pc.addTrack(newTrack, localStream);
+                            }
                             negotiate(userId, pc);
                         }
                     }
+
+                    btn.classList.remove('active-red');
+                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
+
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'cam-toggle',
+                            data: { enabled: true }
+                        }));
+                    }
+
+                    updateLocalAvatar();
+                    savePreferences();
+                    return;
                 } catch (e) {
                     console.error("Could not add camera", e);
                     alert("Could not access camera. Please check permissions.");
@@ -4885,29 +4939,68 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }
             }
 
-            if (tracks.length > 0) {
-                const track = tracks[0];
-                if (!justAdded) {
-                    track.enabled = !track.enabled;
+            const track = tracks[0];
+
+            if (track.enabled) {
+
+                for (const userId in peers) {
+                    const pc = peers[userId];
+                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (sender) {
+                        pc.removeTrack(sender);
+                    }
                 }
 
-                if (!track.enabled) {
-                    btn.classList.add('active-red');
-                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
-                } else {
-                    btn.classList.remove('active-red');
-                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
-                }
-                updateLocalAvatar();
+                track.stop();
+                localStream.removeTrack(track);
+
+                btn.classList.add('active-red');
+                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
 
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
                         type: 'cam-toggle',
-                        data: { enabled: track.enabled }
+                        data: { enabled: false }
                     }));
                 }
-                savePreferences();
+            } else {
+
+                try {
+                    const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const newTrack = newStream.getVideoTracks()[0];
+                    localStream.addTrack(newTrack);
+
+                    if (!screenStream) {
+                        for (const userId in peers) {
+                            const pc = peers[userId];
+                            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                            if (sender) {
+                                sender.replaceTrack(newTrack);
+                            } else {
+                                pc.addTrack(newTrack, localStream);
+                            }
+                            negotiate(userId, pc);
+                        }
+                    }
+
+                    btn.classList.remove('active-red');
+                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
+
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'cam-toggle',
+                            data: { enabled: true }
+                        }));
+                    }
+                } catch (e) {
+                    console.error("Could not re-add camera", e);
+                    alert("Could not access camera. Please check permissions.");
+                    return;
+                }
             }
+
+            updateLocalAvatar();
+            savePreferences();
         }
 
         function isMobileDevice() {
