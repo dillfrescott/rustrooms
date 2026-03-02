@@ -298,8 +298,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .avatar-center {
             position: relative;
-            width: 72px;
-            height: 72px;
+            width: 108px;
+            height: 108px;
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid var(--border-medium);
@@ -326,8 +326,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         @media (min-width: 768px) {
             .avatar-center {
-                width: 96px;
-                height: 96px;
+                width: 144px;
+                height: 144px;
                 border-width: 2px;
             }
         }
@@ -591,8 +591,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .speaking-glow {
-            border: 3px solid #3b82f6 !important;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4) !important;
+            border: 4px solid #3b82f6 !important;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.6) !important;
             transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             z-index: 50;
         }
@@ -6049,7 +6049,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
     </script>
 
-    <div id="cropModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 hidden" style="background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px) saturate(140%);">
+    <div id="cropModal" class="fixed inset-0 z-[250] flex items-center justify-center p-4 hidden" style="background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px) saturate(140%);">
         <div class="glass-panel p-6 md:p-8 rounded-3xl w-full max-w-md max-h-[95vh] flex flex-col items-center relative z-10">
             <h3 class="text-xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">Crop Your Avatar</h3>
             <div id="cropWrapper" class="w-full relative"></div>
