@@ -412,6 +412,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             border-color: #16a34a;
         }
 
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
         .pip-wrapper {
             position: fixed;
             bottom: 220px;
@@ -1088,6 +1096,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             <div class="flex gap-3">
                 <button onclick="closeCustomConfirm()" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
                 <button id="confirmSubmit" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="kickModal" class="modal-overlay">
+        <div class="modal-content text-center space-y-6">
+            <h3 id="kickTitle" class="text-2xl font-bold text-white">Kick User</h3>
+            <p id="kickMessage" class="text-zinc-300"></p>
+            <div class="flex gap-3">
+                <button onclick="closeKickModal()" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
+                <button id="kickSubmit" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all" style="background: var(--danger);">Kick</button>
             </div>
         </div>
     </div>
@@ -1929,6 +1948,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              const currentAudioId = currentAudioTrack ? currentAudioTrack.getSettings().deviceId : "";
              const currentVideoId = currentVideoTrack ? currentVideoTrack.getSettings().deviceId : "";
 
+             const settingsVideoEl = document.getElementById('settingsVideoSource');
+             const originalSettingsVideoValue = settingsVideoEl ? settingsVideoEl.value : null;
+             if (videoId && videoId !== currentVideoId && settingsVideoEl) {
+                 settingsVideoEl.disabled = true;
+             }
+
              if (audioId && audioId !== currentAudioId) {
                  try {
                      const constraints = {
@@ -2029,6 +2054,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                  } catch (e) {
                      console.error("Video switch failed", e);
+                 } finally {
+
+                     if (settingsVideoEl) {
+                         settingsVideoEl.disabled = false;
+                     }
                  }
              }
 
@@ -2353,6 +2383,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             isPreviewStarting = true;
+
+            const videoSelectEl = document.getElementById('videoSource');
+            const audioSelectEl = document.getElementById('audioSource');
+            const originalVideoSelectContent = videoSelectEl ? videoSelectEl.innerHTML : null;
+            const originalAudioSelectContent = audioSelectEl ? audioSelectEl.innerHTML : null;
+            if (videoSelectEl) {
+                videoSelectEl.innerHTML = '<option value="">Loading...</option>';
+                videoSelectEl.disabled = true;
+            }
+            if (audioSelectEl) {
+                audioSelectEl.disabled = true;
+            }
+
             try {
                 if (localStream) {
                     localStream.getTracks().forEach(track => track.stop());
@@ -2549,6 +2592,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 pendingMicToggle = false;
                 isPreviewStarting = false;
 
+                if (videoSelectEl && originalVideoSelectContent) {
+                    videoSelectEl.innerHTML = originalVideoSelectContent;
+                    videoSelectEl.disabled = false;
+                }
+                if (audioSelectEl && originalAudioSelectContent) {
+                    audioSelectEl.innerHTML = originalAudioSelectContent;
+                    audioSelectEl.disabled = false;
+                }
+
                 if (localStream) {
                     let needsUpdate = false;
                     if (wasPendingCam) {
@@ -2690,6 +2742,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              if (!localStream) return;
 
              const videoTrack = localStream.getVideoTracks()[0];
+             const btnCam = document.getElementById('btnPreviewCam');
 
              if (videoTrack) {
 
@@ -2701,6 +2754,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              } else {
 
                  (async () => {
+
+                     if (btnCam) {
+                         btnCam.innerHTML = `<svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
+                         btnCam.disabled = true;
+                     }
+
                      try {
                          const videoSource = videoSelect.value;
                          const constraints = {
@@ -2716,6 +2775,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      } catch (e) {
                          console.error("Could not add camera", e);
                          alert("Could not access camera. Please check permissions.");
+                         updatePreviewButtons();
                      }
                  })();
              }
@@ -3062,6 +3122,64 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             document.getElementById('confirmModal').classList.remove('open');
         }
 
+        let userClickTracker = {};
+        let pendingKickUserId = null;
+        let pendingKickUserNickname = null;
+
+        function handleUserClick(el) {
+            const userId = el.dataset.userId;
+            const nickname = el.dataset.userNickname;
+
+            if (!userId || userId === persistentUserId) return;
+
+            const now = Date.now();
+            const windowMs = 5000;
+            const threshold = 10;
+
+            if (!userClickTracker[userId]) {
+                userClickTracker[userId] = [];
+            }
+
+            userClickTracker[userId] = userClickTracker[userId].filter(timestamp => now - timestamp < windowMs);
+            userClickTracker[userId].push(now);
+
+            if (userClickTracker[userId].length >= threshold) {
+                userClickTracker[userId] = [];
+                showKickModal(userId, nickname);
+            }
+        }
+
+        function showKickModal(userId, nickname) {
+            const modal = document.getElementById('kickModal');
+            const title = document.getElementById('kickTitle');
+            const message = document.getElementById('kickMessage');
+            const submitBtn = document.getElementById('kickSubmit');
+
+            pendingKickUserId = userId;
+            pendingKickUserNickname = nickname;
+
+            title.textContent = 'Kick User';
+            message.textContent = `Are you sure you want to kick "${nickname}" from the room?`;
+
+            submitBtn.onclick = () => {
+                if (pendingKickUserId && ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'kick-user',
+                        data: { userId: pendingKickUserId }
+                    }));
+                }
+                closeKickModal();
+            };
+
+            modal.classList.add('open');
+        }
+
+        function closeKickModal() {
+            document.getElementById('kickModal').classList.remove('open');
+            pendingKickUserId = null;
+            pendingKickUserNickname = null;
+        }
+
         let roomDragState = {
             draggedRid: null
         };
@@ -3285,7 +3403,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     const isScreenSharing = u.isScreenSharing === true;
 
                     usersHtml += `
-                        <div class="room-user-row">
+                        <div class="room-user-row pointer-events-auto cursor-pointer" data-user-id="${uid}" data-user-nickname="${u.nickname.replace(/"/g, '&quot;')}" onclick="handleUserClick(this)">
                             <div class="mini-avatar">
                                 ${u.avatar ? `<img src="${u.avatar}">` : `<div class="mini-avatar-placeholder">${u.nickname.charAt(0).toUpperCase()}</div>`}
                             </div>
@@ -3552,6 +3670,22 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         delete peerScreenHasAudio[msg.userId];
                                         delete peerMicTrackId[msg.userId];
                                         delete peerScreenAudioTrackId[msg.userId];
+                                    }
+                                    break;
+                                case 'user-kicked':
+                                    if (msg.userId === persistentUserId) {
+                                        alert("You have been kicked from the room.");
+                                        hasLeftRoom = true;
+                                        window.location.href = "/";
+                                    } else {
+                                        playNotificationSound('leave');
+                                        removePeer(msg.userId);
+                                        delete peerCamStatus[msg.userId];
+                                        delete peerScreenStatus[msg.userId];
+                                        delete peerScreenHasAudio[msg.userId];
+                                        delete peerMicTrackId[msg.userId];
+                                        delete peerScreenAudioTrackId[msg.userId];
+                                        updateRoomListUI();
                                     }
                                     break;
                                 case 'user-update':
@@ -4900,6 +5034,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             let tracks = localStream.getVideoTracks();
 
             if (tracks.length === 0) {
+
+                btn.innerHTML = `<svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
+
                 try {
                     const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
                     const newTrack = newStream.getVideoTracks()[0];
@@ -4935,6 +5072,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 } catch (e) {
                     console.error("Could not add camera", e);
                     alert("Could not access camera. Please check permissions.");
+                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
                     return;
                 }
             }
@@ -4965,6 +5103,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }
             } else {
 
+                btn.classList.remove('active-red');
+                btn.innerHTML = `<svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
+
                 try {
                     const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
                     const newTrack = newStream.getVideoTracks()[0];
@@ -4983,7 +5124,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         }
                     }
 
-                    btn.classList.remove('active-red');
                     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
 
                     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -4995,6 +5135,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 } catch (e) {
                     console.error("Could not re-add camera", e);
                     alert("Could not access camera. Please check permissions.");
+                    btn.classList.add('active-red');
+                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
                     return;
                 }
             }
@@ -6108,6 +6250,53 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                             }
 
                             broadcast_channel_list(&rooms, &room_id).await;
+                        } else if parsed.msg_type == "kick-user" {
+                            let target_user_id = parsed.data.as_ref()
+                                .and_then(|d| d.get("userId"))
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string());
+
+                            if let Some(kick_uid) = target_user_id {
+                                let mut rooms_lock = rooms.lock().await;
+                                let mut kicked = false;
+                                let mut kicked_tx = None;
+
+                                if let Some(room) = rooms_lock.get_mut(&room_id) {
+                                    if let Some(channel) = room.get_mut(&channel_id) {
+                                        if let Some((tx, _)) = channel.remove(&kick_uid) {
+                                            kicked = true;
+                                            kicked_tx = Some(tx);
+                                        }
+                                    }
+                                }
+
+                                if kicked {
+                                    let kick_notify_msg = serde_json::to_string(&SignalMessage {
+                                        msg_type: "user-kicked".into(),
+                                        user_id: Some(kick_uid.clone()),
+                                        target: None,
+                                        data: None,
+                                    }).unwrap();
+
+                                    if let Some(room) = rooms_lock.get(&room_id) {
+                                        if let Some(channel) = room.get(&channel_id) {
+                                            for (_uid, (tx, _)) in channel.iter() {
+                                                let _ = tx.try_send(Ok(Message::Text(kick_notify_msg.clone().into())));
+                                            }
+                                        }
+                                    }
+
+                                    drop(rooms_lock);
+
+                                    if let Some(kicked_tx) = kicked_tx {
+                                        let _ = kicked_tx.try_send(Ok(Message::Text(kick_notify_msg.into())));
+
+                                        let _ = kicked_tx.try_send(Ok(Message::Close(None)));
+                                    }
+
+                                    broadcast_channel_list(&rooms, &room_id).await;
+                                }
+                            }
                         } else if parsed.msg_type == "rename-channel" {
                             let target_channel_id = parsed.data.as_ref()
                                 .and_then(|d| d.get("channelId"))
