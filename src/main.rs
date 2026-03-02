@@ -569,15 +569,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .speaking-glow {
-            outline: 3px solid rgba(16, 185, 129, 0.9) !important;
-            outline-offset: -3px;
-            box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.5), 0 0 15px rgba(16, 185, 129, 0.6) !important;
-            transition: outline 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            border: 3px solid #3b82f6 !important;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4) !important;
+            transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             z-index: 50;
         }
 
         #localPipWrapper.speaking-glow {
-            box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.5), 0 0 15px rgba(16, 185, 129, 0.6) !important;
+            border: 3px solid #3b82f6 !important;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4) !important;
             z-index: 75;
         }
 
@@ -914,6 +914,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             font-size: 10px;
             font-weight: 600;
             color: var(--text-muted);
+        }
+
+        .mini-avatar.speaking-glow {
+            border: 2px solid #3b82f6 !important;
+            box-shadow: 0 0 6px rgba(59, 130, 246, 0.4) !important;
+            transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         }
 
         .sidebar-overlay {
@@ -2082,7 +2088,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const dataArray = new Uint8Array(bufferLength);
 
             function checkAudio() {
-                if (targetId !== 'local' && !document.getElementById(targetId)) return;
+                if (targetId !== 'local' && !document.getElementById(targetId)) {
+                    return;
+                }
 
                 analyser.getByteFrequencyData(dataArray);
                 let sum = 0;
@@ -2126,6 +2134,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     if (average > 10) {
                         targetEl.classList.add('speaking-glow');
 
+                        if (targetId === 'local') {
+                            const localSidebarAvatar = document.querySelector(`.room-user-row[data-user-id="${persistentUserId}"] .mini-avatar`);
+                            if (localSidebarAvatar) localSidebarAvatar.classList.add('speaking-glow');
+                        } else {
+                            const rawUserId = targetId.startsWith('wrapper-') ? targetId.replace('wrapper-', '') : targetId;
+                            const sidebarAvatar = document.querySelector(`.room-user-row[data-user-id="${rawUserId}"] .mini-avatar`);
+                            if (sidebarAvatar) sidebarAvatar.classList.add('speaking-glow');
+                        }
+
                         if (targetId !== 'local' && targetEl.classList.contains('avatar-center')) {
                             const wrapper = document.getElementById(targetId);
                             if (wrapper) wrapper.classList.remove('speaking-glow');
@@ -2138,14 +2155,27 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     } else {
                         targetEl.classList.remove('speaking-glow');
 
-                        if (targetId !== 'local') {
+                        if (targetId === 'local') {
+                            const localSidebarAvatar = document.querySelector(`.room-user-row[data-user-id="${persistentUserId}"] .mini-avatar`);
+                            if (localSidebarAvatar) localSidebarAvatar.classList.remove('speaking-glow');
+                        } else {
                             const wrapper = document.getElementById(targetId);
                             if (wrapper) {
                                 wrapper.classList.remove('speaking-glow');
                                 const avatar = wrapper.querySelector('.avatar-center');
                                 if (avatar) avatar.classList.remove('speaking-glow');
                             }
+                            const rawUserId = targetId.startsWith('wrapper-') ? targetId.replace('wrapper-', '') : targetId;
+                            const sidebarAvatar = document.querySelector(`.room-user-row[data-user-id="${rawUserId}"] .mini-avatar`);
+                            if (sidebarAvatar) sidebarAvatar.classList.remove('speaking-glow');
                         }
+                    }
+                } else {
+
+                    if (targetId !== 'local') {
+                        const rawUserId = targetId.startsWith('wrapper-') ? targetId.replace('wrapper-', '') : targetId;
+                        const sidebarAvatar = document.querySelector(`.room-user-row[data-user-id="${rawUserId}"] .mini-avatar`);
+                        if (sidebarAvatar) sidebarAvatar.classList.remove('speaking-glow');
                     }
                 }
 
@@ -4636,6 +4666,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (screenAud) screenAud.remove();
             const volRow = document.getElementById(`vol-row-screen-${userId}`);
             if (volRow) volRow.remove();
+
+            const sidebarAvatar = document.querySelector(`.room-user-row[data-user-id="${userId}"] .mini-avatar`);
+            if (sidebarAvatar) sidebarAvatar.classList.remove('speaking-glow');
+
             delete peerMicTrackId[userId];
             delete peerScreenAudioTrackId[userId];
             checkEmpty();
