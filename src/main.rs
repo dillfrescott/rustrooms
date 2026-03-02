@@ -1177,10 +1177,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     </div>
 
                     <div class="flex gap-3">
-                        <button onclick="togglePreviewMic()" id="btnPreviewMic" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2">
+                        <button onclick="togglePreviewMic()" id="btnPreviewMic" disabled class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
                             Mute
                         </button>
-                        <button onclick="togglePreviewCam()" id="btnPreviewCam" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2">
+                        <button onclick="togglePreviewCam()" id="btnPreviewCam" disabled class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
                             Stop Cam
                         </button>
                     </div>
@@ -2443,6 +2443,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             isPreviewStarting = true;
 
+            const btnPreviewCam = document.getElementById('btnPreviewCam');
+            const btnPreviewMic = document.getElementById('btnPreviewMic');
+            if (btnPreviewCam) {
+                btnPreviewCam.disabled = true;
+                btnPreviewCam.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            if (btnPreviewMic) {
+                btnPreviewMic.disabled = true;
+                btnPreviewMic.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+
             const videoSelectEl = document.getElementById('videoSource');
             const audioSelectEl = document.getElementById('audioSource');
             const originalVideoSelectContent = videoSelectEl ? videoSelectEl.innerHTML : null;
@@ -2652,10 +2663,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     updatePreviewButtons();
                 }
             } finally {
-                const wasPendingCam = pendingCamToggle;
-                const wasPendingMic = pendingMicToggle;
-
                 isPreviewStarting = false;
+
+                if (btnPreviewCam) {
+                    btnPreviewCam.disabled = false;
+                    btnPreviewCam.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+                if (btnPreviewMic) {
+                    btnPreviewMic.disabled = false;
+                    btnPreviewMic.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
 
                 if (videoSelectEl && originalVideoSelectContent) {
                     videoSelectEl.innerHTML = originalVideoSelectContent;
@@ -2668,14 +2685,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 if (localStream) {
                     let needsUpdate = false;
-                    if (wasPendingCam) {
+                    if (pendingCamToggle) {
                         const videoTrack = localStream.getVideoTracks()[0];
                         if (videoTrack && videoTrack.enabled) {
                             videoTrack.enabled = false;
                             needsUpdate = true;
                         }
                     }
-                    if (wasPendingMic) {
+                    if (pendingMicToggle) {
                         const audioTrack = localStream.getAudioTracks()[0];
                         if (audioTrack && audioTrack.enabled) {
                             audioTrack.enabled = false;
@@ -2713,8 +2730,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  btnMic.classList.add('opacity-50', 'cursor-not-allowed');
                  btnMic.innerText = "No Mic";
              } else {
-                 btnMic.disabled = false;
-                 btnMic.classList.remove('opacity-50', 'cursor-not-allowed');
+                 if (!isPreviewStarting) {
+                     btnMic.disabled = false;
+                     btnMic.classList.remove('opacity-50', 'cursor-not-allowed');
+                 }
 
                  let isAudioEffectivelyEnabled = audioTrack.enabled;
                  if (pendingMicToggle) {
@@ -2732,15 +2751,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
              if (!videoTrack) {
 
-                 btnCam.disabled = false;
-                 btnCam.classList.remove('opacity-50', 'cursor-not-allowed');
+                 if (!isPreviewStarting) {
+                     btnCam.disabled = false;
+                     btnCam.classList.remove('opacity-50', 'cursor-not-allowed');
+                 }
                  btnCam.classList.add('bg-red-500', 'hover:bg-red-600');
                  btnCam.innerText = "Start Cam";
                  document.getElementById('previewPlaceholder').style.display = 'flex';
              } else {
 
-                 btnCam.disabled = false;
-                 btnCam.classList.remove('opacity-50', 'cursor-not-allowed');
+                 if (!isPreviewStarting) {
+                     btnCam.disabled = false;
+                     btnCam.classList.remove('opacity-50', 'cursor-not-allowed');
+                 }
 
                  let isEffectivelyEnabled = videoTrack.enabled;
                  if (pendingCamToggle) {
@@ -2814,9 +2837,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
              if (videoTrack) {
 
+                 btnCam.disabled = true;
+                 btnCam.innerHTML = `<svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
+
                  videoTrack.stop();
                  localStream.removeTrack(videoTrack);
                  pendingCamToggle = true;
+
+                 btnCam.disabled = false;
                  updatePreviewButtons();
                  savePreferences();
              } else {
@@ -2839,6 +2867,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                          if (!newTrack || newTrack.readyState !== 'live') {
                              console.warn("Camera track not properly initialized, retrying...");
                              newTrack?.stop();
+                             if (newTrack && localStream.getVideoTracks().includes(newTrack)) {
+                                 localStream.removeTrack(newTrack);
+                             }
                              await new Promise(r => setTimeout(r, 100));
                              const retryStream = await navigator.mediaDevices.getUserMedia(constraints);
                              const retryTrack = retryStream.getVideoTracks()[0];
@@ -2910,14 +2941,25 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
              if (localStream) {
                 const audioTrack = localStream.getAudioTracks()[0];
+                const videoTrack = localStream.getVideoTracks()[0];
+
+                const micOnSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
+                const camOnSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`;
 
                 if (!audioTrack || !audioTrack.enabled) {
                      btnMic.classList.add('active-red');
                      btnMic.innerHTML = micOffSvg;
+                } else {
+                     btnMic.classList.remove('active-red');
+                     btnMic.innerHTML = micOnSvg;
                 }
+
                 if (!videoTrack || !videoTrack.enabled) {
                      btnCam.classList.add('active-red');
                      btnCam.innerHTML = camOffSvg;
+                } else {
+                     btnCam.classList.remove('active-red');
+                     btnCam.innerHTML = camOnSvg;
                 }
 
                 setupAudioMonitor(localStream, 'local');
