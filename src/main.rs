@@ -2457,8 +2457,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 const newV = rawStream.getVideoTracks()[0];
                 const newA = rawStream.getAudioTracks()[0];
-                if (newV) newV.enabled = previousVideoEnabled;
                 if (newA) newA.enabled = previousAudioEnabled;
+
+                if (newV) {
+                    if (pendingCamToggle) {
+                        newV.enabled = false;
+                    } else {
+                        newV.enabled = previousVideoEnabled;
+                    }
+                }
 
                 setupVolumeMeter(rawStream, 'setupMicBar');
 
@@ -2618,8 +2625,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             } finally {
                 const wasPendingCam = pendingCamToggle;
                 const wasPendingMic = pendingMicToggle;
-                pendingCamToggle = false;
-                pendingMicToggle = false;
+
                 isPreviewStarting = false;
 
                 if (videoSelectEl && originalVideoSelectContent) {
@@ -2635,15 +2641,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     let needsUpdate = false;
                     if (wasPendingCam) {
                         const videoTrack = localStream.getVideoTracks()[0];
-                        if (videoTrack) {
-                            videoTrack.enabled = !videoTrack.enabled;
+                        if (videoTrack && videoTrack.enabled) {
+                            videoTrack.enabled = false;
                             needsUpdate = true;
                         }
                     }
                     if (wasPendingMic) {
                         const audioTrack = localStream.getAudioTracks()[0];
-                        if (audioTrack) {
-                            audioTrack.enabled = !audioTrack.enabled;
+                        if (audioTrack && audioTrack.enabled) {
+                            audioTrack.enabled = false;
                             needsUpdate = true;
                         }
                     }
@@ -5200,6 +5206,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             }));
                         }
 
+                        pendingCamToggle = false;
+
                         updateLocalAvatar();
                         savePreferences();
                         return;
@@ -5242,6 +5250,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             data: { enabled: false }
                         }));
                     }
+
+                    pendingCamToggle = true;
                 } else {
 
                     btn.classList.remove('active-red');
@@ -5300,6 +5310,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 data: { enabled: true }
                             }));
                         }
+
+                        pendingCamToggle = false;
                     } catch (e) {
                         console.error("Could not re-add camera", e);
                         alert("Could not access camera. Please check permissions.");
