@@ -3013,6 +3013,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const body = document.body;
             const sidebar = document.getElementById('roomSidebar');
             const overlay = document.getElementById('sidebarOverlay');
+            const sidebarToggle = document.getElementById('sidebarToggle');
             const isDesktop = window.innerWidth >= 768;
             const wasOpen = sidebar.classList.contains('open');
 
@@ -3027,8 +3028,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const isOpen = sidebar.classList.contains('open');
             if (isOpen) {
                 body.classList.add('sidebar-open');
+                sidebarToggle.classList.add('hidden');
             } else {
                 body.classList.remove('sidebar-open');
+                sidebarToggle.classList.remove('hidden');
             }
             localStorage.setItem('rustrooms_sidebar_open', isOpen ? 'true' : 'false');
         }
@@ -3037,6 +3040,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const savedState = localStorage.getItem('rustrooms_sidebar_open');
             const isOpen = savedState === 'true';
             const isDesktop = window.innerWidth >= 768;
+            const sidebarToggle = document.getElementById('sidebarToggle');
 
             if (isOpen) {
                 const body = document.body;
@@ -3048,6 +3052,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }
                 body.classList.add('sidebar-open');
                 sidebar.classList.add('open');
+                sidebarToggle.classList.add('hidden');
 
                 if (isDesktop) {
                     overlay.classList.remove('open');
@@ -3061,6 +3066,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         sidebar.style.transition = '';
                     }, 50);
                 }
+            } else {
+                sidebarToggle.classList.remove('hidden');
             }
         }
 
