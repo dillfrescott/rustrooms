@@ -1276,14 +1276,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     <div class="grid grid-cols-1 gap-4">
                          <div>
                             <label class="label-text block mb-2">Microphone</label>
-                            <select id="settingsAudioSource" class="w-full rounded-xl px-3 py-2.5 text-sm text-white transition-all">
+                            <select id="settingsAudioSource" onchange="currentAudioInputId=this.value" class="w-full rounded-xl px-3 py-2.5 text-sm text-white transition-all">
                             </select>
                             <div class="mic-meter"><div id="settingsMicBar" class="mic-bar"></div></div>
                         </div>
                          <div>
                             <label class="label-text block mb-2">Speaker</label>
                             <div class="flex gap-2">
-                                <select id="settingsAudioOutputSource" class="flex-1 min-w-0 rounded-xl px-3 py-2.5 text-sm text-white transition-all">
+                                <select id="settingsAudioOutputSource" onchange="changeAudioOutput(this.value)" class="flex-1 min-w-0 rounded-xl px-3 py-2.5 text-sm text-white transition-all">
                                 </select>
                                 <button onclick="testSpeaker('settingsAudioOutputSource')" class="p-2.5 rounded-xl transition-all" style="background: var(--bg-secondary); color: var(--text-primary);" title="Test Speaker">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
@@ -1292,7 +1292,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         </div>
                         <div>
                             <label class="label-text block mb-2">Camera</label>
-                            <select id="settingsVideoSource" class="w-full rounded-xl px-3 py-2.5 text-sm text-white transition-all">
+                            <select id="settingsVideoSource" onchange="currentVideoInputId=this.value" class="w-full rounded-xl px-3 py-2.5 text-sm text-white transition-all">
                             </select>
                         </div>
                     </div>
@@ -2456,6 +2456,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             const videoSelectEl = document.getElementById('videoSource');
             const audioSelectEl = document.getElementById('audioSource');
+
+            const savedAudioValue = audioSelectEl ? audioSelectEl.value : null;
+            const savedVideoValue = videoSelectEl ? videoSelectEl.value : null;
+
             const originalVideoSelectContent = videoSelectEl ? videoSelectEl.innerHTML : null;
             const originalAudioSelectContent = audioSelectEl ? audioSelectEl.innerHTML : null;
             if (videoSelectEl) {
@@ -2475,8 +2479,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     localStream = null;
                 }
 
-                const audioSource = audioSelect.value;
-                const videoSource = videoSelect.value;
+                const audioSource = savedAudioValue || (audioSelectEl ? audioSelectEl.value : null);
+                const videoSource = savedVideoValue || (videoSelectEl ? videoSelectEl.value : null);
 
                 savePreferences();
 
@@ -2676,10 +2680,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 if (videoSelectEl && originalVideoSelectContent) {
                     videoSelectEl.innerHTML = originalVideoSelectContent;
+                    if (savedVideoValue && [...videoSelectEl.options].some(o => o.value === savedVideoValue)) {
+                        videoSelectEl.value = savedVideoValue;
+                    }
                     videoSelectEl.disabled = false;
                 }
                 if (audioSelectEl && originalAudioSelectContent) {
                     audioSelectEl.innerHTML = originalAudioSelectContent;
+                    if (savedAudioValue && [...audioSelectEl.options].some(o => o.value === savedAudioValue)) {
+                        audioSelectEl.value = savedAudioValue;
+                    }
                     audioSelectEl.disabled = false;
                 }
 
