@@ -3149,26 +3149,75 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 body.classList.add('sidebar-open');
                 sidebarToggle.classList.add('hidden');
 
-                const pip = document.getElementById('localPipWrapper');
-                if (pip) {
-                    const pipRect = pip.getBoundingClientRect();
-                    const sidebarWidth = 320;
-                    const margin = 16;
+                if (isDesktop) {
+                    const pip = document.getElementById('localPipWrapper');
+                    if (pip) {
+                        const pipRect = pip.getBoundingClientRect();
+                        const sidebarWidth = 320;
+                        const margin = 16;
 
-                    if (pipRect.left < sidebarWidth + margin) {
+                        if (pipRect.left < sidebarWidth + margin) {
 
-                        const newLeft = sidebarWidth + margin;
-                        pip.style.left = newLeft + 'px';
-                        pip.style.bottom = '';
-                        pip.style.right = '';
+                            const newLeft = sidebarWidth + margin;
+                            pip.style.left = newLeft + 'px';
+                            pip.style.bottom = '';
+                            pip.style.right = '';
+                        }
                     }
                 }
             } else {
                 body.classList.remove('sidebar-open');
                 sidebarToggle.classList.remove('hidden');
+
+                const pip = document.getElementById('localPipWrapper');
+                if (pip) {
+                    pip.style.left = '';
+                    pip.style.right = '';
+                    pip.style.bottom = '';
+                }
             }
             localStorage.setItem('rustrooms_sidebar_open', isOpen ? 'true' : 'false');
         }
+
+        let lastViewportWasDesktop = window.innerWidth >= 768;
+        window.addEventListener('resize', () => {
+            const isDesktop = window.innerWidth >= 768;
+            if (isDesktop !== lastViewportWasDesktop) {
+                lastViewportWasDesktop = isDesktop;
+
+                const body = document.body;
+                const sidebar = document.getElementById('roomSidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                const sidebarToggle = document.getElementById('sidebarToggle');
+                const isOpen = sidebar.classList.contains('open');
+
+                if (isOpen) {
+                    if (isDesktop) {
+                        overlay.classList.remove('open');
+                        body.classList.add('sidebar-open');
+                        sidebarToggle.classList.add('hidden');
+
+                        const pip = document.getElementById('localPipWrapper');
+                        if (pip) {
+                            const pipRect = pip.getBoundingClientRect();
+                            const sidebarWidth = 320;
+                            const margin = 16;
+
+                            if (pipRect.left < sidebarWidth + margin) {
+                                const newLeft = sidebarWidth + margin;
+                                pip.style.left = newLeft + 'px';
+                                pip.style.bottom = '';
+                                pip.style.right = '';
+                            }
+                        }
+                    } else {
+                        overlay.classList.add('open');
+                        body.classList.add('sidebar-open');
+                        sidebarToggle.classList.add('hidden');
+                    }
+                }
+            }
+        });
 
         function applySidebarState(noTransition = false) {
             const savedState = localStorage.getItem('rustrooms_sidebar_open');
@@ -3190,20 +3239,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 if (isDesktop) {
                     overlay.classList.remove('open');
-                }
 
-                const pip = document.getElementById('localPipWrapper');
-                if (pip) {
-                    const pipRect = pip.getBoundingClientRect();
-                    const sidebarWidth = 320;
-                    const margin = 16;
+                    const pip = document.getElementById('localPipWrapper');
+                    if (pip) {
+                        const pipRect = pip.getBoundingClientRect();
+                        const sidebarWidth = 320;
+                        const margin = 16;
 
-                    if (pipRect.left < sidebarWidth + margin) {
+                        if (pipRect.left < sidebarWidth + margin) {
 
-                        const newLeft = sidebarWidth + margin;
-                        pip.style.left = newLeft + 'px';
-                        pip.style.bottom = '';
-                        pip.style.right = '';
+                            const newLeft = sidebarWidth + margin;
+                            pip.style.left = newLeft + 'px';
+                            pip.style.bottom = '';
+                            pip.style.right = '';
+                        }
                     }
                 }
 
