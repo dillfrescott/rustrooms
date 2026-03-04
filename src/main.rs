@@ -18,7 +18,6 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message as WsMessage};
 use sha1::{Sha1, Digest};
-use rand::Rng;
 
 async fn rnnoise_js() -> impl IntoResponse {
     (
@@ -1341,23 +1340,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             <div class="ping-bar ping-bar-3"></div>
                         </div>
                     </div>
-                    <div id="nodeIdBadge" class="hidden !ml-0 !pl-1.5 md:!ml-0 md:!pl-2 border-l !border-[var(--border-subtle)] flex items-center gap-1.5 cursor-pointer hover:bg-white/5 rounded-r-full transition-colors relative" onclick="toggleServerDropdown(event)">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); flex-shrink: 0;"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
-                        <span id="nodeIdText" class="text-xs font-mono tracking-wider shrink-0" style="color: var(--text-muted); font-size: 0.65rem; letter-spacing: 0.08em;"></span>
-
-                        <div id="serverDropdown" class="hidden absolute top-full mt-4 right-0 w-64 glass-panel rounded-2xl shadow-2xl z-[200] overflow-hidden border border-[var(--border-medium)] fadeIn">
-                            <div class="px-4 py-3 border-b border-[var(--border-subtle)] bg-white/5">
-                                <div class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Available Servers</div>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs text-zinc-300">Auto-Select Best</span>
-                                    <button onclick="clearManualServer(event)" class="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors">Reset</button>
-                                </div>
-                            </div>
-                            <div id="serverList" class="max-h-64 overflow-y-auto">
-                                <div class="p-4 text-center text-xs text-zinc-500 italic">Scanning nodes...</div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <div id="btnCopy" class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full cursor-pointer transition-all flex items-center justify-center gap-2 hover:border-opacity-30 flex-shrink-0" onclick="copyLink()" title="Invite Link">
@@ -1634,199 +1616,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let lastPingSentTime = 0;
         let lastPongTime = Date.now();
         let heartbeatTimeout = null;
-
-        let currentNodeId = null;
-        let rankedPeers = [];
-        let failoverIndex = 0;
-        let currentServerHost = window.location.host;
-        let originalHost = window.location.host;
-        let manualServerHost = null;
-
-        function toggleServerDropdown(e) {
-            e.stopPropagation();
-            const dropdown = document.getElementById('serverDropdown');
-            const isHidden = dropdown.classList.contains('hidden');
-
-            document.querySelectorAll('#serverDropdown').forEach(el => el.classList.add('hidden'));
-
-            if (isHidden) {
-                dropdown.classList.remove('hidden');
-                updateServerDropdownUI();
-            } else {
-                dropdown.classList.add('hidden');
-            }
-        }
-
-        document.addEventListener('click', (e) => {
-            const dropdown = document.getElementById('serverDropdown');
-            if (dropdown && !dropdown.contains(e.target)) {
-                dropdown.classList.add('hidden');
-            }
-        });
-
-        function updateServerDropdownUI() {
-            const list = document.getElementById('serverList');
-            if (!list) return;
-
-            if (rankedPeers.length === 0) {
-                list.innerHTML = `<div class="p-4 text-center text-xs text-zinc-500 italic">No other servers found</div>`;
-                return;
-            }
-
-            list.innerHTML = rankedPeers.map(peer => {
-                const isCurrent = peer.host === currentServerHost;
-                const isManual = peer.host === manualServerHost;
-
-                let latencyClass = 'text-zinc-500';
-                if (peer.latency < 100) latencyClass = 'text-green-500';
-                else if (peer.latency < 250) latencyClass = 'text-yellow-500';
-                else if (peer.latency < Infinity) latencyClass = 'text-red-500';
-
-                return `
-                    <div onclick="selectServer('${peer.host}', event)" class="px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors flex items-center justify-between border-b border-[var(--border-subtle)] last:border-0 ${isManual ? 'bg-blue-500/10' : ''}">
-                        <div class="flex flex-col gap-0.5 min-w-0">
-                            <span class="text-xs font-medium text-zinc-200 truncate">${peer.nodeId || peer.host}</span>
-                            <div class="flex items-center gap-2">
-                                <span class="text-[9px] font-mono text-zinc-500 uppercase">${isCurrent ? 'Current' : 'Available'}</span>
-                                ${isManual ? '<span class="text-[9px] bg-blue-500/20 text-blue-400 px-1 rounded">Pinned</span>' : ''}
-                            </div>
-                        </div>
-                        <div class="text-[10px] font-mono ${latencyClass} ml-2 shrink-0">
-                            ${peer.latency === Infinity ? 'offline' : peer.latency + 'ms'}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function selectServer(host, e) {
-            if (e) e.stopPropagation();
-            if (host === currentServerHost && manualServerHost === host) {
-                document.getElementById('serverDropdown').classList.add('hidden');
-                return;
-            }
-
-            console.log(`Manually selecting server: ${host}`);
-            manualServerHost = host;
-            currentServerHost = host;
-            wsUrl = `${wsProtocol}//${currentServerHost}/ws/${roomId}/${channelId}`;
-
-            document.getElementById('serverDropdown').classList.add('hidden');
-
-            performChannelSwitch(roomId, channelId);
-        }
-
-        function clearManualServer(e) {
-            if (e) e.stopPropagation();
-            manualServerHost = null;
-            document.getElementById('serverDropdown').classList.add('hidden');
-            findBestServer().then(() => {
-                performChannelSwitch(roomId, channelId);
-            });
-        }
-
-        async function fetchNodeId(host) {
-            try {
-                const protocol = window.location.protocol;
-                const resp = await fetch(`${protocol}//${host}/node-id`);
-                if (resp.ok) {
-                    const data = await resp.json();
-                    currentNodeId = data.nodeId;
-                    const badge = document.getElementById('nodeIdBadge');
-                    const text = document.getElementById('nodeIdText');
-                    if (badge && text) {
-                        text.innerText = data.nodeId;
-                        badge.classList.remove('hidden');
-                    }
-                }
-            } catch (e) {
-                console.warn('Failed to fetch node ID:', e);
-            }
-        }
-
-        async function pingHost(host) {
-            const protocol = window.location.protocol;
-            try {
-                const start = performance.now();
-                const resp = await fetch(`${protocol}//${host}/ping`, { mode: 'cors', cache: 'no-cache' });
-                const end = performance.now();
-                if (resp.ok) return Math.round(end - start);
-            } catch (e) {  }
-            return Infinity;
-        }
-
-        async function discoverAndRankPeers() {
-            const protocol = window.location.protocol;
-            try {
-                const resp = await fetch(`${protocol}//${currentServerHost}/cluster-peers`);
-                if (!resp.ok) return [];
-                const data = await resp.json();
-                const allHosts = [currentServerHost];
-                if (data.peers && data.peers.length > 0) {
-                    for (const peer of data.peers) {
-                        if (!allHosts.includes(peer)) allHosts.push(peer);
-                    }
-                }
-
-                const results = await Promise.all(allHosts.map(async (host) => {
-                    const latency = await pingHost(host);
-                    let nodeId = null;
-                    if (latency < Infinity) {
-                        try {
-                            const protocol = window.location.protocol;
-                            const resp = await fetch(`${protocol}//${host}/node-id`);
-                            if (resp.ok) {
-                                const data = await resp.json();
-                                nodeId = data.nodeId;
-                            }
-                        } catch (e) {}
-                    }
-                    return { host, latency, nodeId };
-                }));
-
-                results.sort((a, b) => a.latency - b.latency);
-                console.log('Peer latency ranking:', results.map(r => `${r.host}: ${r.latency}ms`).join(', '));
-                return results.filter(r => r.latency < Infinity);
-            } catch (e) {
-                console.warn('Failed to discover peers:', e);
-                return [{ host: currentServerHost, latency: 0 }];
-            }
-        }
-
-        async function findBestServer() {
-            const peers = await discoverAndRankPeers();
-            rankedPeers = peers;
-            failoverIndex = 0;
-
-            if (manualServerHost) {
-                const manualExists = peers.find(p => p.host === manualServerHost && p.latency < Infinity);
-                if (manualExists) {
-                    currentServerHost = manualServerHost;
-                    wsUrl = `${wsProtocol}//${currentServerHost}/ws/${roomId}/${channelId}`;
-                    return;
-                } else {
-                    console.warn("Manually selected server is offline, falling back to auto");
-                    manualServerHost = null;
-                }
-            }
-
-            if (peers.length > 0 && peers[0].host !== currentServerHost) {
-                const best = peers[0];
-                console.log(`Switching to closer server: ${best.host} (${best.latency}ms)`);
-                currentServerHost = best.host;
-                wsUrl = `${wsProtocol}//${currentServerHost}/ws/${roomId}/${channelId}`;
-            }
-        }
-
-        function getNextFailoverHost() {
-            if (rankedPeers.length === 0) return null;
-            failoverIndex++;
-            if (failoverIndex >= rankedPeers.length) {
-                failoverIndex = 0;
-                return null;
-            }
-            return rankedPeers[failoverIndex];
-        }
 
         function getScreenAudioFlag(data) {
             if (!data) return undefined;
@@ -3731,7 +3520,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 history.pushState({ roomId, channelId }, "", newUrl);
             }
 
-            wsUrl = `${wsProtocol}//${currentServerHost}/ws/${roomId}/${channelId}`;
+            wsUrl = `${wsProtocol}//${window.location.host}/ws/${roomId}/${channelId}`;
             updateStatus('connecting', 'Connecting...');
 
             if (typeof updateRoomListUI === 'function') updateRoomListUI();
@@ -3965,7 +3754,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const setupDone = sessionStorage.getItem('rustrooms_setup_done') === 'true';
             if (setupDone && roomId) {
 
-                loadDevices().then(() => findBestServer().then(() => joinRoom()));
+                loadDevices().then(() => joinRoom());
             } else {
                 configOverlay.classList.remove('hidden');
                 configOverlay.classList.remove('opacity-0');
@@ -3989,11 +3778,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             playNotificationSound('join');
                             reconnectionAttempts = 0;
                             isReconnecting = false;
-                            failoverIndex = 0;
                             updateStatus('connected', 'Connected');
                             startHeartbeat();
-                            fetchNodeId(currentServerHost);
-                            discoverAndRankPeers().then(peers => { rankedPeers = peers; });
                             const camEnabled = localStream && localStream.getVideoTracks()[0] && localStream.getVideoTracks()[0].enabled;
                             const screenEnabled = !!screenStream;
                             const screenHasAudio = screenStream && screenStream.getAudioTracks().length > 0;
@@ -4242,18 +4028,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                             isReconnecting = true;
                             reconnectionAttempts++;
-
-                            const nextPeer = getNextFailoverHost();
-                            if (nextPeer && reconnectionAttempts <= 2) {
-                                console.log(`Failing over to peer: ${nextPeer.host} (${nextPeer.latency}ms)`);
-                                updateStatus('connecting', 'Switching servers...');
-                                currentServerHost = nextPeer.host;
-                                wsUrl = `${wsProtocol}//${currentServerHost}/ws/${roomId}/${channelId}`;
-                                setTimeout(() => {
-                                    isReconnecting = false;
-                                    connectWs();
-                                }, 500);
-                            } else if (reconnectionAttempts >= maxReconnectionAttempts) {
+                            if (reconnectionAttempts >= maxReconnectionAttempts) {
                                 updateStatus('disconnected', 'Disconnected');
                                 const btn = document.getElementById('btnReconnect');
                                 if (btn) btn.classList.remove('hidden');
@@ -6342,11 +6117,8 @@ const ROOM_EMPTY_GRACE_SECS: u64 = 120;
 struct ClusterMessage {
     #[serde(rename = "type")]
     msg_type: String,
-    #[serde(default)]
     room_id: String,
-    #[serde(default)]
     channel_id: String,
-    #[serde(default)]
     user_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     status: Option<UserStatus>,
@@ -6354,8 +6126,6 @@ struct ClusterMessage {
     data: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     signal_msg: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    peer_host: Option<String>,
 }
 
 #[derive(Clone)]
@@ -6367,8 +6137,6 @@ struct AppState {
     remote_users: RemoteUsersMap,
     cluster_key: Option<String>,
     connected_peers: Arc<Mutex<HashSet<String>>>,
-    dht_peers: Arc<Mutex<HashSet<String>>>,
-    node_id: String,
 }
 
 #[tokio::main]
@@ -6380,13 +6148,6 @@ async fn main() {
     let cluster_key = std::env::var("KEY").ok().filter(|s| !s.is_empty());
     let (cluster_tx, _) = tokio::sync::broadcast::channel::<String>(10000);
     let remote_users: RemoteUsersMap = Arc::new(Mutex::new(HashMap::new()));
-
-    let node_id = {
-        let mut rng = rand::thread_rng();
-        let bytes: [u8; 4] = rng.r#gen();
-        format!("{:02X}{:02X}{:02X}{:02X}", bytes[0], bytes[1], bytes[2], bytes[3])
-    };
-    println!("NODE ID: {}", node_id);
 
     if cluster_key.is_some() {
         println!("CLUSTER: Enabled via KEY env var (DHT discovery)");
@@ -6400,8 +6161,6 @@ async fn main() {
         remote_users,
         cluster_key,
         connected_peers: Arc::new(Mutex::new(HashSet::new())),
-        dht_peers: Arc::new(Mutex::new(HashSet::new())),
-        node_id,
     };
 
     let app = Router::new()
@@ -6431,9 +6190,6 @@ async fn main() {
         .route("/ws/{room_id}/{channel_id}", get(ws_handler))
         .route("/ws/{room_id}/{channel_id}/", get(redirect_ws_trailing_slash))
         .route("/cluster-ws", get(cluster_ws_handler))
-        .route("/node-id", get(node_id_handler))
-        .route("/ping", get(ping_handler))
-        .route("/cluster-peers", get(cluster_peers_handler))
         .with_state(state.clone());
 
     let port = std::env::var("PORT")
@@ -6551,31 +6307,6 @@ async fn cluster_ws_handler(
     ws.on_upgrade(move |socket| handle_inbound_cluster(socket, state))
 }
 
-async fn node_id_handler(State(state): State<AppState>) -> impl IntoResponse {
-    (
-        [(header::CONTENT_TYPE, "application/json")],
-        format!("{{\"nodeId\":\"{}\"}}", state.node_id),
-    )
-}
-
-async fn ping_handler() -> impl IntoResponse {
-    "pong"
-}
-
-async fn cluster_peers_handler(State(state): State<AppState>) -> impl IntoResponse {
-    let connected: Vec<String> = state.connected_peers.lock().await.iter().cloned().collect();
-    let dht_discovered: Vec<String> = state.dht_peers.lock().await.iter().cloned().collect();
-
-    let mut all_peers: HashSet<String> = connected.into_iter().collect();
-    all_peers.extend(dht_discovered);
-
-    let peers_json: Vec<String> = all_peers.iter().map(|p| format!("\"{}\"", p)).collect();
-    (
-        [(header::CONTENT_TYPE, "application/json")],
-        format!("{{\"peers\":[{}],\"nodeId\":\"{}\"}}", peers_json.join(","), state.node_id),
-    )
-}
-
 async fn handle_inbound_cluster(socket: WebSocket, state: AppState) {
     let (mut ws_tx, mut ws_rx) = socket.split();
     let (write_tx, mut write_rx) = tokio::sync::mpsc::channel::<String>(5000);
@@ -6607,7 +6338,6 @@ async fn handle_inbound_cluster(socket: WebSocket, state: AppState) {
                             "screenEnabled": status.is_screen_sharing,
                         })),
                         signal_msg: None,
-                        peer_host: None,
                     };
                     if let Ok(json) = serde_json::to_string(&cm) {
                         let _ = write_tx.send(json).await;
@@ -6636,14 +6366,6 @@ async fn handle_inbound_cluster(socket: WebSocket, state: AppState) {
                     peer_users.lock().await.insert((cm.room_id.clone(), cm.channel_id.clone(), cm.user_id.clone()));
                 } else if cm.msg_type == "user-left" || cm.msg_type == "user-kicked" {
                     peer_users.lock().await.remove(&(cm.room_id.clone(), cm.channel_id.clone(), cm.user_id.clone()));
-                } else if cm.msg_type == "peer-discovered" {
-                    // Handle peer discovery from other cluster nodes
-                    if let Some(ref peer_host) = cm.peer_host {
-                        let mut dht_peers = state.dht_peers.lock().await;
-                        if dht_peers.insert(peer_host.clone()) {
-                            println!("CLUSTER: Learned about peer {} from cluster", peer_host);
-                        }
-                    }
                 }
                 handle_cluster_message(&cm, &rooms, &remote_users).await;
             }
@@ -6668,10 +6390,10 @@ fn spawn_dht_discovery(state: AppState, port: u16) {
         };
         println!("CLUSTER: DHT infohash = {:?}", info_hash);
 
-        let dht = match tokio::task::spawn_blocking(|| mainline::Dht::builder().build()).await {
+        let dht = match tokio::task::spawn_blocking(|| mainline::Dht::client()).await {
             Ok(Ok(d)) => d,
             Ok(Err(e)) => {
-                eprintln!("CLUSTER: Failed to start DHT node: {}", e);
+                eprintln!("CLUSTER: Failed to start DHT client: {}", e);
                 return;
             }
             Err(e) => {
@@ -6679,7 +6401,7 @@ fn spawn_dht_discovery(state: AppState, port: u16) {
                 return;
             }
         };
-        println!("CLUSTER: DHT node started, waiting for bootstrap...");
+        println!("CLUSTER: DHT client started, waiting for bootstrap...");
 
         let dht_clone = dht.clone();
         let bootstrapped = tokio::task::spawn_blocking(move || dht_clone.bootstrapped()).await.unwrap_or(false);
@@ -6713,29 +6435,15 @@ fn spawn_dht_discovery(state: AppState, port: u16) {
             }).await;
 
             if let Ok(peers) = peers_result {
-                println!("CLUSTER: DHT get_peers returned {} raw peers", peers.len());
 
                 let unique_peers: HashSet<String> = peers.iter()
-                    .filter(|p| {
-                        let keep = p.port() != port;
-                        if !keep {
-                            println!("CLUSTER: Filtering out self: {}:{} (same port)", p.ip(), p.port());
-                        }
-                        keep
-                    })
+                    .filter(|p| p.port() != port)
                     .map(|p| p.to_string())
                     .collect();
                 if !unique_peers.is_empty() {
-                    println!("CLUSTER: DHT found {} unique peer(s): {:?}", unique_peers.len(), unique_peers);
-                } else if !peers.is_empty() {
-                    println!("CLUSTER: DHT found peers but all were filtered (same port or duplicates)");
+                    println!("CLUSTER: DHT found {} unique peer(s)", unique_peers.len());
                 }
                 for addr_str in unique_peers {
-
-                    {
-                        let mut dht_peers = state.dht_peers.lock().await;
-                        dht_peers.insert(addr_str.clone());
-                    }
 
                     {
                         let mut cp = state.connected_peers.lock().await;
@@ -6745,20 +6453,6 @@ fn spawn_dht_discovery(state: AppState, port: u16) {
                         cp.insert(addr_str.clone());
                     }
                     println!("CLUSTER: Discovered new peer: {}", addr_str);
-                    
-                    // Broadcast peer discovery to all connected cluster nodes
-                    let peer_discovery_msg = ClusterMessage {
-                        msg_type: "peer-discovered".into(),
-                        room_id: String::new(),
-                        channel_id: String::new(),
-                        user_id: String::new(),
-                        status: None,
-                        data: None,
-                        signal_msg: None,
-                        peer_host: Some(addr_str.clone()),
-                    };
-                    let _ = state.cluster_tx.send(serde_json::to_string(&peer_discovery_msg).unwrap_or_default());
-                    
                     let state_clone = state.clone();
                     let addr_clone = addr_str.clone();
                     tokio::spawn(async move {
@@ -6830,7 +6524,6 @@ async fn connect_to_peer(url: &str, state: &AppState) -> Result<(), Box<dyn std:
                             "screenEnabled": status.is_screen_sharing,
                         })),
                         signal_msg: None,
-                        peer_host: None,
                     };
                     if let Ok(json) = serde_json::to_string(&cm) {
                         let _ = write_tx.send(json).await;
@@ -7322,7 +7015,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 status: Some(UserStatus { nickname: nickname.clone(), avatar: avatar.clone(), is_muted, is_deafened, is_screen_sharing }),
                                 data: notify_data.clone(),
                                 signal_msg: None,
-                                peer_host: None,
                             });
                             broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
                         }
@@ -7383,7 +7075,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     status: Some(s.clone()),
                                     data: None,
                                     signal_msg: None,
-                                    peer_host: None,
                                 });
                             }
                             broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
@@ -7414,7 +7105,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 status: None,
                                 data: parsed.data.clone(),
                                 signal_msg: None,
-                                peer_host: None,
                             });
                         } else if parsed.msg_type == "screen-toggle" {
                             {
@@ -7454,7 +7144,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 status: None,
                                 data: parsed.data.clone(),
                                 signal_msg: None,
-                                peer_host: None,
                             });
                             broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
                         } else if parsed.msg_type == "kick-user" {
@@ -7509,7 +7198,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         status: None,
                                         data: None,
                                         signal_msg: None,
-                                        peer_host: None,
                                     });
                                     broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
                                 }
@@ -7554,7 +7242,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                          status: None,
                                          data: Some(serde_json::json!({ "newName": new_name_str })),
                                          signal_msg: None,
-                                         peer_host: None,
                                      });
                                      broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
                                 }
@@ -7592,7 +7279,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         status: None,
                                         data: None,
                                         signal_msg: None,
-                                        peer_host: None,
                                     });
                                     broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
                                 }
@@ -7636,7 +7322,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         status: None,
                                         data: None,
                                         signal_msg: Some(forwarded_text),
-                                        peer_host: None,
                                     });
                                 }
                             }
@@ -7774,7 +7459,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
             status: None,
             data: None,
             signal_msg: None,
-            peer_host: None,
         });
     }
     broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
