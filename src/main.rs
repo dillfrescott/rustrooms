@@ -6668,10 +6668,10 @@ fn spawn_dht_discovery(state: AppState, port: u16) {
         };
         println!("CLUSTER: DHT infohash = {:?}", info_hash);
 
-        let dht = match tokio::task::spawn_blocking(|| mainline::Dht::client()).await {
+        let dht = match tokio::task::spawn_blocking(|| mainline::Dht::builder().build()).await {
             Ok(Ok(d)) => d,
             Ok(Err(e)) => {
-                eprintln!("CLUSTER: Failed to start DHT client: {}", e);
+                eprintln!("CLUSTER: Failed to start DHT node: {}", e);
                 return;
             }
             Err(e) => {
@@ -6679,7 +6679,7 @@ fn spawn_dht_discovery(state: AppState, port: u16) {
                 return;
             }
         };
-        println!("CLUSTER: DHT client started, waiting for bootstrap...");
+        println!("CLUSTER: DHT node started, waiting for bootstrap...");
 
         let dht_clone = dht.clone();
         let bootstrapped = tokio::task::spawn_blocking(move || dht_clone.bootstrapped()).await.unwrap_or(false);
