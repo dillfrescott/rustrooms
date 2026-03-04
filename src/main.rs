@@ -6713,13 +6713,22 @@ fn spawn_dht_discovery(state: AppState, port: u16) {
             }).await;
 
             if let Ok(peers) = peers_result {
+                println!("CLUSTER: DHT get_peers returned {} raw peers", peers.len());
 
                 let unique_peers: HashSet<String> = peers.iter()
-                    .filter(|p| p.port() != port)
+                    .filter(|p| {
+                        let keep = p.port() != port;
+                        if !keep {
+                            println!("CLUSTER: Filtering out self: {}:{} (same port)", p.ip(), p.port());
+                        }
+                        keep
+                    })
                     .map(|p| p.to_string())
                     .collect();
                 if !unique_peers.is_empty() {
-                    println!("CLUSTER: DHT found {} unique peer(s)", unique_peers.len());
+                    println!("CLUSTER: DHT found {} unique peer(s): {:?}", unique_peers.len(), unique_peers);
+                } else if !peers.is_empty() {
+                    println!("CLUSTER: DHT found peers but all were filtered (same port or duplicates)");
                 }
                 for addr_str in unique_peers {
 
