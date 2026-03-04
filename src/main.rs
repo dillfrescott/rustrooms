@@ -970,7 +970,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             inset: 0;
             background: rgba(0, 0, 0, 0.75);
             backdrop-filter: blur(8px);
-            z-index: 200;
+            z-index: 300;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1204,6 +1204,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold" style="background: rgba(0, 0, 0, 0.7); color: var(--text-primary);">Edit</div>
                                 </div>
                                 <button id="btnRemoveSetupAvatar" onclick="removeSetupAvatar()" class="hidden mt-1 text-xs font-medium px-2 py-0.5 rounded-lg transition-all" style="color: var(--text-muted); background: var(--bg-tertiary); border: 1px solid var(--border-subtle);" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">Remove</button>
+                                <div class="mt-1 text-center" style="font-size: 0.6rem; color: var(--text-muted); opacity: 0.7;">Max 2MB · Images & GIFs</div>
                                 <input type="file" id="avatarInput" hidden accept="image/*" onchange="handleAvatarUpload(this)">
                             </div>
                         </div>
@@ -1272,6 +1273,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold" style="background: rgba(0, 0, 0, 0.75); color: var(--text-primary);">Change</div>
                             </div>
                             <button id="btnRemoveSettingsAvatar" onclick="removeSettingsAvatar()" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-all" style="color: var(--text-muted); background: var(--bg-primary); border: 1px solid var(--border-subtle);" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">Remove Avatar</button>
+                            <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7;">Max 2MB · Images & GIFs</div>
                                                             <input type="file" id="settingsAvatarInput" hidden accept="image/*" onchange="handleSettingsAvatarUpload(this)">
                                                         </div>
                                                     </div>
@@ -2467,6 +2469,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const file = input.files[0];
             if (!file) return;
 
+            if (file.size > 2 * 1024 * 1024) {
+                showCustomAlert('File Too Large', 'Avatar images must be under 2MB. Please choose a smaller file.');
+                input.value = '';
+                return;
+            }
             const isGif = file.type === 'image/gif';
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -5880,6 +5887,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const file = input.files[0];
             if (!file) return;
 
+            if (file.size > 2 * 1024 * 1024) {
+                showCustomAlert('File Too Large', 'Avatar images must be under 2MB. Please choose a smaller file.');
+                input.value = '';
+                return;
+            }
             const isGif = file.type === 'image/gif';
             const reader = new FileReader();
             reader.onload = function(e) {
