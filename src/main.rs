@@ -18,6 +18,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message as WsMessage};
 use sha1::{Sha1, Digest};
+use rand::Rng;
 
 async fn rnnoise_js() -> impl IntoResponse {
     (
@@ -1340,6 +1341,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             <div class="ping-bar ping-bar-3"></div>
                         </div>
                     </div>
+                    <div id="nodeIdBadge" class="hidden !ml-0 !pl-1.5 md:!ml-0 md:!pl-2 border-l !border-[var(--border-subtle)] flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); flex-shrink: 0;"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                        <span id="nodeIdText" class="text-xs font-mono tracking-wider shrink-0" style="color: var(--text-muted); font-size: 0.65rem; letter-spacing: 0.08em;"></span>
+                    </div>
                 </div>
 
                 <div id="btnCopy" class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full cursor-pointer transition-all flex items-center justify-center gap-2 hover:border-opacity-30 flex-shrink-0" onclick="copyLink()" title="Invite Link">
@@ -1616,6 +1621,91 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let lastPingSentTime = 0;
         let lastPongTime = Date.now();
         let heartbeatTimeout = null;
+
+        let currentNodeId = null;
+        let rankedPeers = [];
+        let failoverIndex = 0;
+        let currentServerHost = window.location.host;
+        let originalHost = window.location.host;
+
+        async function fetchNodeId(host) {
+            try {
+                const protocol = window.location.protocol;
+                const resp = await fetch(`${protocol}//${host}/node-id`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    currentNodeId = data.nodeId;
+                    const badge = document.getElementById('nodeIdBadge');
+                    const text = document.getElementById('nodeIdText');
+                    if (badge && text) {
+                        text.innerText = data.nodeId;
+                        badge.classList.remove('hidden');
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to fetch node ID:', e);
+            }
+        }
+
+        async function pingHost(host) {
+            const protocol = window.location.protocol;
+            try {
+                const start = performance.now();
+                const resp = await fetch(`${protocol}//${host}/ping`, { mode: 'cors', cache: 'no-cache' });
+                const end = performance.now();
+                if (resp.ok) return Math.round(end - start);
+            } catch (e) {  }
+            return Infinity;
+        }
+
+        async function discoverAndRankPeers() {
+            const protocol = window.location.protocol;
+            try {
+                const resp = await fetch(`${protocol}//${currentServerHost}/cluster-peers`);
+                if (!resp.ok) return [];
+                const data = await resp.json();
+                const allHosts = [currentServerHost];
+                if (data.peers && data.peers.length > 0) {
+                    for (const peer of data.peers) {
+                        if (!allHosts.includes(peer)) allHosts.push(peer);
+                    }
+                }
+
+                const results = await Promise.all(allHosts.map(async (host) => {
+                    const latency = await pingHost(host);
+                    return { host, latency };
+                }));
+
+                results.sort((a, b) => a.latency - b.latency);
+                console.log('Peer latency ranking:', results.map(r => `${r.host}: ${r.latency}ms`).join(', '));
+                return results.filter(r => r.latency < Infinity);
+            } catch (e) {
+                console.warn('Failed to discover peers:', e);
+                return [{ host: currentServerHost, latency: 0 }];
+            }
+        }
+
+        async function findBestServer() {
+            const peers = await discoverAndRankPeers();
+            rankedPeers = peers;
+            failoverIndex = 0;
+            if (peers.length > 0 && peers[0].host !== currentServerHost) {
+                const best = peers[0];
+                console.log(`Switching to closer server: ${best.host} (${best.latency}ms)`);
+                currentServerHost = best.host;
+                wsUrl = `${wsProtocol}//${currentServerHost}/ws/${roomId}/${channelId}`;
+            }
+        }
+
+        function getNextFailoverHost() {
+            if (rankedPeers.length === 0) return null;
+            failoverIndex++;
+            if (failoverIndex >= rankedPeers.length) {
+                failoverIndex = 0;
+                return null;
+            }
+            return rankedPeers[failoverIndex];
+        }
 
         function getScreenAudioFlag(data) {
             if (!data) return undefined;
@@ -3520,7 +3610,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 history.pushState({ roomId, channelId }, "", newUrl);
             }
 
-            wsUrl = `${wsProtocol}//${window.location.host}/ws/${roomId}/${channelId}`;
+            wsUrl = `${wsProtocol}//${currentServerHost}/ws/${roomId}/${channelId}`;
             updateStatus('connecting', 'Connecting...');
 
             if (typeof updateRoomListUI === 'function') updateRoomListUI();
@@ -3754,7 +3844,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const setupDone = sessionStorage.getItem('rustrooms_setup_done') === 'true';
             if (setupDone && roomId) {
 
-                loadDevices().then(() => joinRoom());
+                loadDevices().then(() => findBestServer().then(() => joinRoom()));
             } else {
                 configOverlay.classList.remove('hidden');
                 configOverlay.classList.remove('opacity-0');
@@ -3778,8 +3868,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             playNotificationSound('join');
                             reconnectionAttempts = 0;
                             isReconnecting = false;
+                            failoverIndex = 0;
                             updateStatus('connected', 'Connected');
                             startHeartbeat();
+                            fetchNodeId(currentServerHost);
+                            discoverAndRankPeers().then(peers => { rankedPeers = peers; });
                             const camEnabled = localStream && localStream.getVideoTracks()[0] && localStream.getVideoTracks()[0].enabled;
                             const screenEnabled = !!screenStream;
                             const screenHasAudio = screenStream && screenStream.getAudioTracks().length > 0;
@@ -4028,7 +4121,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                             isReconnecting = true;
                             reconnectionAttempts++;
-                            if (reconnectionAttempts >= maxReconnectionAttempts) {
+
+                            const nextPeer = getNextFailoverHost();
+                            if (nextPeer && reconnectionAttempts <= 2) {
+                                console.log(`Failing over to peer: ${nextPeer.host} (${nextPeer.latency}ms)`);
+                                updateStatus('connecting', 'Switching servers...');
+                                currentServerHost = nextPeer.host;
+                                wsUrl = `${wsProtocol}//${currentServerHost}/ws/${roomId}/${channelId}`;
+                                setTimeout(() => {
+                                    isReconnecting = false;
+                                    connectWs();
+                                }, 500);
+                            } else if (reconnectionAttempts >= maxReconnectionAttempts) {
                                 updateStatus('disconnected', 'Disconnected');
                                 const btn = document.getElementById('btnReconnect');
                                 if (btn) btn.classList.remove('hidden');
@@ -6137,6 +6241,7 @@ struct AppState {
     remote_users: RemoteUsersMap,
     cluster_key: Option<String>,
     connected_peers: Arc<Mutex<HashSet<String>>>,
+    node_id: String,
 }
 
 #[tokio::main]
@@ -6148,6 +6253,13 @@ async fn main() {
     let cluster_key = std::env::var("KEY").ok().filter(|s| !s.is_empty());
     let (cluster_tx, _) = tokio::sync::broadcast::channel::<String>(10000);
     let remote_users: RemoteUsersMap = Arc::new(Mutex::new(HashMap::new()));
+
+    let node_id = {
+        let mut rng = rand::thread_rng();
+        let bytes: [u8; 4] = rng.r#gen();
+        format!("{:02X}{:02X}{:02X}{:02X}", bytes[0], bytes[1], bytes[2], bytes[3])
+    };
+    println!("NODE ID: {}", node_id);
 
     if cluster_key.is_some() {
         println!("CLUSTER: Enabled via KEY env var (DHT discovery)");
@@ -6161,6 +6273,7 @@ async fn main() {
         remote_users,
         cluster_key,
         connected_peers: Arc::new(Mutex::new(HashSet::new())),
+        node_id,
     };
 
     let app = Router::new()
@@ -6190,6 +6303,9 @@ async fn main() {
         .route("/ws/{room_id}/{channel_id}", get(ws_handler))
         .route("/ws/{room_id}/{channel_id}/", get(redirect_ws_trailing_slash))
         .route("/cluster-ws", get(cluster_ws_handler))
+        .route("/node-id", get(node_id_handler))
+        .route("/ping", get(ping_handler))
+        .route("/cluster-peers", get(cluster_peers_handler))
         .with_state(state.clone());
 
     let port = std::env::var("PORT")
@@ -6305,6 +6421,26 @@ async fn cluster_ws_handler(
         return (axum::http::StatusCode::FORBIDDEN, "Clustering not enabled").into_response();
     }
     ws.on_upgrade(move |socket| handle_inbound_cluster(socket, state))
+}
+
+async fn node_id_handler(State(state): State<AppState>) -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "application/json")],
+        format!("{{\"nodeId\":\"{}\"}}", state.node_id),
+    )
+}
+
+async fn ping_handler() -> impl IntoResponse {
+    "pong"
+}
+
+async fn cluster_peers_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let peers: Vec<String> = state.connected_peers.lock().await.iter().cloned().collect();
+    let peers_json: Vec<String> = peers.iter().map(|p| format!("\"{}\"", p)).collect();
+    (
+        [(header::CONTENT_TYPE, "application/json")],
+        format!("{{\"peers\":[{}],\"nodeId\":\"{}\"}}", peers_json.join(","), state.node_id),
+    )
 }
 
 async fn handle_inbound_cluster(socket: WebSocket, state: AppState) {
