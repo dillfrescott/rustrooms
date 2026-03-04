@@ -3116,7 +3116,22 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             hasLeftRoom = false;
 
             if (isAnotherTabActive()) {
-                showCustomAlert('Already In Call', 'You already have an active call open in another tab. Please close it first.');
+                document.getElementById('alertTitle').innerText = 'Already In Call';
+                document.getElementById('alertMessage').innerText = 'You already have an active call open in another tab for this room. Please close it first.';
+
+                const alertBtn = document.querySelector('#alertModal button');
+                const oldOnClick = alertBtn.onclick;
+
+                alertBtn.onclick = function() {
+                    closeCustomAlert();
+                    alertBtn.onclick = oldOnClick;
+                    history.replaceState(null, '', '/');
+                    document.getElementById('welcomeOverlay').style.display = 'flex';
+                    document.querySelector('main').style.display = 'none';
+                    document.querySelector('.taskbar').style.display = 'none';
+                };
+
+                document.getElementById('alertModal').classList.add('open');
                 return;
             }
 
