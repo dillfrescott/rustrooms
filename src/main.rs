@@ -1203,6 +1203,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     <span id="avatarPlaceholder" class="text-3xl" style="color: var(--text-muted);">👤</span>
                                     <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold" style="background: rgba(0, 0, 0, 0.7); color: var(--text-primary);">Edit</div>
                                 </div>
+                                <button id="btnRemoveSetupAvatar" onclick="removeSetupAvatar()" class="hidden mt-1 text-xs font-medium px-2 py-0.5 rounded-lg transition-all" style="color: var(--text-muted); background: var(--bg-tertiary); border: 1px solid var(--border-subtle);" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">Remove</button>
                                 <input type="file" id="avatarInput" hidden accept="image/*" onchange="handleAvatarUpload(this)">
                             </div>
                         </div>
@@ -1270,6 +1271,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 <span id="settingsAvatarPlaceholder" class="text-6xl" style="color: var(--text-muted);">👤</span>
                                 <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold" style="background: rgba(0, 0, 0, 0.75); color: var(--text-primary);">Change</div>
                             </div>
+                            <button id="btnRemoveSettingsAvatar" onclick="removeSettingsAvatar()" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-all" style="color: var(--text-muted); background: var(--bg-primary); border: 1px solid var(--border-subtle);" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">Remove Avatar</button>
                                                             <input type="file" id="settingsAvatarInput" hidden accept="image/*" onchange="handleSettingsAvatarUpload(this)">
                                                         </div>
                                                     </div>
@@ -1579,6 +1581,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let peerScreenAudioTrackId = {};
         let userNickname = "Guest";
         let userAvatar = null;
+        let userAvatarIsGif = false;
+        let userAvatarStaticFrame = null;
         let sidebarOpen = false;
         let globalRoomList = {};
         let isConfigured = false;
@@ -2173,6 +2177,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     if (average > 10) {
                         targetEl.classList.add('speaking-glow');
 
+                        if (!gifSpeakingState[targetId]) {
+                            gifSpeakingState[targetId] = true;
+                            toggleGifAnimation(targetId, true);
+                        }
+
                         if (targetId === 'local') {
                             const localSidebarAvatar = document.querySelector(`.room-user-row[data-user-id="${persistentUserId}"] .mini-avatar`);
                             if (localSidebarAvatar) localSidebarAvatar.classList.add('speaking-glow');
@@ -2193,6 +2202,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         }
                     } else {
                         targetEl.classList.remove('speaking-glow');
+
+                        if (gifSpeakingState[targetId]) {
+                            gifSpeakingState[targetId] = false;
+                            toggleGifAnimation(targetId, false);
+                        }
 
                         if (targetId === 'local') {
                             const localSidebarAvatar = document.querySelector(`.room-user-row[data-user-id="${persistentUserId}"] .mini-avatar`);
@@ -2235,16 +2249,30 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                     if (data.avatar) {
                         userAvatar = data.avatar;
+                        userAvatarIsGif = !!data.isGif;
+                        userAvatarStaticFrame = null;
+                        const displaySrc = userAvatar;
                         if (avatarPreview) {
-                            avatarPreview.src = userAvatar;
+                            avatarPreview.src = displaySrc;
                             avatarPreview.classList.remove('hidden');
                             avatarPlaceholder.classList.add('hidden');
+                            const removeBtn = document.getElementById('btnRemoveSetupAvatar');
+                            if (removeBtn) removeBtn.classList.remove('hidden');
                         }
                         if (document.getElementById('settingsAvatarPreview')) {
                             const sap = document.getElementById('settingsAvatarPreview');
-                            sap.src = userAvatar;
+                            sap.src = displaySrc;
                             sap.classList.remove('hidden');
                             document.getElementById('settingsAvatarPlaceholder').classList.add('hidden');
+                        }
+                        if (userAvatarIsGif) {
+                            extractGifFirstFrame(userAvatar).then(sf => {
+                                userAvatarStaticFrame = sf;
+                                if (avatarPreview) avatarPreview.src = sf;
+                                if (document.getElementById('settingsAvatarPreview')) {
+                                    document.getElementById('settingsAvatarPreview').src = sf;
+                                }
+                            });
                         }
                     }
                     if (data.audioOutputId) {
@@ -2300,16 +2328,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 if (videoTrack) isCamOff = !videoTrack.enabled;
             }
 
-            localStorage.setItem('rustrooms_profile', JSON.stringify({
-                nickname: userNickname,
-                avatar: userAvatar,
-                audioOutputId: audioOutputId,
-                audioInputId: audioInputId,
-                videoInputId: videoInputId,
-                isMuted: isMuted,
-                isCamOff: isCamOff,
-                isDeafened: isDeafened
-            }));
+            try {
+                localStorage.setItem('rustrooms_profile', JSON.stringify({
+                    nickname: userNickname,
+                    avatar: userAvatar,
+                    isGif: userAvatarIsGif,
+                    audioOutputId: audioOutputId,
+                    audioInputId: audioInputId,
+                    videoInputId: videoInputId,
+                    isMuted: isMuted,
+                    isCamOff: isCamOff,
+                    isDeafened: isDeafened
+                }));
+            } catch(e) {
+                console.warn('Could not save preferences to localStorage:', e.message);
+            }
 
             currentAudioInputId = audioInputId;
             currentVideoInputId = videoInputId;
@@ -2425,12 +2458,115 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const file = input.files[0];
             if (!file) return;
 
+            const isGif = file.type === 'image/gif';
             const reader = new FileReader();
             reader.onload = function(e) {
-                openCropModal(e.target.result, 'setup');
+                if (isGif) {
+                    const gifDataUrl = e.target.result;
+                    userAvatar = gifDataUrl;
+                    userAvatarIsGif = true;
+                    extractGifFirstFrame(gifDataUrl).then(staticFrame => {
+                        userAvatarStaticFrame = staticFrame;
+                        avatarPreview.src = staticFrame;
+                        avatarPreview.classList.remove('hidden');
+                        avatarPlaceholder.classList.add('hidden');
+                        const removeBtn = document.getElementById('btnRemoveSetupAvatar');
+                        if (removeBtn) removeBtn.classList.remove('hidden');
+                    });
+                } else {
+                    openCropModal(e.target.result, 'setup');
+                }
             };
             reader.readAsDataURL(file);
             input.value = '';
+        }
+
+        function removeSetupAvatar() {
+            userAvatar = null;
+            userAvatarIsGif = false;
+            userAvatarStaticFrame = null;
+            avatarPreview.src = '';
+            avatarPreview.classList.add('hidden');
+            avatarPlaceholder.classList.remove('hidden');
+            const removeBtn = document.getElementById('btnRemoveSetupAvatar');
+            if (removeBtn) removeBtn.classList.add('hidden');
+        }
+
+        function removeSettingsAvatar() {
+            newAvatarCandidate = null;
+            newAvatarCandidateIsGif = false;
+            newAvatarCandidateStaticFrame = null;
+            settingsAvatarPreview.src = '';
+            settingsAvatarPreview.classList.add('hidden');
+            settingsAvatarPlaceholder.classList.remove('hidden');
+            const removeBtn = document.getElementById('btnRemoveSettingsAvatar');
+            if (removeBtn) removeBtn.classList.add('hidden');
+        }
+
+        function extractGifFirstFrame(gifDataUrl) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/png'));
+                };
+                img.onerror = function() {
+                    resolve(gifDataUrl);
+                };
+                img.src = gifDataUrl;
+            });
+        }
+
+        function restartGif(url) {
+            return url.split('#')[0] + '#' + Date.now();
+        }
+
+        let gifSpeakingState = {};
+
+        function toggleGifAnimation(targetId, isSpeaking) {
+            if (targetId === 'local') {
+                if (!userAvatarIsGif || !userAvatar) return;
+                const centerImg = document.getElementById('localAvatarCenterImg');
+                const bgImg = document.getElementById('localAvatarImg');
+                const sidebarImg = document.querySelector(`.room-user-row[data-user-id="${persistentUserId}"] .mini-avatar img`);
+                const staticSrc = userAvatarStaticFrame || userAvatar;
+                if (isSpeaking) {
+                    const animSrc = restartGif(userAvatar);
+                    if (centerImg) centerImg.src = animSrc;
+                    if (bgImg) bgImg.src = animSrc;
+                    if (sidebarImg) sidebarImg.src = animSrc;
+                } else {
+                    if (centerImg) centerImg.src = staticSrc;
+                    if (bgImg) bgImg.src = staticSrc;
+                    if (sidebarImg) sidebarImg.src = staticSrc;
+                }
+            } else {
+                const rawUserId = targetId.startsWith('wrapper-') ? targetId.replace('wrapper-', '') : targetId;
+                const wrapper = document.getElementById(targetId);
+                if (!wrapper) return;
+                const avatarCenter = wrapper.querySelector('.avatar-center');
+                if (!avatarCenter) return;
+                const imgs = avatarCenter.querySelectorAll('img');
+                imgs.forEach(img => {
+                    const gifSrc = img.dataset.gifSrc;
+                    const staticSrc = img.dataset.staticSrc;
+                    if (gifSrc && staticSrc) {
+                        img.src = isSpeaking ? restartGif(gifSrc) : staticSrc;
+                    }
+                });
+                const bgImg = wrapper.querySelector('.avatar-img');
+                if (bgImg && bgImg.dataset.gifSrc && bgImg.dataset.staticSrc) {
+                    bgImg.src = isSpeaking ? restartGif(bgImg.dataset.gifSrc) : bgImg.dataset.staticSrc;
+                }
+                const sidebarImg = document.querySelector(`.room-user-row[data-user-id="${rawUserId}"] .mini-avatar img`);
+                if (sidebarImg && sidebarImg.dataset.gifSrc && sidebarImg.dataset.staticSrc) {
+                    sidebarImg.src = isSpeaking ? restartGif(sidebarImg.dataset.gifSrc) : sidebarImg.dataset.staticSrc;
+                }
+            }
         }
 
         let isPreviewStarting = false;
@@ -3644,7 +3780,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     usersHtml += `
                         <div class="room-user-row pointer-events-auto cursor-pointer" data-user-id="${uid}" data-user-nickname="${u.nickname.replace(/"/g, '&quot;')}" onclick="handleUserClick(this)">
                             <div class="mini-avatar">
-                                ${u.avatar ? `<img src="${u.avatar}">` : `<div class="mini-avatar-placeholder">${u.nickname.charAt(0).toUpperCase()}</div>`}
+                                ${u.avatar ? (u.isGif && u.staticFrame ? `<img src="${u.staticFrame}" data-gif-src="${u.avatar}" data-static-src="${u.staticFrame}">` : `<img src="${u.avatar}">`) : `<div class="mini-avatar-placeholder">${u.nickname.charAt(0).toUpperCase()}</div>`}
                             </div>
                             <span class="room-user-name">${u.nickname}</span>
                             <div class="status-indicators">
@@ -3790,6 +3926,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     userId: persistentUserId,
                                     nickname: userNickname,
                                     avatar: userAvatar,
+                                    isGif: userAvatarIsGif,
+                                    staticFrame: userAvatarStaticFrame,
                                     camEnabled: camEnabled,
                                     screenEnabled: screenEnabled,
                                     screenAudio: screenHasAudio,
@@ -3866,7 +4004,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         if (peerScreenStatus[msg.userId] === true && joinedScreenAudio === true) {
                                             ensureScreenAudioUI(msg.userId);
                                         }
-                                        updatePeerInfo(msg.userId, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened);
+                                        updatePeerInfo(msg.userId, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened, msg.data?.isGif, msg.data?.staticFrame);
                                     } else {
 
                                         if (document.getElementById(`wrapper-${msg.userId}`)) {
@@ -3882,7 +4020,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         if (joinedScreenAudio !== undefined) {
                                             peerScreenHasAudio[msg.userId] = joinedScreenAudio;
                                         }
-                                        initPeer(msg.userId, true, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened);
+                                        initPeer(msg.userId, true, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened, msg.data?.isGif, msg.data?.staticFrame);
                                         if (peerScreenStatus[msg.userId] === true && joinedScreenAudio === true) {
                                             ensureScreenAudioUI(msg.userId);
                                         }
@@ -3901,6 +4039,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                             userId: persistentUserId,
                                             nickname: userNickname,
                                             avatar: userAvatar,
+                                            isGif: userAvatarIsGif,
+                                            staticFrame: userAvatarStaticFrame,
                                             camEnabled: myCamEnabled,
                                             screenEnabled: myScreenEnabled,
                                             screenAudio: myScreenHasAudio,
@@ -3941,7 +4081,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     break;
                                 case 'user-update':
                                     updatePeerTrackHints(msg.userId, msg.data);
-                                     updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened);
+                                     updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened, msg.data.isGif, msg.data.staticFrame);
                                     break;
                                 case 'cam-toggle':
                                     if (msg.data && msg.data.enabled !== undefined) {
@@ -3982,9 +4122,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         peerScreenHasAudio[msg.userId] = identifiedScreenAudio;
                                     }
                                     if (peers[msg.userId]) {
-                                        updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened);
+                                        updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened, msg.data.isGif, msg.data.staticFrame);
                                     } else {
-                                        initPeer(msg.userId, false, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened);
+                                        initPeer(msg.userId, false, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened, msg.data.isGif, msg.data.staticFrame);
                                     }
                                     if (peerScreenStatus[msg.userId] === true && identifiedScreenAudio === true) {
                                         ensureScreenAudioUI(msg.userId);
@@ -4080,20 +4220,29 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
-        function setAvatar(layer, avatar) {
+        function setAvatar(layer, avatar, isGif, staticFrame) {
             layer.innerHTML = '';
             if (avatar) {
+               const displaySrc = isGif && staticFrame ? staticFrame : avatar;
                const bgImg = document.createElement('img');
-               bgImg.src = avatar;
+               bgImg.src = displaySrc;
                bgImg.className = 'avatar-img';
                bgImg.draggable = false;
+               if (isGif && staticFrame) {
+                   bgImg.dataset.gifSrc = avatar;
+                   bgImg.dataset.staticSrc = staticFrame;
+               }
 
                const centerDiv = document.createElement('div');
                centerDiv.className = 'avatar-center';
 
                const centerImg = document.createElement('img');
-               centerImg.src = avatar;
+               centerImg.src = displaySrc;
                centerImg.draggable = false;
+               if (isGif && staticFrame) {
+                   centerImg.dataset.gifSrc = avatar;
+                   centerImg.dataset.staticSrc = staticFrame;
+               }
 
                centerDiv.appendChild(centerImg);
                layer.appendChild(bgImg);
@@ -4119,7 +4268,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
            }
         }
 
-        function updatePeerInfo(userId, nickname, avatar, isMuted, isDeafened) {
+        function updatePeerInfo(userId, nickname, avatar, isMuted, isDeafened, isGif, staticFrame) {
             const wrapper = document.getElementById(`wrapper-${userId}`);
             if (wrapper) {
                 const nameSpan = wrapper.querySelector('.peer-name');
@@ -4144,7 +4293,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 const avatarLayer = wrapper.querySelector('.avatar-layer');
                 if (avatarLayer) {
-                     setAvatar(avatarLayer, avatar);
+                     setAvatar(avatarLayer, avatar, isGif, staticFrame);
                 }
             }
         }
@@ -4455,7 +4604,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 .catch(e => console.error("Negotiation error", e));
         }
 
-        function createPeerUI(userId, displayName, avatarUrl, remoteIsDeafened, remoteIsMuted) {
+        function createPeerUI(userId, displayName, avatarUrl, remoteIsDeafened, remoteIsMuted, isGif, staticFrame) {
 
             if (document.getElementById(`wrapper-${userId}`)) {
                 return;
@@ -4483,7 +4632,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const avatarLayer = document.createElement('div');
             avatarLayer.className = 'avatar-layer';
 
-            setAvatar(avatarLayer, avatarUrl);
+            setAvatar(avatarLayer, avatarUrl, isGif, staticFrame);
 
             const label = document.createElement('div');
             label.className = 'name-tag absolute bottom-3 left-3 bg-black/50 px-3 py-1 rounded-full text-sm text-white backdrop-blur-md z-30 flex items-center gap-1.5';
@@ -4559,7 +4708,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         }
 
-        function initPeer(userId, initiator, nickname, avatarUrl, isMuted, remoteIsDeafened) {
+        function initPeer(userId, initiator, nickname, avatarUrl, isMuted, remoteIsDeafened, isGif, staticFrame) {
             if (peers[userId]) return;
 
             const displayName = nickname || `User ${userId.substr(0,4)}`;
@@ -4600,7 +4749,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  pc.addTransceiver('audio', { direction: 'recvonly' });
             }
 
-            createPeerUI(userId, displayName, avatarUrl, remoteIsDeafened, isMuted);
+            createPeerUI(userId, displayName, avatarUrl, remoteIsDeafened, isMuted, isGif, staticFrame);
 
             pc.ontrack = (event) => {
 
@@ -4612,7 +4761,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 let vid = document.getElementById(`vid-${userId}`);
 
                 if (!container || !vid) {
-                    createPeerUI(userId, displayName, avatarUrl, remoteIsDeafened, isMuted);
+                    createPeerUI(userId, displayName, avatarUrl, remoteIsDeafened, isMuted, isGif, staticFrame);
                     container = document.getElementById(`wrapper-${userId}`);
                     vid = document.getElementById(`vid-${userId}`);
                 }
@@ -5675,6 +5824,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const settingsAvatarPreview = document.getElementById('settingsAvatarPreview');
         const settingsAvatarPlaceholder = document.getElementById('settingsAvatarPlaceholder');
         let newAvatarCandidate = null;
+        let newAvatarCandidateIsGif = false;
+        let newAvatarCandidateStaticFrame = null;
         let settingsInitialAudioId = '';
         let settingsInitialVideoId = '';
         let settingsInitialAudioOutputId = '';
@@ -5682,14 +5833,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         async function openSettings() {
             settingsNicknameInput.value = userNickname;
             newAvatarCandidate = userAvatar;
+            newAvatarCandidateIsGif = userAvatarIsGif;
+            newAvatarCandidateStaticFrame = userAvatarStaticFrame;
 
+            const removeBtn = document.getElementById('btnRemoveSettingsAvatar');
             if (userAvatar) {
-                settingsAvatarPreview.src = userAvatar;
+                const displaySrc = userAvatarIsGif && userAvatarStaticFrame ? userAvatarStaticFrame : userAvatar;
+                settingsAvatarPreview.src = displaySrc;
                 settingsAvatarPreview.classList.remove('hidden');
                 settingsAvatarPlaceholder.classList.add('hidden');
+                if (removeBtn) removeBtn.classList.remove('hidden');
             } else {
                 settingsAvatarPreview.classList.add('hidden');
                 settingsAvatarPlaceholder.classList.remove('hidden');
+                if (removeBtn) removeBtn.classList.add('hidden');
             }
 
             await populateSettingsDeviceList();
@@ -5714,9 +5871,24 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const file = input.files[0];
             if (!file) return;
 
+            const isGif = file.type === 'image/gif';
             const reader = new FileReader();
             reader.onload = function(e) {
-                openCropModal(e.target.result, 'settings');
+                if (isGif) {
+                    const gifDataUrl = e.target.result;
+                    newAvatarCandidate = gifDataUrl;
+                    newAvatarCandidateIsGif = true;
+                    extractGifFirstFrame(gifDataUrl).then(staticFrame => {
+                        newAvatarCandidateStaticFrame = staticFrame;
+                        settingsAvatarPreview.src = staticFrame;
+                        settingsAvatarPreview.classList.remove('hidden');
+                        settingsAvatarPlaceholder.classList.add('hidden');
+                        const removeBtn = document.getElementById('btnRemoveSettingsAvatar');
+                        if (removeBtn) removeBtn.classList.remove('hidden');
+                    });
+                } else {
+                    openCropModal(e.target.result, 'settings');
+                }
             };
             reader.readAsDataURL(file);
             input.value = '';
@@ -5737,6 +5909,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             userNickname = settingsNicknameInput.value.trim() || "Guest";
             userAvatar = newAvatarCandidate;
+            userAvatarIsGif = newAvatarCandidateIsGif;
+            userAvatarStaticFrame = newAvatarCandidateStaticFrame;
             savePreferences();
 
             updateLocalLabel();
@@ -5747,7 +5921,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     type: "update-user",
                     data: {
                         nickname: userNickname,
-                        avatar: userAvatar
+                        avatar: userAvatar,
+                        isGif: userAvatarIsGif,
+                        staticFrame: userAvatarStaticFrame
                     }
                 }));
             }
@@ -5776,9 +5952,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              } else {
                  layer.style.display = 'flex';
                  if (userAvatar) {
+                     const displaySrc = userAvatarIsGif && userAvatarStaticFrame ? userAvatarStaticFrame : userAvatar;
+                     img.src = displaySrc;
                      img.classList.remove('hidden');
 
-                     centerImg.src = userAvatar;
+                     centerImg.src = displaySrc;
                      centerImg.classList.remove('hidden');
                      placeholder.classList.add('hidden');
                  } else {
@@ -6046,14 +6224,22 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }).then(function(base64) {
                 if (currentCropTarget === 'setup') {
                     userAvatar = base64;
+                    userAvatarIsGif = false;
+                    userAvatarStaticFrame = null;
                     avatarPreview.src = userAvatar;
                     avatarPreview.classList.remove('hidden');
                     avatarPlaceholder.classList.add('hidden');
+                    const removeBtn = document.getElementById('btnRemoveSetupAvatar');
+                    if (removeBtn) removeBtn.classList.remove('hidden');
                 } else if (currentCropTarget === 'settings') {
                     newAvatarCandidate = base64;
+                    newAvatarCandidateIsGif = false;
+                    newAvatarCandidateStaticFrame = null;
                     settingsAvatarPreview.src = newAvatarCandidate;
                     settingsAvatarPreview.classList.remove('hidden');
                     settingsAvatarPlaceholder.classList.add('hidden');
+                    const removeBtn = document.getElementById('btnRemoveSettingsAvatar');
+                    if (removeBtn) removeBtn.classList.remove('hidden');
                 }
                 closeCropModal();
             });
@@ -6083,6 +6269,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 struct UserStatus {
     pub nickname: String,
     pub avatar: Option<String>,
+    pub is_gif: bool,
+    pub static_frame: Option<String>,
     pub is_muted: bool,
     pub is_deafened: bool,
     pub is_screen_sharing: bool,
@@ -6417,9 +6605,21 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     channel.remove(&user_id);
                                 }
 
+                            let is_gif = parsed.data.as_ref()
+                                .and_then(|d| d.get("isGif"))
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+
+                            let static_frame = parsed.data.as_ref()
+                                .and_then(|d| d.get("staticFrame"))
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string());
+
                                 channel.insert(user_id.clone(), (tx.clone(), UserStatus {
                                     nickname: nickname.clone(),
                                     avatar: avatar.clone(),
+                                    is_gif,
+                                    static_frame: static_frame.clone(),
                                     is_muted,
                                     is_deafened,
                                     is_screen_sharing,
@@ -6476,10 +6676,23 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                                 if let Some(n) = d.get("nickname").and_then(|v| v.as_str()) {
                                                     status.nickname = n.to_string();
                                                 }
-                                                if let Some(a) = d.get("avatar").and_then(|v| v.as_str()) {
-                                                    if a.len() <= 7_000_000 {
-                                                        status.avatar = Some(a.to_string());
+                                                if let Some(a) = d.get("avatar") {
+                                                    if a.is_null() {
+                                                        status.avatar = None;
+                                                        status.is_gif = false;
+                                                        status.static_frame = None;
+                                                    } else if let Some(a_str) = a.as_str() {
+                                                        if a_str.len() <= 7_000_000 {
+                                                            status.avatar = Some(a_str.to_string());
+                                                        }
                                                     }
+                                                }
+                                                if let Some(g) = d.get("isGif").and_then(|v| v.as_bool()) {
+                                                    status.is_gif = g;
+                                                }
+                                                if d.contains_key("staticFrame") {
+                                                    let sf = d.get("staticFrame").and_then(|v| v.as_str()).map(|s| s.to_string());
+                                                    status.static_frame = sf;
                                                 }
                                                 if let Some(m) = d.get("isMuted").and_then(|v| v.as_bool()) {
                                                     status.is_muted = m;
