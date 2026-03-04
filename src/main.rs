@@ -1341,9 +1341,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             <div class="ping-bar ping-bar-3"></div>
                         </div>
                     </div>
-                    <div id="nodeIdBadge" class="hidden !ml-0 !pl-1.5 md:!ml-0 md:!pl-2 border-l !border-[var(--border-subtle)] flex items-center gap-1.5">
+                    <div id="nodeIdBadge" class="hidden !ml-0 !pl-1.5 md:!ml-0 md:!pl-2 border-l !border-[var(--border-subtle)] flex items-center gap-1.5 cursor-pointer hover:bg-white/5 rounded-r-full transition-colors relative" onclick="toggleServerDropdown(event)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); flex-shrink: 0;"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
                         <span id="nodeIdText" class="text-xs font-mono tracking-wider shrink-0" style="color: var(--text-muted); font-size: 0.65rem; letter-spacing: 0.08em;"></span>
+
+                        <div id="serverDropdown" class="hidden absolute top-full mt-4 right-0 w-64 glass-panel rounded-2xl shadow-2xl z-[200] overflow-hidden border border-[var(--border-medium)] fadeIn">
+                            <div class="px-4 py-3 border-b border-[var(--border-subtle)] bg-white/5">
+                                <div class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Available Servers</div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-zinc-300">Auto-Select Best</span>
+                                </div>
+                            </div>
+                            <div id="serverList" class="max-h-64 overflow-y-auto">
+                                <div class="p-4 text-center text-xs text-zinc-500 italic">Scanning nodes...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1627,6 +1639,90 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let failoverIndex = 0;
         let currentServerHost = window.location.host;
         let originalHost = window.location.host;
+        let manualServerHost = null;
+
+        function toggleServerDropdown(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('serverDropdown');
+            const isHidden = dropdown.classList.contains('hidden');
+
+            document.querySelectorAll('#serverDropdown').forEach(el => el.classList.add('hidden'));
+
+            if (isHidden) {
+                dropdown.classList.remove('hidden');
+                updateServerDropdownUI();
+            } else {
+                dropdown.classList.add('hidden');
+            }
+        }
+
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('serverDropdown');
+            if (dropdown && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        function updateServerDropdownUI() {
+            const list = document.getElementById('serverList');
+            if (!list) return;
+
+            if (rankedPeers.length === 0) {
+                list.innerHTML = `<div class="p-4 text-center text-xs text-zinc-500 italic">No other servers found</div>`;
+                return;
+            }
+
+            list.innerHTML = rankedPeers.map(peer => {
+                const isCurrent = peer.host === currentServerHost;
+                const isManual = peer.host === manualServerHost;
+
+                let latencyClass = 'text-zinc-500';
+                if (peer.latency < 100) latencyClass = 'text-green-500';
+                else if (peer.latency < 250) latencyClass = 'text-yellow-500';
+                else if (peer.latency < Infinity) latencyClass = 'text-red-500';
+
+                return `
+                    <div onclick="selectServer('${peer.host}', event)" class="px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors flex items-center justify-between border-b border-[var(--border-subtle)] last:border-0 ${isManual ? 'bg-blue-500/10' : ''}">
+                        <div class="flex flex-col gap-0.5 min-w-0">
+                            <span class="text-xs font-medium text-zinc-200 truncate">${peer.nodeId || peer.host}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[9px] font-mono text-zinc-500 uppercase">${isCurrent ? 'Current' : 'Available'}</span>
+                                ${isManual ? '<span class="text-[9px] bg-blue-500/20 text-blue-400 px-1 rounded">Pinned</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="text-[10px] font-mono ${latencyClass} ml-2 shrink-0">
+                            ${peer.latency === Infinity ? 'offline' : peer.latency + 'ms'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectServer(host, e) {
+            if (e) e.stopPropagation();
+            if (host === currentServerHost && manualServerHost === host) {
+                document.getElementById('serverDropdown').classList.add('hidden');
+                return;
+            }
+
+            console.log(`Manually selecting server: ${host}`);
+            manualServerHost = host;
+            currentServerHost = host;
+            wsUrl = `${wsProtocol}//${currentServerHost}/ws/${roomId}/${channelId}`;
+
+            document.getElementById('serverDropdown').classList.add('hidden');
+
+            performChannelSwitch(roomId, channelId);
+        }
+
+        function clearManualServer(e) {
+            if (e) e.stopPropagation();
+            manualServerHost = null;
+            document.getElementById('serverDropdown').classList.add('hidden');
+            findBestServer().then(() => {
+                performChannelSwitch(roomId, channelId);
+            });
+        }
 
         async function fetchNodeId(host) {
             try {
@@ -1673,7 +1769,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 const results = await Promise.all(allHosts.map(async (host) => {
                     const latency = await pingHost(host);
-                    return { host, latency };
+                    let nodeId = null;
+                    if (latency < Infinity) {
+                        try {
+                            const protocol = window.location.protocol;
+                            const resp = await fetch(`${protocol}//${host}/node-id`);
+                            if (resp.ok) {
+                                const data = await resp.json();
+                                nodeId = data.nodeId;
+                            }
+                        } catch (e) {}
+                    }
+                    return { host, latency, nodeId };
                 }));
 
                 results.sort((a, b) => a.latency - b.latency);
@@ -1689,6 +1796,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const peers = await discoverAndRankPeers();
             rankedPeers = peers;
             failoverIndex = 0;
+
+            if (manualServerHost) {
+                const manualExists = peers.find(p => p.host === manualServerHost && p.latency < Infinity);
+                if (manualExists) {
+                    currentServerHost = manualServerHost;
+                    wsUrl = `${wsProtocol}//${currentServerHost}/ws/${roomId}/${channelId}`;
+                    return;
+                } else {
+                    console.warn("Manually selected server is offline, falling back to auto");
+                    manualServerHost = null;
+                }
+            }
+
             if (peers.length > 0 && peers[0].host !== currentServerHost) {
                 const best = peers[0];
                 console.log(`Switching to closer server: ${best.host} (${best.latency}ms)`);
