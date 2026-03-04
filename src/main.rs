@@ -2114,6 +2114,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              updateLocalAvatar();
         }
 
+        let audioMonitorGeneration = {};
+
         async function setupAudioMonitor(stream, targetId) {
             if (!audioContext) return;
             if (!stream.getAudioTracks().length) return;
@@ -2121,6 +2123,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (audioContext.state === 'suspended') {
                 await audioContext.resume();
             }
+
+            if (!audioMonitorGeneration[targetId]) audioMonitorGeneration[targetId] = 0;
+            audioMonitorGeneration[targetId]++;
+            const myGeneration = audioMonitorGeneration[targetId];
 
             const source = audioContext.createMediaStreamSource(stream);
             const analyser = audioContext.createAnalyser();
@@ -2131,6 +2137,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const dataArray = new Uint8Array(bufferLength);
 
             function checkAudio() {
+                if (audioMonitorGeneration[targetId] !== myGeneration) {
+                    return;
+                }
                 if (targetId !== 'local' && !document.getElementById(targetId)) {
                     return;
                 }
