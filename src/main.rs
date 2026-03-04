@@ -1611,6 +1611,48 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let isReconnecting = false;
         let awaitingPassword = false;
 
+        const tabId = crypto.randomUUID();
+        let tabHeartbeatInterval = null;
+        let activeTabSessionKey = null;
+
+        function setActiveTabSession() {
+            try {
+                if (!activeTabSessionKey) activeTabSessionKey = 'rustrooms_active_tab_' + currentPath;
+                localStorage.setItem(activeTabSessionKey, JSON.stringify({ id: tabId, timestamp: Date.now() }));
+            } catch(e) {}
+        }
+
+        function clearActiveTabSession() {
+            try {
+                if (activeTabSessionKey) {
+                    const data = localStorage.getItem(activeTabSessionKey);
+                    if (data) {
+                        const parsed = JSON.parse(data);
+                        if (parsed.id === tabId) {
+                            localStorage.removeItem(activeTabSessionKey);
+                        }
+                    }
+                }
+            } catch(e) {}
+            if (tabHeartbeatInterval) {
+                clearInterval(tabHeartbeatInterval);
+                tabHeartbeatInterval = null;
+            }
+        }
+
+        function isAnotherTabActive() {
+            try {
+                const key = 'rustrooms_active_tab_' + currentPath;
+                const data = localStorage.getItem(key);
+                if (!data) return false;
+                const parsed = JSON.parse(data);
+                if (parsed.id === tabId) return false;
+                return (Date.now() - parsed.timestamp) < 5000;
+            } catch(e) { return false; }
+        }
+
+        window.addEventListener('beforeunload', clearActiveTabSession);
+
         let reconnectStatusTimeout = null;
         const reconnectDelayMs = 5000;
 
@@ -3073,8 +3115,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             hasLeftRoom = false;
 
+            if (isAnotherTabActive()) {
+                showCustomAlert('Already In Call', 'You already have an active call open in another tab. Please close it first.');
+                return;
+            }
+
             userNickname = nicknameInput.value.trim() || "Guest";
             savePreferences();
+
+            setActiveTabSession();
+            tabHeartbeatInterval = setInterval(setActiveTabSession, 2000);
 
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -5145,6 +5195,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         function leaveRoom() {
 
             hasLeftRoom = true;
+
+            clearActiveTabSession();
 
             playNotificationSound('disconnect');
 
