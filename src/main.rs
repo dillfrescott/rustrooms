@@ -6342,8 +6342,11 @@ const ROOM_EMPTY_GRACE_SECS: u64 = 120;
 struct ClusterMessage {
     #[serde(rename = "type")]
     msg_type: String,
+    #[serde(default)]
     room_id: String,
+    #[serde(default)]
     channel_id: String,
+    #[serde(default)]
     user_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     status: Option<UserStatus>,
@@ -6351,6 +6354,8 @@ struct ClusterMessage {
     data: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     signal_msg: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    peer_host: Option<String>,
 }
 
 #[derive(Clone)]
@@ -6602,6 +6607,7 @@ async fn handle_inbound_cluster(socket: WebSocket, state: AppState) {
                             "screenEnabled": status.is_screen_sharing,
                         })),
                         signal_msg: None,
+                        peer_host: None,
                     };
                     if let Ok(json) = serde_json::to_string(&cm) {
                         let _ = write_tx.send(json).await;
@@ -6630,6 +6636,14 @@ async fn handle_inbound_cluster(socket: WebSocket, state: AppState) {
                     peer_users.lock().await.insert((cm.room_id.clone(), cm.channel_id.clone(), cm.user_id.clone()));
                 } else if cm.msg_type == "user-left" || cm.msg_type == "user-kicked" {
                     peer_users.lock().await.remove(&(cm.room_id.clone(), cm.channel_id.clone(), cm.user_id.clone()));
+                } else if cm.msg_type == "peer-discovered" {
+                    // Handle peer discovery from other cluster nodes
+                    if let Some(ref peer_host) = cm.peer_host {
+                        let mut dht_peers = state.dht_peers.lock().await;
+                        if dht_peers.insert(peer_host.clone()) {
+                            println!("CLUSTER: Learned about peer {} from cluster", peer_host);
+                        }
+                    }
                 }
                 handle_cluster_message(&cm, &rooms, &remote_users).await;
             }
@@ -6722,6 +6736,20 @@ fn spawn_dht_discovery(state: AppState, port: u16) {
                         cp.insert(addr_str.clone());
                     }
                     println!("CLUSTER: Discovered new peer: {}", addr_str);
+                    
+                    // Broadcast peer discovery to all connected cluster nodes
+                    let peer_discovery_msg = ClusterMessage {
+                        msg_type: "peer-discovered".into(),
+                        room_id: String::new(),
+                        channel_id: String::new(),
+                        user_id: String::new(),
+                        status: None,
+                        data: None,
+                        signal_msg: None,
+                        peer_host: Some(addr_str.clone()),
+                    };
+                    let _ = state.cluster_tx.send(serde_json::to_string(&peer_discovery_msg).unwrap_or_default());
+                    
                     let state_clone = state.clone();
                     let addr_clone = addr_str.clone();
                     tokio::spawn(async move {
@@ -6793,6 +6821,7 @@ async fn connect_to_peer(url: &str, state: &AppState) -> Result<(), Box<dyn std:
                             "screenEnabled": status.is_screen_sharing,
                         })),
                         signal_msg: None,
+                        peer_host: None,
                     };
                     if let Ok(json) = serde_json::to_string(&cm) {
                         let _ = write_tx.send(json).await;
@@ -7284,6 +7313,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 status: Some(UserStatus { nickname: nickname.clone(), avatar: avatar.clone(), is_muted, is_deafened, is_screen_sharing }),
                                 data: notify_data.clone(),
                                 signal_msg: None,
+                                peer_host: None,
                             });
                             broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
                         }
@@ -7344,6 +7374,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     status: Some(s.clone()),
                                     data: None,
                                     signal_msg: None,
+                                    peer_host: None,
                                 });
                             }
                             broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
@@ -7374,6 +7405,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 status: None,
                                 data: parsed.data.clone(),
                                 signal_msg: None,
+                                peer_host: None,
                             });
                         } else if parsed.msg_type == "screen-toggle" {
                             {
@@ -7413,6 +7445,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 status: None,
                                 data: parsed.data.clone(),
                                 signal_msg: None,
+                                peer_host: None,
                             });
                             broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
                         } else if parsed.msg_type == "kick-user" {
@@ -7467,6 +7500,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         status: None,
                                         data: None,
                                         signal_msg: None,
+                                        peer_host: None,
                                     });
                                     broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
                                 }
@@ -7511,6 +7545,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                          status: None,
                                          data: Some(serde_json::json!({ "newName": new_name_str })),
                                          signal_msg: None,
+                                         peer_host: None,
                                      });
                                      broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
                                 }
@@ -7548,6 +7583,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         status: None,
                                         data: None,
                                         signal_msg: None,
+                                        peer_host: None,
                                     });
                                     broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
                                 }
@@ -7591,6 +7627,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         status: None,
                                         data: None,
                                         signal_msg: Some(forwarded_text),
+                                        peer_host: None,
                                     });
                                 }
                             }
@@ -7728,6 +7765,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
             status: None,
             data: None,
             signal_msg: None,
+            peer_host: None,
         });
     }
     broadcast_channel_list(&rooms, &state.remote_users, &room_id).await;
