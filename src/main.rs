@@ -1350,6 +1350,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 <div class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Available Servers</div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-xs text-zinc-300">Auto-Select Best</span>
+                                    <button onclick="clearManualServer(event)" class="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors">Reset</button>
                                 </div>
                             </div>
                             <div id="serverList" class="max-h-64 overflow-y-auto">
@@ -6361,6 +6362,7 @@ struct AppState {
     remote_users: RemoteUsersMap,
     cluster_key: Option<String>,
     connected_peers: Arc<Mutex<HashSet<String>>>,
+    dht_peers: Arc<Mutex<HashSet<String>>>,
     node_id: String,
 }
 
@@ -6393,6 +6395,7 @@ async fn main() {
         remote_users,
         cluster_key,
         connected_peers: Arc::new(Mutex::new(HashSet::new())),
+        dht_peers: Arc::new(Mutex::new(HashSet::new())),
         node_id,
     };
 
@@ -6555,8 +6558,13 @@ async fn ping_handler() -> impl IntoResponse {
 }
 
 async fn cluster_peers_handler(State(state): State<AppState>) -> impl IntoResponse {
-    let peers: Vec<String> = state.connected_peers.lock().await.iter().cloned().collect();
-    let peers_json: Vec<String> = peers.iter().map(|p| format!("\"{}\"", p)).collect();
+    let connected: Vec<String> = state.connected_peers.lock().await.iter().cloned().collect();
+    let dht_discovered: Vec<String> = state.dht_peers.lock().await.iter().cloned().collect();
+
+    let mut all_peers: HashSet<String> = connected.into_iter().collect();
+    all_peers.extend(dht_discovered);
+
+    let peers_json: Vec<String> = all_peers.iter().map(|p| format!("\"{}\"", p)).collect();
     (
         [(header::CONTENT_TYPE, "application/json")],
         format!("{{\"peers\":[{}],\"nodeId\":\"{}\"}}", peers_json.join(","), state.node_id),
@@ -6700,6 +6708,11 @@ fn spawn_dht_discovery(state: AppState, port: u16) {
                     println!("CLUSTER: DHT found {} unique peer(s)", unique_peers.len());
                 }
                 for addr_str in unique_peers {
+
+                    {
+                        let mut dht_peers = state.dht_peers.lock().await;
+                        dht_peers.insert(addr_str.clone());
+                    }
 
                     {
                         let mut cp = state.connected_peers.lock().await;
