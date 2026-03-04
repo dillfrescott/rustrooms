@@ -1605,6 +1605,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const maxReconnectionDelay = 30000;
         let hasLeftRoom = false;
         let isReconnecting = false;
+        let awaitingPassword = false;
 
         let reconnectStatusTimeout = null;
         const reconnectDelayMs = 5000;
@@ -3811,12 +3812,24 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 case 'error':
                                     if (msg.data && msg.data.code === 'PASSWORD_REQUIRED') {
 
+                                        awaitingPassword = true;
+                                        hasLeftRoom = true;
+                                        isReconnecting = false;
+                                        if (reconnectStatusTimeout) {
+                                            clearTimeout(reconnectStatusTimeout);
+                                            reconnectStatusTimeout = null;
+                                        }
+
                                         const modal = document.getElementById('passwordModal');
                                         if (modal && !modal.classList.contains('open')) {
                                             showPasswordModal("Room Creation Password", msg.data.message || "Password required to create this room:", (pass) => {
                                                 if (pass) {
                                                     roomCreationPassword = pass;
                                                     sessionStorage.setItem('rustrooms_room_password', pass);
+                                                    awaitingPassword = false;
+                                                    hasLeftRoom = false;
+                                                    reconnectionAttempts = 0;
+                                                    isReconnecting = false;
                                                     connectWs();
                                                 } else {
                                                     hasLeftRoom = true;
