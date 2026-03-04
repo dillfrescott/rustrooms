@@ -5057,10 +5057,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (mainApp) mainApp.style.display = 'none';
             if (taskbar) taskbar.style.display = 'none';
 
-            setTimeout(() => {
-                sessionStorage.removeItem('rustrooms_setup_done');
-                window.location.href = '/';
-            }, 800);
+            sessionStorage.removeItem('rustrooms_setup_done');
+            history.replaceState(null, '', '/');
         }
 
         function toggleMic() {
