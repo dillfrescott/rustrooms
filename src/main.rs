@@ -1804,7 +1804,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     <script>
         let parts = window.location.pathname.split('/').filter(p => p !== '');
         let roomId = parts[0] || '';
-        let channelId = parts[1] || (roomId ? 'General' : '');
+        let channelId = decodeURIComponent(parts[1] || '') || (roomId ? 'General' : '');
         if (channelId.length > 32) channelId = channelId.substring(0, 32);
 
         const initialChannelNameEl = document.getElementById('currentChannelName');
@@ -1813,13 +1813,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         const currentPath = window.location.pathname;
-        const newPath = `/${roomId}${channelId ? '/' + channelId : ''}`;
+        const newPath = `/${roomId}${channelId ? '/' + encodeURIComponent(channelId) : ''}`;
         if (currentPath !== newPath && roomId) {
             window.history.replaceState({ roomId, channelId }, "", newPath);
         }
 
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        let wsUrl = roomId ? `${wsProtocol}//${window.location.host}/ws/${roomId}/${channelId}` : '';
+        let wsUrl = roomId ? `${wsProtocol}//${window.location.host}/ws/${roomId}/${encodeURIComponent(channelId)}` : '';
 
         let ws;
         let localStream;
@@ -4127,7 +4127,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         async function createNewChannel() {
             showNameModal("Create New Channel", "Enter channel name", (name) => {
                 if (!name) return;
-                performChannelSwitch(roomId, encodeURIComponent(name));
+                performChannelSwitch(roomId, name);
             });
         }
 
@@ -4161,12 +4161,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 channelNameEl.innerText = `# ${channelId}`;
             }
 
-            const newUrl = `/${roomId}/${channelId}`;
+            const newUrl = `/${roomId}/${encodeURIComponent(channelId)}`;
             if (window.location.pathname !== newUrl) {
                 history.pushState({ roomId, channelId }, "", newUrl);
             }
 
-            wsUrl = `${wsProtocol}//${window.location.host}/ws/${roomId}/${channelId}`;
+            wsUrl = `${wsProtocol}//${window.location.host}/ws/${roomId}/${encodeURIComponent(channelId)}`;
             updateStatus('connecting', 'Connecting...');
 
             if (typeof updateRoomListUI === 'function') updateRoomListUI();
@@ -4189,7 +4189,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         window.onpopstate = function(event) {
             const parts = window.location.pathname.split('/').filter(p => p !== '');
             const newRoomId = parts[0] || '';
-            const newChannelId = parts[1] || (newRoomId ? 'general' : '');
+            const newChannelId = decodeURIComponent(parts[1] || '') || (newRoomId ? 'general' : '');
 
             if (newRoomId && (newRoomId !== roomId || newChannelId !== channelId)) {
                 performChannelSwitch(newRoomId, newChannelId);
