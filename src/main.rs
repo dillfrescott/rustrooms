@@ -841,21 +841,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .btn-secondary:focus {
             outline: none;
         }
-        .btn-secondary:active {
-            transform: translateY(0);
+        .btn-secondary:active, .btn-secondary.is-pressed {
+            transform: scale(0.96) translateY(0);
             transition: transform 0.1s ease;
         }
         @media (hover: none) {
-            .btn-secondary:active, .btn-secondary:focus {
+            .btn-secondary:active, .btn-secondary.is-pressed {
                 background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-tertiary) 100%);
                 border-color: var(--border-subtle);
-                transform: none;
+                transform: scale(0.96);
                 box-shadow: var(--shadow-sm);
             }
-            .btn-secondary.active-red:active, .btn-secondary.active-red:focus {
+            .btn-secondary.active-red:active, .btn-secondary.active-red.is-pressed {
                 background: linear-gradient(180deg, var(--danger) 0%, var(--accent-dark-red) 100%);
                 border-color: var(--danger);
-                transform: none;
+                transform: scale(0.96);
                 box-shadow: 0 2px 12px rgba(239, 68, 68, 0.4);
             }
         }
@@ -864,6 +864,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             background: linear-gradient(180deg, var(--danger) 0%, var(--accent-dark-red) 100%);
             border-color: var(--danger);
             box-shadow: 0 2px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-icon-test:active, .btn-icon-test.is-pressed {
+            transform: scale(0.94);
+            transition: transform 0.1s ease;
         }
 
         @media (hover: hover) {
@@ -953,10 +958,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 margin-left: 340px;
                 width: calc(100% - 340px);
                 transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-
-            body.sidebar-open #sidebarOverlay {
-                display: none;
             }
         }
 
@@ -1065,16 +1066,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
             z-index: 90;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.35s ease;
+            will-change: opacity;
         }
 
         .sidebar-overlay.open {
             opacity: 1;
             pointer-events: auto;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            will-change: auto;
         }
 
         @media (min-width: 768px) {
@@ -1349,7 +1353,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 <select id="audioOutputSource" onchange="changeAudioOutput(this.value)" class="flex-1 min-w-0 rounded-xl px-3 py-2.5 text-sm text-white transition-all">
                                     <option value="default">Default</option>
                                 </select>
-                                <button onclick="testSpeaker('audioOutputSource')" class="p-2.5 rounded-xl transition-all" style="background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%); color: var(--text-primary); border: 1px solid var(--border-subtle); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);" title="Test Speaker">
+                                <button onclick="testSpeaker('audioOutputSource')" class="btn-icon-test p-2.5 rounded-xl transition-all" style="background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%); color: var(--text-primary); border: 1px solid var(--border-subtle); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);" title="Test Speaker">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                                 </button>
                             </div>
@@ -1416,7 +1420,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             <div class="flex gap-2">
                                 <select id="settingsAudioOutputSource" onchange="changeAudioOutput(this.value)" class="flex-1 min-w-0 rounded-xl px-3 py-2.5 text-sm text-white transition-all">
                                 </select>
-                                <button onclick="testSpeaker('settingsAudioOutputSource')" class="p-2.5 rounded-xl transition-all" style="background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%); color: var(--text-primary); border: 1px solid var(--border-subtle); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);" title="Test Speaker">
+                                <button onclick="testSpeaker('settingsAudioOutputSource')" class="btn-icon-test p-2.5 rounded-xl transition-all" style="background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%); color: var(--text-primary); border: 1px solid var(--border-subtle); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);" title="Test Speaker">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                                 </button>
                             </div>
@@ -3479,16 +3483,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const isDesktop = window.innerWidth >= 768;
             const wasOpen = sidebar.classList.contains('open');
 
-            sidebar.classList.toggle('open');
+            const isOpen = !wasOpen;
 
-            if (isDesktop) {
-                overlay.classList.remove('open');
-            } else {
-                overlay.classList.toggle('open');
-            }
-
-            const isOpen = sidebar.classList.contains('open');
             if (isOpen) {
+                sidebar.classList.add('open');
+                overlay.classList.add('open');
                 body.classList.add('sidebar-open');
                 sidebarToggle.classList.add('hidden');
 
@@ -3508,6 +3507,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                 }
             } else {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('open');
                 body.classList.remove('sidebar-open');
                 sidebarToggle.classList.remove('hidden');
 
@@ -3557,6 +3558,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         body.classList.add('sidebar-open');
                         sidebarToggle.classList.add('hidden');
                     }
+                } else {
+                    overlay.classList.remove('open');
+                    body.classList.remove('sidebar-open');
+                    sidebarToggle.classList.remove('hidden');
                 }
             }
         });
@@ -3595,6 +3600,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             pip.style.right = '';
                         }
                     }
+                } else {
+                    overlay.classList.add('open');
                 }
 
                 if (noTransition) {
@@ -4093,10 +4100,43 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             } else {
                 configOverlay.classList.remove('hidden');
                 configOverlay.classList.remove('opacity-0');
+                initSetupButtonTouchHandlers();
                 loadDevices();
             }
         } else {
             welcomeOverlay.style.display = 'flex';
+        }
+
+        function initSetupButtonTouchHandlers() {
+            const btnPreviewMic = document.getElementById('btnPreviewMic');
+            const btnPreviewCam = document.getElementById('btnPreviewCam');
+            const speakerTestButtons = document.querySelectorAll('.btn-icon-test');
+
+            [btnPreviewMic, btnPreviewCam].forEach(btn => {
+                if (btn) {
+                    btn.addEventListener('touchstart', function() {
+                        this.classList.add('is-pressed');
+                    }, { passive: true });
+                    btn.addEventListener('touchend', function() {
+                        this.classList.remove('is-pressed');
+                    }, { passive: true });
+                    btn.addEventListener('touchcancel', function() {
+                        this.classList.remove('is-pressed');
+                    }, { passive: true });
+                }
+            });
+
+            speakerTestButtons.forEach(btn => {
+                btn.addEventListener('touchstart', function() {
+                    this.classList.add('is-pressed');
+                }, { passive: true });
+                btn.addEventListener('touchend', function() {
+                    this.classList.remove('is-pressed');
+                }, { passive: true });
+                btn.addEventListener('touchcancel', function() {
+                    this.classList.remove('is-pressed');
+                }, { passive: true });
+            });
         }
 
         function connectWs() {
@@ -6076,6 +6116,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             settingsInitialVideoId = settingsVideo ? settingsVideo.value : '';
             settingsInitialAudioOutputId = settingsAudioOutput ? settingsAudioOutput.value : '';
             settingsOverlay.classList.remove('hidden');
+            initSetupButtonTouchHandlers();
             if (localStream) {
                 await setupVolumeMeter(localStream, 'settingsMicBar');
             }
