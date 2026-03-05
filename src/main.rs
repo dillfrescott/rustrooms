@@ -6999,12 +6999,27 @@ struct CaptchaVerifyResponse {
     message: Option<String>,
 }
 
-async fn verify_captcha(Json(payload): Json<CaptchaVerifyRequest>) -> impl IntoResponse {
+async fn verify_captcha(
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<CaptchaVerifyRequest>
+) -> impl IntoResponse {
     let captcha_secret = std::env::var("CAPTCHA_SECRET").unwrap_or_else(|_| "default-secret".to_string());
 
+    let mut client_ip = String::new();
+    if let Some(real_ip) = headers.get("X-Real-IP") {
+        client_ip = real_ip.to_str().unwrap_or("").to_string();
+    } else if let Some(forwarded_for) = headers.get("X-Forwarded-For") {
+        client_ip = forwarded_for.to_str().unwrap_or("").split(',').next().unwrap_or("").trim().to_string();
+    }
+
     let client = reqwest::Client::new();
-    let response = client
-        .post("https://captcha.dill.moe/api/token/verify")
+    let mut request_builder = client.post("https://captcha.dill.moe/api/token/verify");
+
+    if !client_ip.is_empty() {
+        request_builder = request_builder.header("X-Forwarded-For", &client_ip);
+    }
+
+    let response = request_builder
         .json(&serde_json::json!({
             "token": payload.token,
             "secret": captcha_secret
@@ -7018,7 +7033,7 @@ async fn verify_captcha(Json(payload): Json<CaptchaVerifyRequest>) -> impl IntoR
             let valid = verify_result.get("valid").and_then(|v| v.as_bool()).unwrap_or(false);
             let score = verify_result.get("score").and_then(|v| v.as_f64());
 
-            println!("CAPTCHA VERIFY: valid={}, score={:?}", valid, score);
+            println!("CAPTCHA VERIFY: valid={}, score={:?}, ip={}", valid, score, client_ip);
 
             Json(CaptchaVerifyResponse {
                 valid,
