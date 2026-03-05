@@ -3414,6 +3414,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 return;
             }
 
+            // Skip captcha if already connected (e.g., page refresh during active call)
+            const alreadyConnected = ws && ws.readyState === WebSocket.OPEN;
+            if (alreadyConnected) {
+                console.log('Already connected to room, skipping captcha verification');
+                proceedJoinRoom();
+                return;
+            }
+
             // Captcha verification
             showCaptchaModal();
             try {
