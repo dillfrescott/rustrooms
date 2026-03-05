@@ -5330,7 +5330,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 if (event.track.kind === 'video') {
                      mainStream.getVideoTracks().forEach(t => mainStream.removeTrack(t));
                      mainStream.addTrack(event.track);
-                     vid.play().catch(e => console.error("Remote play err", e));
+                     vid.play().then(() => {
+                         const sv = getVolumeSettings(userId, 'main');
+                         if (vid.volume !== sv) vid.volume = sv;
+                     }).catch(e => console.error("Remote play err", e));
 
                      event.track.onmute = () => { checkActive(userId); };
                      event.track.onunmute = () => { checkActive(userId); };
@@ -5397,6 +5400,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                     if (mainStream.getAudioTracks().length === 0 || isHintedMicTrack) {
                         mainStream.addTrack(event.track);
+                        const sv = getVolumeSettings(userId, 'main');
+                        if (vid.volume !== sv) vid.volume = sv;
                         (async () => { await setupAudioMonitor(mainStream, `wrapper-${userId}`); })();
 
                     } else {
@@ -5541,6 +5546,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         clearTimeout(pc._disconnectTimeout);
                         pc._disconnectTimeout = null;
                         console.log(`Peer ${userId.substr(0,4)} reconnected successfully`);
+                    }
+                    const _vid = document.getElementById(`vid-${userId}`);
+                    if (_vid) {
+                        const sv = getVolumeSettings(userId, 'main');
+                        if (_vid.volume !== sv) _vid.volume = sv;
+                    }
+                    const _screenAud = document.getElementById(`aud-screen-${userId}`);
+                    if (_screenAud) {
+                        const ssv = getVolumeSettings(userId, 'screen');
+                        if (_screenAud.volume !== ssv) _screenAud.volume = ssv;
                     }
                     updateConnectionStatus();
                 }
