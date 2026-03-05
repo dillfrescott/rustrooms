@@ -169,37 +169,45 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     <link href="/assets/inter.css" rel="stylesheet">
     <style>
         :root {
-
             --bg-primary: #000000;
-            --bg-secondary: #050505;
-            --bg-tertiary: #0a0a0a;
-            --bg-elevated: #111111;
-            --bg-elevated-strong: #161616;
-            --border-subtle: #222222;
-            --border-medium: #333333;
-            --border-strong: #444444;
+            --bg-secondary: #080808;
+            --bg-tertiary: #0f0f0f;
+            --bg-elevated: #141414;
+            --bg-elevated-strong: #1a1a1a;
 
-            --text-primary: #fafafa;
-            --text-secondary: #a1a1aa;
-            --text-muted: #71717a;
+            --border-subtle: #1f1f1f;
+            --border-medium: #2a2a2a;
+            --border-strong: #3a3a3a;
+            --border-accent: #3b82f640;
+
+            --text-primary: #ffffff;
+            --text-secondary: #a8a8a8;
+            --text-muted: #6b6b6b;
 
             --accent: #3b82f6;
-            --accent-hover: #2563eb;
-            --accent-glow: rgba(59, 130, 246, 0.25);
+            --accent-hover: #60a5fa;
+            --accent-glow: rgba(59, 130, 246, 0.3);
             --accent-blue: #3b82f6;
             --accent-dark-blue: #1d4ed8;
 
             --accent-green: #10b981;
+            --accent-green-hover: #34d399;
             --accent-red: #ef4444;
+            --accent-red-hover: #f87171;
             --accent-dark-red: #dc2626;
             --accent-yellow: #f59e0b;
 
             --success: #10b981;
-            --success-glow: rgba(16, 185, 129, 0.2);
+            --success-glow: rgba(16, 185, 129, 0.25);
             --danger: #ef4444;
-            --danger-glow: rgba(239, 68, 68, 0.2);
+            --danger-glow: rgba(239, 68, 68, 0.25);
             --warning: #f59e0b;
-            --warning-glow: rgba(245, 158, 11, 0.2);
+            --warning-glow: rgba(245, 158, 11, 0.25);
+
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+            --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
         }
 
         html {
@@ -218,6 +226,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             width: 100%;
             height: 100dvh;
             touch-action: pan-x pan-y;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         * {
@@ -229,37 +239,62 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             filter: none;
         }
 
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+        ::selection {
+            background: var(--accent);
+            color: var(--text-primary);
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-strong);
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border-accent);
+        }
 
         .glass-panel {
             background: var(--bg-elevated);
-            backdrop-filter: blur(32px) saturate(180%) brightness(115%);
-            -webkit-backdrop-filter: blur(32px) saturate(180%) brightness(115%);
+            backdrop-filter: blur(40px) saturate(200%) brightness(110%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(110%);
             border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-xl);
         }
 
         .video-container {
             position: relative;
             background: var(--bg-secondary);
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
             border: 1px solid var(--border-subtle);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
             width: 100%;
             height: 100%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .video-container::before {
-            display: none;
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+
+        .video-container:hover::before {
+            opacity: 1;
         }
 
         .video-container:hover {
             border-color: var(--border-medium);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            transform: translateY(-3px);
         }
 
         .video-container video {
@@ -289,8 +324,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             width: 100%;
             height: 100%;
             object-fit: cover;
-            filter: blur(24px);
-            opacity: 0.3;
+            filter: blur(32px);
+            opacity: 0.25;
             pointer-events: none;
             -webkit-user-drag: none;
             user-drag: none;
@@ -298,12 +333,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .avatar-center {
             position: relative;
-            width: 108px;
-            height: 108px;
-            border-radius: 12px;
+            width: 120px;
+            height: 120px;
+            border-radius: 16px;
             overflow: hidden;
-            border: 1px solid var(--border-medium);
+            border: 2px solid var(--border-subtle);
             background: var(--bg-tertiary);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .avatar-center:hover {
+            border-color: var(--border-medium);
+            box-shadow: var(--shadow-md);
         }
 
         .avatar-center img {
@@ -344,38 +385,31 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .control-btn {
             padding: 0;
-            border-radius: 10px;
-            border: none;
+            border-radius: 14px;
+            border: 1px solid var(--border-subtle);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            background: var(--bg-elevated);
-            backdrop-filter: blur(20px) saturate(160%);
-            -webkit-backdrop-filter: blur(20px) saturate(160%);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-tertiary) 100%);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
             color: var(--text-primary);
-            width: 54px;
-            height: 54px;
-            border: 1px solid var(--border-subtle);
+            width: 52px;
+            height: 52px;
             overflow: hidden;
-        }
-
-        @media (min-width: 768px) {
-            .control-btn {
-                width: 58px;
-                height: 58px;
-                border-radius: 11px;
-            }
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
         .control-btn::before {
             content: '';
             position: absolute;
             inset: 0;
-            background: rgba(255, 255, 255, 0.05);
+            background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 100%);
             opacity: 0;
-            transition: opacity 0.15s ease;
+            transition: opacity 0.25s ease;
         }
 
         .control-btn:hover::before {
@@ -383,37 +417,45 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .control-btn:hover {
-            background: var(--bg-tertiary);
+            background: linear-gradient(180deg, var(--bg-elevated-strong) 0%, var(--bg-elevated) 100%);
             border-color: var(--border-medium);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
         }
 
         .control-btn:active {
-            transform: scale(0.97);
+            transform: scale(0.96) translateY(0);
             transition: transform 0.1s ease;
         }
 
         .control-btn.active-red {
-            background: var(--danger);
+            background: linear-gradient(180deg, var(--danger) 0%, var(--accent-dark-red) 100%);
             border-color: var(--danger);
+            box-shadow: 0 2px 12px rgba(239, 68, 68, 0.4);
         }
 
         .control-btn.active-red:hover {
-            background: #dc2626;
-            border-color: #dc2626;
+            background: linear-gradient(180deg, var(--accent-red-hover) 0%, var(--danger) 100%);
+            border-color: var(--accent-red-hover);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+            transform: translateY(-2px);
         }
 
         .control-btn.active-green {
-            background: var(--success);
+            background: linear-gradient(180deg, var(--success) 0%, var(--accent-green) 100%);
             border-color: var(--success);
+            box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
         }
 
         .control-btn.active-green:hover {
-            background: #16a34a;
-            border-color: #16a34a;
+            background: linear-gradient(180deg, var(--accent-green-hover) 0%, var(--success) 100%);
+            border-color: var(--accent-green-hover);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+            transform: translateY(-2px);
         }
 
         .control-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
             pointer-events: none;
             -webkit-pointer-events: none;
@@ -423,6 +465,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             background: var(--bg-elevated);
             border-color: var(--border-subtle);
             transform: none;
+            box-shadow: none;
         }
 
         .control-btn:disabled:hover::before {
@@ -444,52 +487,43 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .pip-wrapper {
             position: fixed;
-            bottom: 220px;
+            bottom: 200px;
             right: 16px;
             cursor: grab;
             touch-action: none;
-            width: 140px;
+            width: 160px;
             aspect-ratio: 16/9;
-            border-radius: 10px;
+            border-radius: 14px;
             border: 1px solid var(--border-subtle);
             overflow: hidden;
             z-index: 75;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            background: var(--bg-secondary);
-        }
-
-        @media (min-width: 768px) {
-            .pip-wrapper {
-                width: 280px;
-                bottom: 240px;
-                border-radius: 12px;
-            }
-        }
-
-        @media (max-width: 950px) and (orientation: landscape) {
-            .pip-wrapper {
-                width: 140px;
-                bottom: 120px;
-            }
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-secondary) 100%);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
         .pip-wrapper:hover {
             border-color: var(--border-medium);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
+            transform: scale(1.03) translateY(-2px);
         }
 
         .connection-dot {
-            width: 8px;
-            height: 8px;
+            width: 9px;
+            height: 9px;
             background-color: var(--danger);
             border-radius: 50%;
             display: inline-block;
-            transition: background-color 0.3s;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
         }
         .connection-dot.connected {
             background-color: var(--success);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
         }
         .connection-dot.connecting {
             background-color: var(--warning);
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
             animation: pulse 2s infinite;
         }
 
@@ -509,20 +543,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .ping-bars {
             display: flex;
             align-items: flex-end;
-            gap: 2px;
-            height: 12px;
+            gap: 3px;
+            height: 14px;
         }
 
         .ping-bar {
             width: 3px;
-            background-color: var(--border-medium);
+            background-color: var(--border-strong);
             border-radius: 1px;
             transition: background-color 0.3s, height 0.3s;
         }
 
-        .ping-bar-1 { height: 4px; }
-        .ping-bar-2 { height: 8px; }
-        .ping-bar-3 { height: 12px; }
+        .ping-bar-1 { height: 5px; }
+        .ping-bar-2 { height: 9px; }
+        .ping-bar-3 { height: 13px; }
 
         .ping-good .ping-bar { background-color: var(--success); }
         .ping-fair .ping-bar-1, .ping-fair .ping-bar-2 { background-color: var(--warning); }
@@ -534,41 +568,43 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 14px;
-            width: 14px;
+            height: 16px;
+            width: 16px;
             border-radius: 50%;
             background: var(--text-primary);
             cursor: pointer;
-            margin-top: -5px;
-            transition: transform 0.15s;
+            margin-top: -6px;
+            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         }
         input[type=range]::-webkit-slider-thumb:hover {
-            transform: scale(1.15);
+            transform: scale(1.2);
         }
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
-            height: 4px;
+            height: 5px;
             cursor: pointer;
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.12);
             border-radius: 2px;
         }
 
         .volume-controls {
             position: absolute;
-            bottom: 14px;
-            right: 14px;
-            background: var(--bg-elevated-strong);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
-            padding: 12px 16px;
-            border-radius: 10px;
+            bottom: 12px;
+            right: 12px;
+            background: linear-gradient(180deg, var(--bg-elevated-strong) 0%, var(--bg-elevated) 100%);
+            backdrop-filter: blur(32px) saturate(200%);
+            -webkit-backdrop-filter: blur(32px) saturate(200%);
+            padding: 10px 14px;
+            border-radius: 12px;
             display: flex;
             flex-direction: column;
             gap: 10px;
             opacity: 0;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             align-items: flex-end;
             border: 1px solid var(--border-medium);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         .video-container:hover .volume-controls {
             opacity: 1;
@@ -583,23 +619,24 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .vol-row button {
             padding: 4px;
-            border-radius: 6px;
-            transition: all 0.15s;
+            border-radius: 8px;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .vol-row button:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.12);
+            transform: scale(1.05);
         }
 
         .speaking-glow {
-            border: 4px solid #3b82f6 !important;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.6) !important;
+            border: 3px solid #3b82f6 !important;
+            box-shadow: 0 0 24px rgba(59, 130, 246, 0.5) !important;
             transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             z-index: 50;
         }
 
         #localPipWrapper.speaking-glow {
-            border: 3px solid #3b82f6 !important;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4) !important;
+            border: 2px solid #3b82f6 !important;
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.5) !important;
             z-index: 75;
         }
 
@@ -616,14 +653,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             position: fixed;
             z-index: 1000;
             cursor: grabbing;
-            transform: scale(1.02) translate3d(0, 0, 0);
+            transform: scale(1.03) translate3d(0, 0, 0);
             pointer-events: none;
-            opacity: 0.95;
+            opacity: 0.92;
             will-change: transform;
             transition: none;
             user-select: none;
             -webkit-user-select: none;
             outline: none;
+            box-shadow: var(--shadow-xl);
         }
 
         .video-container.is-dragging * {
@@ -633,7 +671,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .video-container.drag-placeholder {
-            opacity: 0.25;
+            opacity: 0.2;
             border: 2px dashed var(--accent);
             background: transparent;
             user-select: none;
@@ -651,7 +689,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .video-container.is-shifting {
-            transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1);
+            transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
             user-select: none;
             -webkit-user-select: none;
         }
@@ -672,18 +710,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .video-container:fullscreen .volume-controls {
-            bottom: 32px;
-            right: 32px;
-            transform: scale(1.15);
+            bottom: 40px;
+            right: 40px;
+            transform: scale(1.1);
             transform-origin: bottom right;
-            padding: 12px;
-            gap: 8px;
+            padding: 14px 18px;
+            gap: 10px;
         }
 
         .mic-meter {
             width: 100%;
             height: 4px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
             border-radius: 2px;
             overflow: hidden;
             margin-top: 10px;
@@ -691,17 +729,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .mic-bar {
             height: 100%;
             width: 0%;
-            background: var(--success);
+            background: linear-gradient(90deg, var(--success) 0%, var(--accent-green-hover) 100%);
             border-radius: 2px;
             transition: width 0.04s linear;
         }
 
         .taskbar {
-            background: #000000;
-            border-top: 1px solid rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(32px) saturate(180%) brightness(115%);
-            -webkit-backdrop-filter: blur(32px) saturate(180%) brightness(115%);
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            border-top: 1px solid var(--border-subtle);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
             padding-bottom: env(safe-area-inset-bottom);
+            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5), 0 -4px 16px rgba(0, 0, 0, 0.3);
         }
 
         @media (min-width: 768px) {
@@ -724,11 +763,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         input[type="text"],
         input[type="password"],
         select {
-            background: var(--bg-tertiary);
+            background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
             border: 1px solid var(--border-subtle);
             color: var(--text-primary);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         input[type="text"]:focus,
@@ -736,7 +776,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         select:focus {
             outline: none;
             border-color: var(--accent);
-            background: var(--bg-secondary);
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            box-shadow: 0 0 0 3px var(--accent-glow), 0 4px 16px rgba(59, 130, 246, 0.2);
+        }
+
+        select option {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
         }
 
         input[type="text"]::placeholder,
@@ -746,15 +792,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .btn-primary {
-            background: var(--accent);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 10px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark-blue) 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3), var(--shadow-md);
         }
         .btn-primary:hover {
-            background: var(--accent-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+            background: linear-gradient(180deg, var(--accent-hover) 0%, var(--accent) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(59, 130, 246, 0.45);
         }
 
         .btn-primary:active {
@@ -763,46 +809,65 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .btn-secondary {
-            background: var(--bg-elevated);
+            background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-tertiary) 100%);
             border: 1px solid var(--border-subtle);
-            backdrop-filter: blur(20px) saturate(160%);
-            -webkit-backdrop-filter: blur(20px) saturate(160%);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 10px;
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
         }
         .btn-secondary:hover {
-            background: var(--bg-elevated-strong);
+            background: linear-gradient(180deg, var(--bg-elevated-strong) 0%, var(--bg-elevated) 100%);
             border-color: var(--border-medium);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary.active-red {
+            background: linear-gradient(180deg, var(--danger) 0%, var(--accent-dark-red) 100%);
+            border-color: var(--danger);
+            box-shadow: 0 2px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-secondary.active-red:hover {
+            background: linear-gradient(180deg, var(--accent-red-hover) 0%, var(--danger) 100%);
+            border-color: var(--accent-red-hover);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+            transform: translateY(-2px);
         }
 
         .status-pill {
-            background: var(--bg-elevated);
+            background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-tertiary) 100%);
             border: 1px solid var(--border-subtle);
-            backdrop-filter: blur(24px) saturate(160%);
-            -webkit-backdrop-filter: blur(24px) saturate(160%);
-            border-radius: 10px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(32px) saturate(180%);
+            -webkit-backdrop-filter: blur(32px) saturate(180%);
+            border-radius: 99px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
         .status-pill:hover {
-            background: var(--bg-elevated-strong);
+            background: linear-gradient(180deg, var(--bg-elevated-strong) 0%, var(--bg-elevated) 100%);
             border-color: var(--border-medium);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         }
 
         .label-text {
             color: var(--text-secondary);
             font-size: 0.75rem;
-            font-weight: 500;
-            letter-spacing: 0.01em;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
         }
 
         .empty-state-icon {
             color: var(--text-muted);
-            opacity: 0.4;
+            opacity: 0.5;
         }
 
         .fadeIn {
-            animation: fadeIn 0.3s ease-in-out;
+            animation: fadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         @keyframes fadeOut {
@@ -811,8 +876,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         @keyframes fadeIn {
-            0% { opacity: 0; }
-            100% { opacity: 1; }
+            0% { opacity: 0; transform: translateY(8px); }
+            100% { opacity: 1; transform: translateY(0); }
         }
 
         #particleCanvas {
@@ -823,30 +888,32 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             height: 100%;
             pointer-events: none;
             z-index: 1;
+            opacity: 0.6;
         }
 
         #roomSidebar {
             position: fixed;
-            left: -320px;
+            left: -340px;
             top: 0;
             bottom: 0;
-            width: 320px;
+            width: 340px;
             z-index: 100;
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            background: #000000;
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
             border-right: 1px solid var(--border-medium);
             display: flex;
             flex-direction: column;
+            box-shadow: 0 0 64px rgba(0, 0, 0, 0.6), 0 0 128px rgba(0, 0, 0, 0.4);
         }
 
         #roomSidebar.open {
-            transform: translateX(320px);
+            transform: translateX(340px);
         }
 
         @media (min-width: 768px) {
             body.sidebar-open #appLayout {
-                margin-left: 320px;
-                width: calc(100% - 320px);
+                margin-left: 340px;
+                width: calc(100% - 340px);
                 transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
@@ -856,37 +923,42 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .sidebar-header {
-            padding: 24px;
+            padding: 28px 24px;
             border-bottom: 1px solid var(--border-subtle);
             display: flex;
             align-items: center;
             justify-content: space-between;
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
         }
 
         .sidebar-content {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            padding: 20px 16px;
         }
 
         .room-item {
-            background: var(--bg-secondary);
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
             border: 1px solid var(--border-subtle);
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 16px;
             margin-bottom: 12px;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .room-item:hover {
             border-color: var(--accent);
-            background: var(--bg-tertiary);
+            background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+            transform: translateX(6px);
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
         }
 
         .room-item.active {
             border-color: var(--accent);
-            background: rgba(255, 255, 255, 0.05);
+            background: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.04) 100%);
+            box-shadow: 0 0 0 1px var(--border-accent), 0 4px 16px rgba(59, 130, 246, 0.2);
         }
 
         .room-name {
@@ -900,12 +972,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .user-count {
-            font-size: 0.75rem;
-            color: var(--text-muted);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
             background: var(--bg-primary);
-            padding: 2px 8px;
+            padding: 3px 10px;
             border-radius: 99px;
             border: 1px solid var(--border-subtle);
+            font-weight: 500;
         }
 
         .room-users {
@@ -915,15 +988,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .mini-avatar {
-            width: 24px;
-            height: 24px;
-            border-radius: 6px;
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
             background: var(--bg-primary);
             border: 1px solid var(--border-subtle);
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .mini-avatar:hover {
+            border-color: var(--border-medium);
+            transform: scale(1.05);
         }
 
         .mini-avatar img {
@@ -933,25 +1012,26 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .mini-avatar-placeholder {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 600;
             color: var(--text-muted);
         }
 
         .mini-avatar.speaking-glow {
             border: 2px solid #3b82f6 !important;
-            box-shadow: 0 0 6px rgba(59, 130, 246, 0.4) !important;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.5) !important;
             transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         }
 
         .sidebar-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
             z-index: 90;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.35s ease;
         }
 
         .sidebar-overlay.open {
@@ -968,15 +1048,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(16px);
             z-index: 300;
             display: flex;
             align-items: center;
             justify-content: center;
             opacity: 0;
             pointer-events: none;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .modal-overlay.open {
@@ -985,51 +1065,53 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .modal-content {
-            background: var(--bg-elevated);
+            background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-tertiary) 100%);
             border: 1px solid var(--border-medium);
-            backdrop-filter: blur(24px) saturate(160%);
-            -webkit-backdrop-filter: blur(24px) saturate(160%);
-            border-radius: 24px;
+            backdrop-filter: blur(32px) saturate(180%);
+            -webkit-backdrop-filter: blur(32px) saturate(180%);
+            border-radius: 28px;
             width: 90%;
-            max-width: 400px;
-            padding: 32px;
-            transform: scale(0.96);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            max-width: 420px;
+            padding: 40px 32px;
+            transform: scale(0.92) translateY(16px);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 32px 96px rgba(0, 0, 0, 0.7), 0 8px 32px rgba(0, 0, 0, 0.5);
         }
 
         .modal-overlay.open .modal-content {
-            transform: scale(1);
+            transform: scale(1) translateY(0);
         }
 
         .room-user-row {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 8px;
-            border-radius: 8px;
-            transition: background 0.2s;
+            padding: 10px 12px;
+            border-radius: 10px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .room-user-row:hover {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.06);
         }
 
         .room-user-name {
-            font-size: 0.85rem;
+            font-size: 0.875rem;
             color: var(--text-secondary);
             font-weight: 500;
         }
 
         .status-indicators {
             display: flex;
-            gap: 4px;
+            gap: 6px;
             margin-left: auto;
             align-items: center;
         }
 
         .status-icon {
             color: var(--text-muted);
-            opacity: 0.7;
+            opacity: 0.6;
+            transition: all 0.2s ease;
         }
 
         .status-icon.active {
@@ -1139,22 +1221,22 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="welcomeOverlay" class="fixed inset-0 z-[70] flex flex-col items-center justify-center p-4" style="display: none; background: var(--bg-primary);">
+    <div id="welcomeOverlay" class="fixed inset-0 z-[70] flex flex-col items-center justify-center p-4" style="display: none; background: radial-gradient(ellipse at center top, #0a0a0a 0%, #000000 100%);">
         <canvas id="particleCanvas"></canvas>
-        <div class="text-center space-y-8 max-w-md w-full relative z-10">
-            <div class="space-y-3" id="welcomeTitleContainer">
-                <h1 class="text-5xl md:text-6xl font-bold tracking-tight" style="color: #ffffff; text-shadow: 0 0 20px rgba(255, 255, 255, 0.5), 0 2px 8px rgba(255, 255, 255, 0.3), 0 8px 16px rgba(0, 0, 0, 0.5); font-weight: 800; letter-spacing: -0.02em;">Rust Rooms</h1>
-                <p style="color: var(--text-secondary);" class="text-base md:text-lg font-normal">Simple, secure, and fast video conferencing.</p>
+        <div class="text-center space-y-10 max-w-md w-full relative z-10">
+            <div class="space-y-4" id="welcomeTitleContainer">
+                <h1 class="text-5xl md:text-7xl font-bold tracking-tight" style="color: #ffffff; text-shadow: 0 0 40px rgba(59, 130, 246, 0.4), 0 0 80px rgba(59, 130, 246, 0.2); font-weight: 800; letter-spacing: -0.03em;">Rust Rooms</h1>
+                <p style="color: var(--text-secondary);" class="text-base md:text-lg font-normal opacity-80">Simple, secure, and fast video conferencing.</p>
             </div>
 
-            <div id="startActionContainer" class="relative min-h-[64px] flex justify-center items-center">
-                 <button id="btnStartRoom" onclick="createRoom()" class="btn-primary absolute w-full md:w-auto px-10 py-4 text-white rounded-2xl font-semibold text-base transition-all">
+            <div id="startActionContainer" class="relative min-h-[72px] flex justify-center items-center">
+                 <button id="btnStartRoom" onclick="createRoom()" class="btn-primary absolute w-full md:w-auto px-12 py-4 text-white rounded-2xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl" style="box-shadow: 0 4px 24px rgba(59, 130, 246, 0.3);">
                     Start Room
                 </button>
 
                 <div id="passwordInputContainer" class="absolute w-full max-w-xs transition-all duration-300 transform translate-y-4 opacity-0 pointer-events-none flex gap-2">
-                     <input type="password" id="roomPasswordInput" placeholder="Password required" class="flex-1 rounded-xl px-4 py-3 text-white" onkeypress="if(event.key==='Enter') submitPassword()">
-                     <button onclick="submitPassword()" class="btn-primary px-5 py-3 text-white rounded-xl font-medium transition-all">
+                     <input type="password" id="roomPasswordInput" placeholder="Password required" class="flex-1 rounded-xl px-4 py-3 text-white bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none transition-all" onkeypress="if(event.key==='Enter') submitPassword()">
+                     <button onclick="submitPassword()" class="btn-primary px-5 py-3 text-white rounded-xl font-medium transition-all flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                      </button>
                 </div>
@@ -1162,23 +1244,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="configOverlay" class="fixed inset-0 z-[60] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(16px) saturate(120%);">
+    <div id="configOverlay" class="fixed inset-0 z-[60] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(20px);">
         <canvas id="particleCanvasConfig" class="absolute inset-0 pointer-events-none" style="z-index: 1;"></canvas>
-        <div id="configPanel" class="glass-panel p-6 md:p-8 rounded-3xl max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
-            <div class="text-center space-y-1 mb-5">
-                <h1 class="text-2xl md:text-3xl font-bold tracking-tight" style="color: var(--text-primary);">Setup</h1>
-                <p style="color: var(--text-secondary);" class="text-sm font-normal">Configure your stream.</p>
+        <div id="configPanel" class="glass-panel p-8 md:p-10 rounded-[32px] max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
+            <div class="text-center space-y-2 mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--text-primary);">Setup</h1>
+                <p style="color: var(--text-secondary);" class="text-sm font-normal opacity-80">Configure your camera and microphone.</p>
             </div>
 
             <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
 
                 <div class="lg:w-1/2 flex flex-col gap-4">
-                    <div class="relative aspect-video rounded-2xl overflow-hidden flex-shrink-0" style="background: var(--bg-secondary); border: 1px solid var(--border-subtle);">
+                    <div class="relative aspect-video rounded-2xl overflow-hidden flex-shrink-0 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] shadow-lg">
                         <video id="previewVideo" autoplay playsinline muted class="w-full h-full object-contain"></video>
                         <div class="absolute inset-0 flex items-center justify-center pointer-events-none" id="previewPlaceholder" style="color: var(--text-muted);">
                             <span>Camera Off</span>
                         </div>
-                        <div class="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl text-xs font-medium backdrop-blur-sm" style="background: rgba(0, 0, 0, 0.6); color: var(--text-primary);">
+                        <div class="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg text-xs font-medium backdrop-blur-md bg-black/60 border border-[var(--border-subtle)]" style="color: var(--text-primary);">
                             Preview
                         </div>
                     </div>
@@ -1229,7 +1311,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 <select id="audioOutputSource" onchange="changeAudioOutput(this.value)" class="flex-1 min-w-0 rounded-xl px-3 py-2.5 text-sm text-white transition-all">
                                     <option value="default">Default</option>
                                 </select>
-                                <button onclick="testSpeaker('audioOutputSource')" class="p-2.5 rounded-xl transition-all" style="background: var(--bg-secondary); color: var(--text-primary);" title="Test Speaker">
+                                <button onclick="testSpeaker('audioOutputSource')" class="p-2.5 rounded-xl transition-all" style="background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%); color: var(--text-primary); border: 1px solid var(--border-subtle); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);" title="Test Speaker">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                                 </button>
                             </div>
@@ -1250,36 +1332,36 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="settingsOverlay" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden" style="background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px) saturate(140%);" onclick="if(event.target === this) closeSettings()">
-        <div class="glass-panel p-6 md:p-8 rounded-3xl max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
-             <button onclick="closeSettings()" class="absolute top-5 right-5 transition-colors p-1 rounded-lg hover:bg-white/10" style="color: var(--text-muted);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    <div id="settingsOverlay" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden" style="background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(24px);" onclick="if(event.target === this) closeSettings()">
+        <div class="glass-panel p-8 md:p-10 rounded-[32px] max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
+             <button onclick="closeSettings()" class="absolute top-6 right-6 transition-all p-2 rounded-xl hover:bg-white/10" style="color: var(--text-muted);" title="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
 
-            <div class="text-center space-y-1 mb-5">
-                <h2 class="text-2xl md:text-3xl font-bold tracking-tight" style="color: var(--text-primary);">Settings</h2>
-                <p style="color: var(--text-secondary);" class="text-sm font-normal">Update your profile and devices.</p>
+            <div class="text-center space-y-2 mb-8">
+                <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--text-primary);">Settings</h2>
+                <p style="color: var(--text-secondary);" class="text-sm font-normal opacity-80">Update your profile and devices.</p>
             </div>
 
             <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
 
                 <div class="lg:w-1/2 space-y-4">
-                    <div class="flex flex-col items-center gap-4 p-4 rounded-2xl" style="background: var(--bg-secondary); border: 1px solid var(--border-subtle);">
+                    <div class="flex flex-col items-center gap-5 p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] shadow-md">
                         <label class="label-text">Avatar</label>
-                        <div class="flex flex-col items-center gap-3">
-                            <div onclick="document.getElementById('settingsAvatarInput').click()" class="w-32 h-32 rounded-3xl cursor-pointer overflow-hidden flex items-center justify-center transition-all relative" style="background: var(--bg-tertiary); border: 2px solid var(--border-subtle);">
+                        <div class="flex flex-col items-center gap-4">
+                            <div onclick="document.getElementById('settingsAvatarInput').click()" class="w-32 h-32 rounded-3xl cursor-pointer overflow-hidden flex items-center justify-center transition-all relative bg-[var(--bg-tertiary)] border-2 border-[var(--border-subtle)] hover:border-[var(--accent)] group shadow-lg">
                                 <img id="settingsAvatarPreview" src="" class="hidden w-full h-full object-cover" draggable="false">
                                 <span id="settingsAvatarPlaceholder" class="text-6xl" style="color: var(--text-muted);">👤</span>
-                                <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold" style="background: rgba(0, 0, 0, 0.75); color: var(--text-primary);">Change</div>
+                                <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold bg-black/80" style="color: var(--text-primary);">Change</div>
                             </div>
-                            <button id="btnRemoveSettingsAvatar" onclick="removeSettingsAvatar()" class="hidden text-xs font-medium px-3 py-1 rounded-lg transition-all" style="color: var(--text-muted); background: var(--bg-primary); border: 1px solid var(--border-subtle);" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">Remove Avatar</button>
+                            <button id="btnRemoveSettingsAvatar" onclick="removeSettingsAvatar()" class="hidden text-xs font-medium px-3 py-1.5 rounded-lg transition-all bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-[var(--danger)]" style="color: var(--text-muted);" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">Remove Avatar</button>
                             <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7;">Max 2MB · Images & GIFs</div>
-                                                            <input type="file" id="settingsAvatarInput" hidden accept="image/*" onchange="handleSettingsAvatarUpload(this)">
-                                                        </div>
-                                                    </div>
+                            <input type="file" id="settingsAvatarInput" hidden accept="image/*" onchange="handleSettingsAvatarUpload(this)">
+                        </div>
+                    </div>
                     <div>
                         <label class="label-text block mb-2">Nickname</label>
-                        <input type="text" id="settingsNicknameInput" placeholder="Enter your name" class="w-full rounded-xl px-4 py-2.5 text-white transition-all" style="font-size: 0.875rem;" maxlength="32">
+                        <input type="text" id="settingsNicknameInput" placeholder="Enter your name" class="w-full rounded-xl px-4 py-3 text-white transition-all" style="font-size: 0.875rem;" maxlength="32">
                     </div>
                 </div>
 
@@ -1296,7 +1378,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             <div class="flex gap-2">
                                 <select id="settingsAudioOutputSource" onchange="changeAudioOutput(this.value)" class="flex-1 min-w-0 rounded-xl px-3 py-2.5 text-sm text-white transition-all">
                                 </select>
-                                <button onclick="testSpeaker('settingsAudioOutputSource')" class="p-2.5 rounded-xl transition-all" style="background: var(--bg-secondary); color: var(--text-primary);" title="Test Speaker">
+                                <button onclick="testSpeaker('settingsAudioOutputSource')" class="p-2.5 rounded-xl transition-all" style="background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%); color: var(--text-primary); border: 1px solid var(--border-subtle); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);" title="Test Speaker">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                                 </button>
                             </div>
@@ -1319,20 +1401,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     </div>
 
     <div id="appLayout" class="hidden flex-col h-full w-full">
-        <div class="flex-none p-3 sm:p-4 md:p-5 z-40 flex justify-between items-center gap-2 md:gap-4">
+        <div class="flex-none p-3 sm:p-4 md:p-5 z-40 flex justify-between items-center gap-2 md:gap-4 pl-3 md:pl-4" style="background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%); backdrop-filter: blur(8px);">
             <div class="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-                <button id="sidebarToggle" onclick="toggleSidebar()" class="control-btn shadow-xl hidden !w-10 !h-10 md:!w-14 md:!h-14 flex-shrink-0" title="Channels">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                <button id="sidebarToggle" onclick="toggleSidebar()" class="control-btn shadow-lg hidden !w-10 !h-10 md:!w-12 md:!h-12 flex-shrink-0" title="Channels">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </button>
-                <div id="currentChannelName" class="text-white font-semibold text-lg md:text-xl truncate min-w-0"></div>
+                <div id="currentChannelName" class="text-white font-semibold text-lg md:text-xl truncate min-w-0 drop-shadow-md"></div>
             </div>
 
             <div class="flex items-center justify-end gap-2 md:gap-3 flex-shrink-0">
                 <div class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center justify-center gap-2 md:gap-2.5 flex-shrink-0 h-8 md:h-10">
                     <div id="connectionDot" class="connection-dot"></div>
                     <span id="statusText" class="text-xs md:text-sm font-medium hidden sm:inline-block" style="color: var(--text-primary);">Waiting...</span>
-                    <button id="btnReconnect" onclick="retryConnection()" class="hidden ml-1 p-1 rounded-full transition-all" style="color: var(--text-muted);" title="Retry Connection">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                    <button id="btnReconnect" onclick="retryConnection()" class="hidden ml-1 p-1 rounded-lg transition-all hover:bg-white/10" style="color: var(--text-muted);" title="Retry Connection">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
                     </button>
                     <div id="pingContainer" class="ping-container hidden !ml-0 !pl-1.5 md:!ml-0 md:!pl-2 border-l !border-[var(--border-subtle)]">
                         <span id="pingText" class="tabular-nums shrink-0 mr-1 md:mr-1.5">0ms</span>
@@ -1344,26 +1426,26 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     </div>
                 </div>
 
-                <div id="btnCopy" class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full cursor-pointer transition-all flex items-center justify-center gap-2 hover:border-opacity-30 flex-shrink-0" onclick="copyLink()" title="Invite Link">
-                    <span class="text-xs md:text-sm font-medium hidden md:inline-block" style="color: var(--text-primary);">Invite Link</span>
+                <div id="btnCopy" class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full cursor-pointer transition-all flex items-center justify-center gap-2 hover:border-opacity-30 flex-shrink-0 h-8 md:h-10" onclick="copyLink()" title="Invite Link">
+                    <span class="text-xs md:text-sm font-medium hidden md:inline-block" style="color: var(--text-primary);">Invite</span>
                     <svg id="iconCopy" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
                 </div>
             </div>
         </div>
 
         <main class="flex-1 w-full relative min-h-0">
-            <div class="absolute inset-0 pb-4 md:pb-5 px-4 overflow-hidden flex items-center justify-center">
-                 <div id="remoteGrid" class="grid gap-4 w-full h-full max-w-[1600px] transition-all duration-500 grid-expand"></div>
+            <div class="absolute inset-0 pb-4 md:pb-5 px-4 pt-1 md:pt-2 overflow-hidden flex items-center justify-center">
+                 <div id="remoteGrid" class="grid gap-4 md:gap-5 w-full h-full max-w-[1600px] transition-all duration-500 grid-expand"></div>
             </div>
 
             <div id="emptyState" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                <div class="mb-5">
-                    <svg class="mx-auto h-16 w-16 empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                <div class="mb-6">
+                    <svg class="mx-auto h-20 w-20 empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="0.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                 </div>
                 <p class="text-xl font-semibold" style="color: var(--text-secondary);">Waiting for others to join...</p>
-                <p class="text-sm mt-2" style="color: var(--text-muted);">Share the invite link to get started.</p>
+                <p class="text-sm mt-2" style="color: var(--text-muted); opacity: 0.8;">Share the invite link to get started.</p>
             </div>
 
             <div class="pip-wrapper" id="localPipWrapper">
@@ -2956,10 +3038,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  }
 
                  if (!isAudioEffectivelyEnabled) {
-                     btnMic.classList.add('bg-red-500', 'hover:bg-red-600');
+                     btnMic.classList.add('active-red');
                      btnMic.innerText = "Unmute";
                  } else {
-                     btnMic.classList.remove('bg-red-500', 'hover:bg-red-600');
+                     btnMic.classList.remove('active-red');
                      btnMic.innerText = "Mute";
                  }
              }
@@ -2970,7 +3052,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      btnCam.disabled = false;
                      btnCam.classList.remove('opacity-50', 'cursor-not-allowed');
                  }
-                 btnCam.classList.add('bg-red-500', 'hover:bg-red-600');
+                 btnCam.classList.add('active-red');
                  btnCam.innerText = "Start Cam";
                  document.getElementById('previewPlaceholder').style.display = 'flex';
              } else {
@@ -2986,11 +3068,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  }
 
                  if (!isEffectivelyEnabled) {
-                     btnCam.classList.add('bg-red-500', 'hover:bg-red-600');
+                     btnCam.classList.add('active-red');
                      btnCam.innerText = "Start Cam";
                      document.getElementById('previewPlaceholder').style.display = 'flex';
                  } else {
-                     btnCam.classList.remove('bg-red-500', 'hover:bg-red-600');
+                     btnCam.classList.remove('active-red');
                      btnCam.innerText = "Stop Cam";
                      document.getElementById('previewPlaceholder').style.display = 'none';
                  }
@@ -3004,10 +3086,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  const btnMic = document.getElementById('btnPreviewMic');
                  if (btnMic) {
                     if (btnMic.innerText.includes("Mute") && !btnMic.innerText.includes("Unmute")) {
-                        btnMic.classList.add('bg-red-500', 'hover:bg-red-600');
+                        btnMic.classList.add('active-red');
                         btnMic.innerText = "Unmute";
                     } else {
-                        btnMic.classList.remove('bg-red-500', 'hover:bg-red-600');
+                        btnMic.classList.remove('active-red');
                         btnMic.innerText = "Mute";
                     }
                  }
@@ -3033,11 +3115,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                  if (btnCam) {
                     if (!willBeEnabled) {
-                        btnCam.classList.add('bg-red-500', 'hover:bg-red-600');
+                        btnCam.classList.add('active-red');
                         btnCam.innerText = "Start Cam";
                         document.getElementById('previewPlaceholder').style.display = 'flex';
                     } else {
-                        btnCam.classList.remove('bg-red-500', 'hover:bg-red-600');
+                        btnCam.classList.remove('active-red');
                         btnCam.innerText = "Stop Cam";
                         document.getElementById('previewPlaceholder').style.display = 'none';
                     }
@@ -3374,11 +3456,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     const pip = document.getElementById('localPipWrapper');
                     if (pip) {
                         const pipRect = pip.getBoundingClientRect();
-                        const sidebarWidth = 320;
-                        const margin = 16;
+                        const sidebarWidth = 340;
+                        const margin = 24;
 
                         if (pipRect.left < sidebarWidth + margin) {
-
                             const newLeft = sidebarWidth + margin;
                             pip.style.left = newLeft + 'px';
                             pip.style.bottom = '';
@@ -3421,8 +3502,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         const pip = document.getElementById('localPipWrapper');
                         if (pip) {
                             const pipRect = pip.getBoundingClientRect();
-                            const sidebarWidth = 320;
-                            const margin = 16;
+                            const sidebarWidth = 340;
+                            const margin = 24;
 
                             if (pipRect.left < sidebarWidth + margin) {
                                 const newLeft = sidebarWidth + margin;
@@ -3464,11 +3545,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     const pip = document.getElementById('localPipWrapper');
                     if (pip) {
                         const pipRect = pip.getBoundingClientRect();
-                        const sidebarWidth = 320;
-                        const margin = 16;
+                        const sidebarWidth = 340;
+                        const margin = 24;
 
                         if (pipRect.left < sidebarWidth + margin) {
-
                             const newLeft = sidebarWidth + margin;
                             pip.style.left = newLeft + 'px';
                             pip.style.bottom = '';
@@ -4187,6 +4267,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                             if (row) row.remove();
                                             const aud = document.getElementById(`aud-screen-${msg.userId}`);
                                             if (aud) aud.remove();
+                                        }
+
+                                        const wrapper = document.getElementById(`wrapper-${msg.userId}`);
+                                        if (wrapper) {
+                                            const vid = document.getElementById(`vid-${msg.userId}`);
+                                            if (vid && vid.srcObject && vid.srcObject.getAudioTracks().length > 0) {
+                                                (async () => { await setupAudioMonitor(vid.srcObject, `wrapper-${msg.userId}`); })();
+                                            }
                                         }
                                     }
                                     break;
@@ -5786,6 +5874,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 updateLocalAvatar();
 
+                if (localStream && localStream.getAudioTracks().length > 0) {
+                    await setupAudioMonitor(localStream, 'local');
+                }
+
             } else {
                 try {
                     screenStream = await navigator.mediaDevices.getDisplayMedia({
@@ -5857,6 +5949,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                     screenTrack.onended = () => { toggleScreen(); };
                     btn.classList.add('active-green');
+
+                    if (localStream && localStream.getAudioTracks().length > 0) {
+                        await setupAudioMonitor(localStream, 'local');
+                    }
                 } catch (e) {
                     console.error("Screen share failed", e);
                 }
