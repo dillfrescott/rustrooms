@@ -4710,6 +4710,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     if (msg.userId === persistentUserId) {
                                         alert("You have been kicked from the room.");
                                         hasLeftRoom = true;
+                                        sessionStorage.removeItem('rustrooms_setup_done');
                                         window.location.href = "/";
                                     } else {
                                         playNotificationSound('leave');
