@@ -1161,6 +1161,129 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             opacity: 1;
         }
 
+        .user-volume-menu {
+            position: fixed;
+            z-index: 200;
+            min-width: 220px;
+            max-width: 260px;
+            background: linear-gradient(180deg, var(--bg-elevated-strong) 0%, var(--bg-elevated) 100%);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border: 1px solid var(--border-medium);
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.4);
+            opacity: 0;
+            transform: scale(0.92) translateY(-4px);
+            pointer-events: none;
+            transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .user-volume-menu.open {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            pointer-events: auto;
+        }
+
+        .user-volume-menu .uvm-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .user-volume-menu .uvm-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+        }
+
+        .user-volume-menu .uvm-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-volume-menu .uvm-close:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-volume-menu .uvm-section {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .user-volume-menu .uvm-section + .uvm-section {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .user-volume-menu .uvm-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .user-volume-menu .uvm-slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-volume-menu .uvm-slider-row button {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .user-volume-menu .uvm-slider-row button:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: scale(1.1);
+        }
+
+        .user-volume-menu .uvm-slider-row button.muted {
+            color: var(--accent-red);
+        }
+
+        .user-volume-menu .uvm-slider-row input[type=range] {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-volume-menu .uvm-vol-pct {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            min-width: 30px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
         .idle-fullscreen {
             cursor: none !important;
         }
@@ -1205,6 +1328,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
         </div>
     </div>
+
+    <div id="userVolumeMenu" class="user-volume-menu"></div>
 
     <div id="nameModal" class="modal-overlay">
         <div class="modal-content text-center space-y-6">
@@ -3732,6 +3857,185 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
+        let _uvmLongPressTimer = null;
+        let _uvmTouchMoved = false;
+
+        function handleUserContextMenu(e, el) {
+            e.preventDefault();
+            e.stopPropagation();
+            const userId = el.dataset.userId;
+            const nickname = el.dataset.userNickname;
+            if (!userId || userId === persistentUserId) return;
+            showUserVolumeMenu(userId, nickname, e.clientX, e.clientY);
+        }
+
+        function handleUserTouchStart(e, el) {
+            _uvmTouchMoved = false;
+            const touch = e.touches[0];
+            const tx = touch.clientX;
+            const ty = touch.clientY;
+            _uvmLongPressTimer = setTimeout(() => {
+                if (_uvmTouchMoved) return;
+                const userId = el.dataset.userId;
+                const nickname = el.dataset.userNickname;
+                if (!userId || userId === persistentUserId) return;
+                e.preventDefault();
+                showUserVolumeMenu(userId, nickname, tx, ty);
+            }, 500);
+        }
+
+        function handleUserTouchEnd(e) {
+            if (_uvmLongPressTimer) {
+                clearTimeout(_uvmLongPressTimer);
+                _uvmLongPressTimer = null;
+            }
+        }
+
+        function handleUserTouchCancel() {
+            _uvmTouchMoved = true;
+            if (_uvmLongPressTimer) {
+                clearTimeout(_uvmLongPressTimer);
+                _uvmLongPressTimer = null;
+            }
+        }
+
+        function showUserVolumeMenu(userId, nickname, x, y) {
+            const menu = document.getElementById('userVolumeMenu');
+            if (!menu) return;
+
+            const mainVol = getVolumeSettings(userId, 'main');
+            const hasScreen = !!peerScreenHasAudio[userId];
+            const screenVol = hasScreen ? getVolumeSettings(userId, 'screen') : 1.0;
+
+            const vidEl = document.getElementById(`vid-${userId}`);
+            const mainMuted = vidEl ? vidEl.muted : false;
+            let screenMuted = false;
+            if (hasScreen) {
+                const screenAud = document.getElementById(`aud-screen-${userId}`);
+                screenMuted = screenAud ? screenAud.muted : false;
+            }
+
+            const volSvgOn = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+            const volSvgOff = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
+            const screenSvgOn = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="14" rx="2" ry="2"></rect><line x1="12" y1="22" x2="12" y2="16"></line><path d="M5 12h14"></path><path d="M12 12v4"></path></svg>`;
+            const screenSvgOff = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="14" rx="2" ry="2"></rect><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
+
+            let html = `
+                <div class="uvm-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <span class="uvm-name">${nickname}</span>
+                    <button class="uvm-close" onclick="closeUserVolumeMenu()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div class="uvm-section">
+                    <div class="uvm-label">Mic Volume</div>
+                    <div class="uvm-slider-row">
+                        <button id="uvm-mute-main" class="${mainMuted ? 'muted' : ''}" onclick="uvmToggleMute('${userId}', 'main')">
+                            ${mainMuted ? volSvgOff : volSvgOn}
+                        </button>
+                        <input type="range" min="0" max="1" step="0.05" value="${mainVol}" id="uvm-slider-main" oninput="uvmSetVolume('${userId}', 'main', this.value)">
+                        <span class="uvm-vol-pct" id="uvm-pct-main">${Math.round(mainVol * 100)}%</span>
+                    </div>
+                </div>
+            `;
+
+            if (hasScreen) {
+                html += `
+                <div class="uvm-section">
+                    <div class="uvm-label">Screen Volume</div>
+                    <div class="uvm-slider-row">
+                        <button id="uvm-mute-screen" class="${screenMuted ? 'muted' : ''}" onclick="uvmToggleMute('${userId}', 'screen')">
+                            ${screenMuted ? screenSvgOff : screenSvgOn}
+                        </button>
+                        <input type="range" min="0" max="1" step="0.05" value="${screenVol}" id="uvm-slider-screen" oninput="uvmSetVolume('${userId}', 'screen', this.value)">
+                        <span class="uvm-vol-pct" id="uvm-pct-screen">${Math.round(screenVol * 100)}%</span>
+                    </div>
+                </div>
+                `;
+            }
+
+            menu.innerHTML = html;
+            menu.dataset.userId = userId;
+
+            menu.style.left = '0px';
+            menu.style.top = '0px';
+            menu.classList.add('open');
+
+            requestAnimationFrame(() => {
+                const mw = menu.offsetWidth;
+                const mh = menu.offsetHeight;
+                const vw = window.innerWidth;
+                const vh = window.innerHeight;
+                let left = x;
+                let top = y;
+                if (left + mw > vw - 8) left = vw - mw - 8;
+                if (left < 8) left = 8;
+                if (top + mh > vh - 8) top = vh - mh - 8;
+                if (top < 8) top = 8;
+                menu.style.left = left + 'px';
+                menu.style.top = top + 'px';
+            });
+        }
+
+        function closeUserVolumeMenu() {
+            const menu = document.getElementById('userVolumeMenu');
+            if (menu) {
+                menu.classList.remove('open');
+                menu.dataset.userId = '';
+            }
+        }
+
+        window.uvmToggleMute = function(userId, type) {
+            toggleMute(userId, type);
+
+            let el;
+            if (type === 'screen') {
+                el = document.getElementById(`aud-screen-${userId}`);
+                if (!el) el = document.getElementById(`vid-${userId}`);
+            } else {
+                el = document.getElementById(`vid-${userId}`);
+            }
+            const isMuted = el ? el.muted : false;
+
+            const btn = document.getElementById(`uvm-mute-${type}`);
+            if (btn) {
+                if (type === 'screen') {
+                    const screenSvgOn = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="14" rx="2" ry="2"></rect><line x1="12" y1="22" x2="12" y2="16"></line><path d="M5 12h14"></path><path d="M12 12v4"></path></svg>`;
+                    const screenSvgOff = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="14" rx="2" ry="2"></rect><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
+                    btn.innerHTML = isMuted ? screenSvgOff : screenSvgOn;
+                } else {
+                    const volSvgOn = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+                    const volSvgOff = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`;
+                    btn.innerHTML = isMuted ? volSvgOff : volSvgOn;
+                }
+                btn.classList.toggle('muted', isMuted);
+            }
+        };
+
+        window.uvmSetVolume = function(userId, type, val) {
+            setVolume(userId, type, val);
+
+            const pct = document.getElementById(`uvm-pct-${type}`);
+            if (pct) pct.textContent = Math.round(val * 100) + '%';
+
+            const overlaySlider = document.querySelector(`#vol-row-${type}-${userId} input[type=range]`);
+            if (overlaySlider) overlaySlider.value = val;
+        };
+
+        document.addEventListener('mousedown', function(e) {
+            const menu = document.getElementById('userVolumeMenu');
+            if (menu && menu.classList.contains('open') && !menu.contains(e.target)) {
+                closeUserVolumeMenu();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeUserVolumeMenu();
+            }
+        });
+
         function showKickModal(userId, nickname) {
             const modal = document.getElementById('kickModal');
             const title = document.getElementById('kickTitle');
@@ -3986,7 +4290,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     const isScreenSharing = u.isScreenSharing === true;
 
                     usersHtml += `
-                        <div class="room-user-row pointer-events-auto cursor-pointer" data-user-id="${uid}" data-user-nickname="${u.nickname.replace(/"/g, '&quot;')}" onclick="handleUserClick(this)">
+                        <div class="room-user-row pointer-events-auto cursor-pointer" data-user-id="${uid}" data-user-nickname="${u.nickname.replace(/"/g, '&quot;')}" onclick="handleUserClick(this)" oncontextmenu="handleUserContextMenu(event, this)" ontouchstart="handleUserTouchStart(event, this)" ontouchend="handleUserTouchEnd(event)" ontouchmove="handleUserTouchCancel()">
                             <div class="mini-avatar">
                                 ${u.avatar ? (u.isGif && u.staticFrame ? `<img src="${u.staticFrame}" data-gif-src="${u.avatar}" data-static-src="${u.staticFrame}">` : `<img src="${u.avatar}">`) : `<div class="mini-avatar-placeholder">${u.nickname.charAt(0).toUpperCase()}</div>`}
                             </div>
