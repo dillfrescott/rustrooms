@@ -7148,7 +7148,7 @@ async fn index(State(_state): State<AppState>) -> impl IntoResponse {
     (
         [(
             header::CONTENT_SECURITY_POLICY,
-            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://captcha.dill.moe; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws: https://captcha.dill.moe; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; script-src-elem 'self' https://captcha.dill.moe; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws: https://captcha.dill.moe; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
         )],
         Html(html)
     )
