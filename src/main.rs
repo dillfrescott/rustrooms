@@ -428,6 +428,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             transition: transform 0.1s ease;
         }
 
+        .control-btn.active-red:active {
+            background: linear-gradient(180deg, var(--danger) 0%, var(--accent-dark-red) 100%);
+        }
+
         .control-btn.active-red {
             background: linear-gradient(180deg, var(--danger) 0%, var(--accent-dark-red) 100%);
             border-color: var(--danger);
@@ -445,6 +449,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             background: linear-gradient(180deg, var(--success) 0%, var(--accent-green) 100%);
             border-color: var(--success);
             box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .control-btn.active-green:active {
+            background: linear-gradient(180deg, var(--success) 0%, var(--accent-green) 100%);
         }
 
         .control-btn.active-green:hover {
@@ -816,12 +824,40 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             border-radius: 12px;
             box-shadow: var(--shadow-sm);
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
-        .btn-secondary:hover {
-            background: linear-gradient(180deg, var(--bg-elevated-strong) 0%, var(--bg-elevated) 100%);
-            border-color: var(--border-medium);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
+        @media (hover: hover) {
+            .btn-secondary:hover {
+                background: linear-gradient(180deg, var(--bg-elevated-strong) 0%, var(--bg-elevated) 100%);
+                border-color: var(--border-medium);
+                transform: translateY(-1px);
+                box-shadow: var(--shadow-md);
+            }
+        }
+        .btn-secondary:focus {
+            outline: none;
+        }
+        .btn-secondary:active {
+            transform: translateY(0);
+            transition: transform 0.1s ease;
+        }
+        @media (hover: none) {
+            .btn-secondary:active, .btn-secondary:focus {
+                background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-tertiary) 100%);
+                border-color: var(--border-subtle);
+                transform: none;
+                box-shadow: var(--shadow-sm);
+            }
+            .btn-secondary.active-red:active, .btn-secondary.active-red:focus {
+                background: linear-gradient(180deg, var(--danger) 0%, var(--accent-dark-red) 100%);
+                border-color: var(--danger);
+                transform: none;
+                box-shadow: 0 2px 12px rgba(239, 68, 68, 0.4);
+            }
         }
 
         .btn-secondary.active-red {
@@ -830,11 +866,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             box-shadow: 0 2px 12px rgba(239, 68, 68, 0.4);
         }
 
-        .btn-secondary.active-red:hover {
-            background: linear-gradient(180deg, var(--accent-red-hover) 0%, var(--danger) 100%);
-            border-color: var(--accent-red-hover);
-            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
-            transform: translateY(-2px);
+        @media (hover: hover) {
+            .btn-secondary.active-red:hover {
+                background: linear-gradient(180deg, var(--accent-red-hover) 0%, var(--danger) 100%);
+                border-color: var(--accent-red-hover);
+                box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+                transform: translateY(-2px);
+            }
         }
 
         .status-pill {
@@ -3092,6 +3130,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         btnMic.classList.remove('active-red');
                         btnMic.innerText = "Mute";
                     }
+                    btnMic.blur();
                  }
                  savePreferences();
                  return;
@@ -3123,6 +3162,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         btnCam.innerText = "Stop Cam";
                         document.getElementById('previewPlaceholder').style.display = 'none';
                     }
+                    btnCam.blur();
                  }
                  savePreferences();
                  return;
