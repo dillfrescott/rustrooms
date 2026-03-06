@@ -3416,7 +3416,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             // Captcha verification
-            const existingToken = sessionStorage.getItem('rustrooms_captcha_token');
+            const existingToken = sessionStorage.getItem('rustrooms_captcha_token_' + roomId);
             if (existingToken) {
                 window.captchaToken = existingToken;
                 proceedJoinRoom();
@@ -3433,7 +3433,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 console.log('FCaptcha result:', captchaResult);
 
                 window.captchaToken = captchaResult.token;
-                sessionStorage.setItem('rustrooms_captcha_token', captchaResult.token);
+                sessionStorage.setItem('rustrooms_captcha_token_' + roomId, captchaResult.token);
 
                 showCaptchaSuccess();
                 setTimeout(() => {
@@ -4571,7 +4571,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 type: "join",
                                 data: {
                                     userId: persistentUserId,
-                                    captchaToken: window.captchaToken || sessionStorage.getItem('rustrooms_captcha_token'),
+                                    captchaToken: window.captchaToken || sessionStorage.getItem('rustrooms_captcha_token_' + roomId),
                                     nickname: userNickname,
                                     avatar: userAvatar,
                                     isGif: userAvatarIsGif,
