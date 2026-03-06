@@ -3422,14 +3422,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 console.log('FCaptcha result:', captchaResult);
 
-                const verifyResult = await verifyCaptcha(captchaResult.token);
-
-                console.log('Captcha verify result:', verifyResult);
-
-                if (!verifyResult.valid || (verifyResult.score !== null && verifyResult.score >= 0.5)) {
-                    showCaptchaFailed('Verification failed. Please try again.');
-                    return;
-                }
+                window.captchaToken = captchaResult.token;
 
                 showCaptchaSuccess();
                 setTimeout(() => {
@@ -4563,10 +4556,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             const audioTrack = localStream && localStream.getAudioTracks()[0];
                             const isMuted = !audioTrack || !audioTrack.enabled;
 
-                                    ws.send(JSON.stringify({
+                                ws.send(JSON.stringify({
                                 type: "join",
                                 data: {
                                     userId: persistentUserId,
+                                    captchaToken: window.captchaToken,
                                     nickname: userNickname,
                                     avatar: userAvatar,
                                     isGif: userAvatarIsGif,
@@ -7004,7 +6998,7 @@ async fn verify_captcha(
     headers: axum::http::HeaderMap,
     Json(payload): Json<CaptchaVerifyRequest>
 ) -> impl IntoResponse {
-    let captcha_secret = std::env::var("CAPTCHA_SECRET").unwrap_or_else(|_| "default-secret".to_string());
+    let captcha_secret = "rustrooms-secret".to_string();
 
     let mut client_ip = String::new();
     if let Some(real_ip) = headers.get("X-Real-IP") {
@@ -7299,6 +7293,69 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                             if let Some(ref a) = avatar {
                                 if a.len() > 7_000_000 {
                                     avatar = None;
+                                }
+                            }
+
+                            let captcha_token = parsed.data.as_ref()
+                                .and_then(|d| d.get("captchaToken"))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
+                                
+                            let is_reconnect = {
+                                let rooms_lock = rooms.lock().await;
+                                rooms_lock.get(&room_id).and_then(|r| r.get(&channel_id)).map(|c| c.contains_key(&user_id)).unwrap_or(false)
+                            };
+
+                            if !is_reconnect {
+                                if !captcha_token.is_empty() {
+                                    let captcha_secret = "rustrooms-secret".to_string();
+                                    let client = reqwest::Client::new();
+                                    let resp = client.post("https://captcha.dill.moe/api/token/verify")
+                                        .json(&serde_json::json!({
+                                            "token": captcha_token,
+                                            "secret": captcha_secret
+                                        }))
+                                        .send()
+                                        .await;
+                                    
+                                    let mut is_valid_captcha = false;
+                                    if let Ok(response) = resp {
+                                        if let Ok(verify_result) = response.json::<serde_json::Value>().await {
+                                            let valid = verify_result.get("valid").and_then(|v| v.as_bool()).unwrap_or(false);
+                                            let score = verify_result.get("score").and_then(|v| v.as_f64()).unwrap_or(1.0);
+                                            if valid && score < 0.5 {
+                                                is_valid_captcha = true;
+                                            }
+                                        }
+                                    }
+                                    
+                                    if !is_valid_captcha {
+                                        let error_msg = serde_json::to_string(&SignalMessage {
+                                            msg_type: "error".into(),
+                                            user_id: None,
+                                            target: None,
+                                            data: Some(serde_json::json!({
+                                                "code": "CAPTCHA_FAILED",
+                                                "message": "Captcha verification failed."
+                                            })),
+                                        }).unwrap();
+                                        let _ = tx.send(Ok(Message::Text(error_msg.into()))).await;
+                                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                                        return;
+                                    }
+                                } else {
+                                    let error_msg = serde_json::to_string(&SignalMessage {
+                                        msg_type: "error".into(),
+                                        user_id: None,
+                                        target: None,
+                                        data: Some(serde_json::json!({
+                                            "code": "CAPTCHA_REQUIRED",
+                                            "message": "Captcha token is required to join."
+                                        })),
+                                    }).unwrap();
+                                    let _ = tx.send(Ok(Message::Text(error_msg.into()))).await;
+                                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                                    return;
                                 }
                             }
 
