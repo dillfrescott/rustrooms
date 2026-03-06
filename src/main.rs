@@ -7194,8 +7194,15 @@ async fn ws_handler(
         }
     }
 
+    let mut client_ip = String::new();
+    if let Some(real_ip) = headers.get("X-Real-IP") {
+        client_ip = real_ip.to_str().unwrap_or("").to_string();
+    } else if let Some(forwarded_for) = headers.get("X-Forwarded-For") {
+        client_ip = forwarded_for.to_str().unwrap_or("").split(',').next().unwrap_or("").trim().to_string();
+    }
+
     ws.max_message_size(8 * 1024 * 1024)
-        .on_upgrade(move |socket| handle_socket(socket, room_id, channel_id, state))
+        .on_upgrade(move |socket| handle_socket(socket, room_id, channel_id, state, client_ip))
 }
 
 async fn broadcast_channel_list(rooms: &RoomMap, room_id: &str) {
@@ -7233,7 +7240,7 @@ async fn broadcast_channel_list(rooms: &RoomMap, room_id: &str) {
     }
 }
 
-async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, state: AppState) {
+async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, state: AppState, client_ip: String) {
     let rooms = state.rooms.clone();
     let room_cleanup_generations = state.room_cleanup_generations.clone();
     let (mut user_ws_tx, mut user_ws_rx) = socket.split();
@@ -7344,7 +7351,13 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 if !is_verified_session && !captcha_token.is_empty() {
                                     let captcha_secret = "rustrooms-secret".to_string();
                                     let client = reqwest::Client::new();
-                                    let resp = client.post("https://captcha.dill.moe/api/token/verify")
+                                    let mut request_builder = client.post("https://captcha.dill.moe/api/token/verify");
+
+                                    if !client_ip.is_empty() {
+                                        request_builder = request_builder.header("X-Forwarded-For", &client_ip);
+                                    }
+
+                                    let resp = request_builder
                                         .json(&serde_json::json!({
                                             "token": captcha_token,
                                             "secret": captcha_secret
