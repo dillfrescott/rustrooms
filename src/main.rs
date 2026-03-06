@@ -16,6 +16,7 @@ use std::{
 };
 use tokio::sync::Mutex;
 use uuid::Uuid;
+use std::time::Instant;
 
 async fn rnnoise_js() -> impl IntoResponse {
     (
@@ -3415,6 +3416,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             // Captcha verification
+            const existingToken = sessionStorage.getItem('rustrooms_captcha_token');
+            if (existingToken) {
+                window.captchaToken = existingToken;
+                proceedJoinRoom();
+                return;
+            }
+
             showCaptchaModal();
             try {
                 FCaptcha.configure({ serverUrl: 'https://captcha.dill.moe' });
@@ -3422,7 +3430,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 console.log('FCaptcha result:', captchaResult);
 
+                console.log('FCaptcha result:', captchaResult);
+
                 window.captchaToken = captchaResult.token;
+                sessionStorage.setItem('rustrooms_captcha_token', captchaResult.token);
 
                 showCaptchaSuccess();
                 setTimeout(() => {
@@ -4560,7 +4571,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 type: "join",
                                 data: {
                                     userId: persistentUserId,
-                                    captchaToken: window.captchaToken,
+                                    captchaToken: window.captchaToken || sessionStorage.getItem('rustrooms_captcha_token'),
                                     nickname: userNickname,
                                     avatar: userAvatar,
                                     isGif: userAvatarIsGif,
@@ -6973,13 +6984,16 @@ type UserTx = tokio::sync::mpsc::Sender<Result<Message, axum::Error>>;
 type ChannelMap = HashMap<String, HashMap<String, (UserTx, UserStatus)>>;
 type RoomMap = Arc<Mutex<HashMap<String, ChannelMap>>>;
 type RoomCleanupMap = Arc<Mutex<HashMap<String, u64>>>;
+type VerifiedSessionsMap = Arc<Mutex<HashMap<String, Instant>>>;
 const ROOM_EMPTY_GRACE_SECS: u64 = 120;
+const SESSION_VALIDITY_SECS: u64 = 86400; // 24 hours
 
 #[derive(Clone)]
 struct AppState {
     rooms: RoomMap,
     room_cleanup_generations: RoomCleanupMap,
     room_creation_password: Option<String>,
+    verified_sessions: VerifiedSessionsMap,
 }
 
 #[derive(Deserialize)]
@@ -7051,13 +7065,13 @@ async fn verify_captcha(
 async fn main() {
     let rooms: RoomMap = Arc::new(Mutex::new(HashMap::new()));
     let room_cleanup_generations: RoomCleanupMap = Arc::new(Mutex::new(HashMap::new()));
-
-    let room_creation_password = std::env::var("ROOM_CREATION_PASSWORD").ok().filter(|s| !s.is_empty());
+    let verified_sessions: VerifiedSessionsMap = Arc::new(Mutex::new(HashMap::new()));
 
     let state = AppState {
         rooms,
         room_cleanup_generations,
-        room_creation_password,
+        room_creation_password: std::env::var("ROOM_CREATION_PASSWORD").ok().filter(|s| !s.is_empty()),
+        verified_sessions,
     };
 
     let app = Router::new()
@@ -7306,8 +7320,28 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 rooms_lock.get(&room_id).and_then(|r| r.get(&channel_id)).map(|c| c.contains_key(&user_id)).unwrap_or(false)
                             };
 
+                            let session_key = format!("{}:{}", room_id, user_id);
+                            let mut is_verified_session = false;
+
                             if !is_reconnect {
-                                if !captcha_token.is_empty() {
+                                {
+                                    let mut sessions_lock = state.verified_sessions.lock().await;
+                                    // Cleanup old sessions occasionally
+                                    if sessions_lock.len() > 1000 {
+                                        let now = Instant::now();
+                                        sessions_lock.retain(|_, time| now.duration_since(*time).as_secs() < SESSION_VALIDITY_SECS);
+                                    }
+                                    
+                                    if let Some(time) = sessions_lock.get(&session_key) {
+                                        if time.elapsed().as_secs() < SESSION_VALIDITY_SECS {
+                                            is_verified_session = true;
+                                            // Extend the session duration
+                                            sessions_lock.insert(session_key.clone(), Instant::now());
+                                        }
+                                    }
+                                }
+
+                                if !is_verified_session && !captcha_token.is_empty() {
                                     let captcha_secret = "rustrooms-secret".to_string();
                                     let client = reqwest::Client::new();
                                     let resp = client.post("https://captcha.dill.moe/api/token/verify")
@@ -7318,18 +7352,34 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         .send()
                                         .await;
                                     
-                                    let mut is_valid_captcha = false;
                                     if let Ok(response) = resp {
                                         if let Ok(verify_result) = response.json::<serde_json::Value>().await {
                                             let valid = verify_result.get("valid").and_then(|v| v.as_bool()).unwrap_or(false);
                                             let score = verify_result.get("score").and_then(|v| v.as_f64()).unwrap_or(1.0);
                                             if valid && score < 0.5 {
-                                                is_valid_captcha = true;
+                                                is_verified_session = true;
+                                                let mut sessions_lock = state.verified_sessions.lock().await;
+                                                sessions_lock.insert(session_key.clone(), Instant::now());
                                             }
                                         }
                                     }
-                                    
-                                    if !is_valid_captcha {
+                                }
+                                
+                                if !is_verified_session {
+                                    if captcha_token.is_empty() {
+                                        let error_msg = serde_json::to_string(&SignalMessage {
+                                            msg_type: "error".into(),
+                                            user_id: None,
+                                            target: None,
+                                            data: Some(serde_json::json!({
+                                                "code": "CAPTCHA_REQUIRED",
+                                                "message": "Captcha token is required to join."
+                                            })),
+                                        }).unwrap();
+                                        let _ = tx.send(Ok(Message::Text(error_msg.into()))).await;
+                                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                                        return;
+                                    } else {
                                         let error_msg = serde_json::to_string(&SignalMessage {
                                             msg_type: "error".into(),
                                             user_id: None,
@@ -7343,19 +7393,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                                         return;
                                     }
-                                } else {
-                                    let error_msg = serde_json::to_string(&SignalMessage {
-                                        msg_type: "error".into(),
-                                        user_id: None,
-                                        target: None,
-                                        data: Some(serde_json::json!({
-                                            "code": "CAPTCHA_REQUIRED",
-                                            "message": "Captcha token is required to join."
-                                        })),
-                                    }).unwrap();
-                                    let _ = tx.send(Ok(Message::Text(error_msg.into()))).await;
-                                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                                    return;
                                 }
                             }
 
