@@ -171,7 +171,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     <meta name="theme-color" content="#09090b">
     <script src="/assets/tailwind.js"></script>
     <link href="/assets/inter.css" rel="stylesheet">
-    <script src="https://captcha.dill.moe/fcaptcha.js"></script>
+    <script src="https://captcha.dill.moe/dcaptcha.js"></script>
     <style>
         :root {
             --bg-primary: #000000;
@@ -1401,13 +1401,24 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 </div>
                 <h3 class="text-2xl font-bold text-white">Analyzing...</h3>
                 <p class="text-zinc-300">Verifying you're human</p>
+                <p class="text-zinc-500 text-sm">This may take up to 20 seconds while our AI analyzes your behavior</p>
             </div>
             <div id="captchaSuccess" class="hidden space-y-4">
                 <div class="flex justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                 </div>
                 <h3 class="text-2xl font-bold text-white">Verification Passed!</h3>
-                <p class="text-zinc-300">Joining room...</p>
+                <div class="text-left space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-zinc-400 text-sm">Human Score</span>
+                        <span id="captchaScore" class="text-white font-mono font-bold">--</span>
+                    </div>
+                    <div>
+                        <span class="text-zinc-400 text-sm block mb-1">Analysis</span>
+                        <p id="captchaReason" class="text-zinc-300 text-sm leading-relaxed">--</p>
+                    </div>
+                </div>
+                <p class="text-zinc-300 text-sm">Joining room...</p>
             </div>
             <div id="captchaFailed" class="hidden space-y-4">
                 <div class="flex justify-center">
@@ -3418,31 +3429,67 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 return;
             }
 
-            // Captcha verification
-            const existingToken = sessionStorage.getItem('rustrooms_captcha_token_' + roomId);
-            if (existingToken) {
-                window.captchaToken = existingToken;
-                proceedJoinRoom();
-                return;
+            // Captcha verification - check for global 24-hour token
+            const CAPTCHA_TOKEN_KEY = 'rustrooms_global_captcha_token';
+            const CAPTCHA_SCORE_KEY = 'rustrooms_global_captcha_score';
+            const CAPTCHA_REASON_KEY = 'rustrooms_global_captcha_reason';
+            const CAPTCHA_EXPIRY_KEY = 'rustrooms_global_captcha_expiry';
+            
+            const existingToken = localStorage.getItem(CAPTCHA_TOKEN_KEY);
+            const existingExpiry = localStorage.getItem(CAPTCHA_EXPIRY_KEY);
+            
+            if (existingToken && existingExpiry) {
+                const expiryTime = parseInt(existingExpiry, 10);
+                const now = Date.now();
+                if (now < expiryTime) {
+                    // Token is still valid
+                    window.captchaToken = existingToken;
+                    window.captchaScore = parseFloat(localStorage.getItem(CAPTCHA_SCORE_KEY) || '1');
+                    window.captchaReason = localStorage.getItem(CAPTCHA_REASON_KEY) || 'Previously verified';
+                    console.log('Using existing global captcha token (valid for ' + Math.round((expiryTime - now) / 1000 / 60) + ' more minutes)');
+                    proceedJoinRoom();
+                    return;
+                } else {
+                    // Token expired, clean up
+                    localStorage.removeItem(CAPTCHA_TOKEN_KEY);
+                    localStorage.removeItem(CAPTCHA_SCORE_KEY);
+                    localStorage.removeItem(CAPTCHA_REASON_KEY);
+                    localStorage.removeItem(CAPTCHA_EXPIRY_KEY);
+                }
             }
 
             showCaptchaModal();
             try {
-                FCaptcha.configure({ serverUrl: 'https://captcha.dill.moe' });
-                const captchaResult = await FCaptcha.execute('rustrooms-site-key', { action: 'join_room' });
+                DCaptcha.configure({ serverUrl: 'https://captcha.dill.moe' });
+                const captchaToken = await DCaptcha.execute('rustrooms-site-key', { action: 'join_room' });
+                const captchaFullResult = DCaptcha._lastResult;
 
-                console.log('FCaptcha result:', captchaResult);
+                console.log('DCaptcha token:', captchaToken);
+                console.log('DCaptcha full result:', captchaFullResult);
 
-                console.log('FCaptcha result:', captchaResult);
+                if (!captchaToken) {
+                    throw new Error('No token returned from DCaptcha');
+                }
 
-                window.captchaToken = captchaResult.token;
-                sessionStorage.setItem('rustrooms_captcha_token_' + roomId, captchaResult.token);
+                const captchaScore = captchaFullResult?.score || 0;
+                const captchaReason = captchaFullResult?.reason || 'No reason provided';
+                
+                // Store globally for 24 hours
+                const expiryTime = Date.now() + (24 * 60 * 60 * 1000); // 24 hours in milliseconds
 
-                showCaptchaSuccess();
+                window.captchaToken = captchaToken;
+                window.captchaScore = captchaScore;
+                window.captchaReason = captchaReason;
+                localStorage.setItem(CAPTCHA_TOKEN_KEY, captchaToken);
+                localStorage.setItem(CAPTCHA_SCORE_KEY, captchaScore.toString());
+                localStorage.setItem(CAPTCHA_REASON_KEY, captchaReason);
+                localStorage.setItem(CAPTCHA_EXPIRY_KEY, expiryTime.toString());
+
+                showCaptchaSuccess(captchaScore, captchaReason);
                 setTimeout(() => {
                     closeCaptchaModal();
                     proceedJoinRoom();
-                }, 1500);
+                }, 3000);
             } catch (error) {
                 console.error('Captcha error:', error);
                 showCaptchaFailed('Unable to verify. Please try again.');
@@ -3861,10 +3908,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             document.getElementById('captchaModal').classList.remove('open');
         }
 
-        function showCaptchaSuccess() {
+        function showCaptchaSuccess(score, reason) {
             document.getElementById('captchaAnalyzing').classList.add('hidden');
             document.getElementById('captchaSuccess').classList.remove('hidden');
             document.getElementById('captchaFailed').classList.add('hidden');
+            
+            // Display LLM score and reason
+            if (score !== undefined && score !== null) {
+                document.getElementById('captchaScore').textContent = (score * 100).toFixed(0) + '%';
+            }
+            if (reason) {
+                document.getElementById('captchaReason').textContent = reason;
+            }
         }
 
         function showCaptchaFailed(message) {
@@ -4574,7 +4629,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 type: "join",
                                 data: {
                                     userId: persistentUserId,
-                                    captchaToken: window.captchaToken || sessionStorage.getItem('rustrooms_captcha_token_' + roomId),
+                                    captchaToken: window.captchaToken || localStorage.getItem('rustrooms_global_captcha_token'),
                                     nickname: userNickname,
                                     avatar: userAvatar,
                                     isGif: userAvatarIsGif,
@@ -6989,8 +7044,10 @@ type RoomMap = Arc<Mutex<HashMap<String, ChannelMap>>>;
 type RoomCleanupMap = Arc<Mutex<HashMap<String, u64>>>;
 type VerifiedSessionsMap = Arc<Mutex<HashMap<String, Instant>>>;
 type RemoteUsersMap = Arc<Mutex<HashMap<String, HashMap<String, HashMap<String, UserStatus>>>>>;
+type CaptchaTokenStore = Arc<Mutex<HashMap<String, (Instant, f64, String)>>>; // token -> (expiry, score, reason)
 const ROOM_EMPTY_GRACE_SECS: u64 = 120;
 const SESSION_VALIDITY_SECS: u64 = 86400; // 24 hours
+const CAPTCHA_TOKEN_VALIDITY_SECS: u64 = 86400; // 24 hours
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct ClusterMessage {
@@ -7014,6 +7071,7 @@ struct AppState {
     room_cleanup_generations: RoomCleanupMap,
     room_creation_password: Option<String>,
     verified_sessions: VerifiedSessionsMap,
+    captcha_tokens: CaptchaTokenStore,
     cluster_tx: tokio::sync::broadcast::Sender<String>,
     remote_users: RemoteUsersMap,
     cluster_key: Option<String>,
@@ -7035,11 +7093,10 @@ struct CaptchaVerifyResponse {
 }
 
 async fn verify_captcha(
+    State(state): State<AppState>,
     headers: axum::http::HeaderMap,
     Json(payload): Json<CaptchaVerifyRequest>
 ) -> impl IntoResponse {
-    let captcha_secret = "rustrooms-secret".to_string();
-
     let mut client_ip = String::new();
     if let Some(real_ip) = headers.get("X-Real-IP") {
         client_ip = real_ip.to_str().unwrap_or("").to_string();
@@ -7056,8 +7113,7 @@ async fn verify_captcha(
 
     let response = request_builder
         .json(&serde_json::json!({
-            "token": payload.token,
-            "secret": captcha_secret
+            "token": payload.token
         }))
         .send()
         .await;
@@ -7066,13 +7122,21 @@ async fn verify_captcha(
         Ok(resp) => {
             let verify_result: serde_json::Value = resp.json().await.unwrap_or_default();
             let valid = verify_result.get("valid").and_then(|v| v.as_bool()).unwrap_or(false);
-            let score = verify_result.get("score").and_then(|v| v.as_f64());
+            let score = verify_result.get("score").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let reason = verify_result.get("reason").and_then(|v| v.as_str()).unwrap_or("unknown");
 
-            println!("CAPTCHA VERIFY: valid={}, score={:?}, ip={}", valid, score, client_ip);
+            println!("CAPTCHA VERIFY: valid={}, score={}, reason={}, ip={}", valid, score, reason, client_ip);
+
+            if valid {
+                // Store the token globally for 24 hours
+                let expiry = Instant::now() + std::time::Duration::from_secs(CAPTCHA_TOKEN_VALIDITY_SECS);
+                let mut tokens_lock = state.captcha_tokens.lock().await;
+                tokens_lock.insert(payload.token.clone(), (expiry, score, reason.to_string()));
+            }
 
             Json(CaptchaVerifyResponse {
                 valid,
-                score,
+                score: Some(score),
                 message: None,
             })
         }
@@ -7092,6 +7156,7 @@ async fn main() {
     let rooms: RoomMap = Arc::new(Mutex::new(HashMap::new()));
     let room_cleanup_generations: RoomCleanupMap = Arc::new(Mutex::new(HashMap::new()));
     let verified_sessions: VerifiedSessionsMap = Arc::new(Mutex::new(HashMap::new()));
+    let captcha_tokens: CaptchaTokenStore = Arc::new(Mutex::new(HashMap::new()));
 
     let room_creation_password = std::env::var("ROOM_CREATION_PASSWORD").ok().map(|p| p.trim().to_string()).filter(|s| !s.is_empty());
     let cluster_key = std::env::var("KEY").ok().map(|k| k.trim().to_string()).filter(|s| !s.is_empty());
@@ -7107,6 +7172,7 @@ async fn main() {
         room_cleanup_generations,
         room_creation_password,
         verified_sessions,
+        captcha_tokens,
         cluster_tx,
         remote_users,
         cluster_key,
@@ -7114,6 +7180,18 @@ async fn main() {
         recent_cluster_msg_ids: Arc::new(Mutex::new(HashSet::new())),
         cluster_msg_history: Arc::new(Mutex::new(VecDeque::new())),
     };
+
+    // Spawn periodic cleanup for expired captcha tokens
+    let cleanup_state = state.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(3600)).await; // Clean up every hour
+            let mut tokens_lock = cleanup_state.captcha_tokens.lock().await;
+            let now = Instant::now();
+            tokens_lock.retain(|_, (expiry, _, _)| now < *expiry);
+            println!("CAPTCHA TOKEN CLEANUP: {} tokens remaining", tokens_lock.len());
+        }
+    });
 
     let app = Router::new()
         .route("/", get(index))
@@ -7938,7 +8016,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         let now = Instant::now();
                                         sessions_lock.retain(|_, time| now.duration_since(*time).as_secs() < SESSION_VALIDITY_SECS);
                                     }
-                                    
+
                                     if let Some(time) = sessions_lock.get(&session_key) {
                                         if time.elapsed().as_secs() < SESSION_VALIDITY_SECS {
                                             is_verified_session = true;
@@ -7948,8 +8026,20 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     }
                                 }
 
+                                // Check global captcha token store first
                                 if !is_verified_session && !captcha_token.is_empty() {
-                                    let captcha_secret = "rustrooms-secret".to_string();
+                                    let tokens_lock = state.captcha_tokens.lock().await;
+                                    if let Some((expiry, score, _)) = tokens_lock.get(captcha_token) {
+                                        if Instant::now() < *expiry && score > &0.5 {
+                                            is_verified_session = true;
+                                            let mut sessions_lock = state.verified_sessions.lock().await;
+                                            sessions_lock.insert(session_key.clone(), Instant::now());
+                                        }
+                                    }
+                                }
+
+                                // If not verified via global store, verify with external service
+                                if !is_verified_session && !captcha_token.is_empty() {
                                     let client = reqwest::Client::new();
                                     let mut request_builder = client.post("https://captcha.dill.moe/api/token/verify");
 
@@ -7957,22 +8047,38 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         request_builder = request_builder.header("X-Forwarded-For", &client_ip);
                                     }
 
+                                    println!("CAPTCHA WebSocket: Verifying token for ip={}, token_len={}", client_ip, captcha_token.len());
+
                                     let resp = request_builder
                                         .json(&serde_json::json!({
-                                            "token": captcha_token,
-                                            "secret": captcha_secret
+                                            "token": captcha_token
                                         }))
                                         .send()
                                         .await;
-                                    
+
+                                    match &resp {
+                                        Ok(r) => println!("CAPTCHA WebSocket: Response status={}", r.status()),
+                                        Err(e) => println!("CAPTCHA WebSocket: Request error={}", e),
+                                    }
+
                                     if let Ok(response) = resp {
-                                        if let Ok(verify_result) = response.json::<serde_json::Value>().await {
+                                        let _status = response.status();
+                                        let raw_body = response.text().await.unwrap_or_default();
+                                        println!("CAPTCHA WebSocket: Raw response body={}", raw_body);
+
+                                        if let Ok(verify_result) = serde_json::from_str::<serde_json::Value>(&raw_body) {
                                             let valid = verify_result.get("valid").and_then(|v| v.as_bool()).unwrap_or(false);
-                                            let score = verify_result.get("score").and_then(|v| v.as_f64()).unwrap_or(1.0);
-                                            if valid && score < 0.5 {
+                                            let score = verify_result.get("score").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                                            let reason = verify_result.get("reason").and_then(|v| v.as_str()).unwrap_or("unknown");
+                                            println!("CAPTCHA WebSocket VERIFY: valid={}, score={}, reason={}, ip={}", valid, score, reason, client_ip);
+                                            if valid && score > 0.5 {
                                                 is_verified_session = true;
                                                 let mut sessions_lock = state.verified_sessions.lock().await;
                                                 sessions_lock.insert(session_key.clone(), Instant::now());
+                                                // Also store in global token store
+                                                let expiry = Instant::now() + std::time::Duration::from_secs(CAPTCHA_TOKEN_VALIDITY_SECS);
+                                                let mut tokens_lock = state.captcha_tokens.lock().await;
+                                                tokens_lock.insert(captcha_token.to_string(), (expiry, score, reason.to_string()));
                                             }
                                         }
                                     }
