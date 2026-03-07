@@ -573,6 +573,157 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .ping-fair .ping-bar-1, .ping-fair .ping-bar-2 { background-color: var(--warning); }
         .ping-poor .ping-bar-1 { background-color: var(--danger); }
 
+        .status-pill {
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .status-pill-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .stats-window {
+            position: fixed;
+            width: 320px;
+            background: var(--bg-elevated-strong);
+            backdrop-filter: blur(40px) saturate(200%) brightness(110%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(110%);
+            border: 1px solid var(--border-medium);
+            border-radius: 12px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.4);
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .stats-window.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .stats-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-elevated-strong) 100%);
+        }
+
+        .stats-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stats-close {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            color: var(--text-muted);
+        }
+
+        .stats-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .stats-content {
+            padding: 12px 16px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .stat-value.good { color: var(--success); }
+        .stat-value.fair { color: var(--warning); }
+        .stat-value.poor { color: var(--danger); }
+
+        .stats-section {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .stats-section:first-child {
+            margin-top: 0;
+            padding-top: 0;
+            border-top: none;
+        }
+
+        .stats-section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stats-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 0.8rem;
+        }
+
+        .stats-row-label {
+            color: var(--text-muted);
+        }
+
+        .stats-row-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .stats-refresh {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 8px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
         input[type=range] {
             -webkit-appearance: none;
             background: transparent;
@@ -1580,18 +1731,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             </div>
 
             <div class="flex items-center justify-end gap-2 md:gap-3 flex-shrink-0">
-                <div class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center justify-center gap-2 md:gap-2.5 flex-shrink-0 h-8 md:h-10">
-                    <div id="connectionDot" class="connection-dot"></div>
-                    <span id="statusText" class="text-xs md:text-sm font-medium hidden sm:inline-block" style="color: var(--text-primary);">Waiting...</span>
-                    <button id="btnReconnect" onclick="retryConnection()" class="hidden ml-1 p-1 rounded-lg transition-all hover:bg-white/10" style="color: var(--text-muted);" title="Retry Connection">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-                    </button>
-                    <div id="pingContainer" class="ping-container hidden !ml-0 !pl-1.5 md:!ml-0 md:!pl-2 border-l !border-[var(--border-subtle)]">
-                        <span id="pingText" class="tabular-nums shrink-0 mr-1 md:mr-1.5">0ms</span>
-                        <div id="pingBars" class="ping-bars">
-                            <div class="ping-bar ping-bar-1"></div>
-                            <div class="ping-bar ping-bar-2"></div>
-                            <div class="ping-bar ping-bar-3"></div>
+                <div class="status-pill-wrapper" id="statusPillWrapper">
+                    <div class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center justify-center gap-2 md:gap-2.5 flex-shrink-0 h-8 md:h-10" onclick="toggleStatsWindow()">
+                        <div id="connectionDot" class="connection-dot"></div>
+                        <span id="statusText" class="text-xs md:text-sm font-medium hidden sm:inline-block" style="color: var(--text-primary);">Waiting...</span>
+                        <button id="btnReconnect" onclick="event.stopPropagation(); retryConnection()" class="hidden ml-1 p-1 rounded-lg transition-all hover:bg-white/10" style="color: var(--text-muted);" title="Retry Connection">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                        </button>
+                        <div id="pingContainer" class="ping-container hidden !ml-0 !pl-1.5 md:!ml-0 md:!pl-2 border-l !border-[var(--border-subtle)]">
+                            <span id="pingText" class="tabular-nums shrink-0 mr-1 md:mr-1.5">0ms</span>
+                            <div id="pingBars" class="ping-bars">
+                                <div class="ping-bar ping-bar-1"></div>
+                                <div class="ping-bar ping-bar-2"></div>
+                                <div class="ping-bar ping-bar-3"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1993,6 +2146,153 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     pingContainer.classList.add('ping-poor');
                 }
             }
+        }
+
+        let statsWindowVisible = false;
+        let statsUpdateInterval = null;
+
+        function toggleStatsWindow() {
+            const statsWindow = document.getElementById('statsWindow');
+            const statusPillWrapper = document.getElementById('statusPillWrapper');
+            if (!statsWindow || !statusPillWrapper) return;
+
+            statsWindowVisible = !statsWindowVisible;
+
+            if (statsWindowVisible) {
+                const rect = statusPillWrapper.getBoundingClientRect();
+                const top = rect.bottom + window.scrollY + 8;
+                const right = window.innerWidth - rect.right + window.scrollX;
+                statsWindow.style.top = `${top}px`;
+                statsWindow.style.right = `${right}px`;
+                statsWindow.classList.add('visible');
+                startStatsUpdate();
+            } else {
+                statsWindow.classList.remove('visible');
+                stopStatsUpdate();
+            }
+        }
+
+        function startStatsUpdate() {
+            if (statsUpdateInterval) return;
+            updateWebRTCStats();
+            statsUpdateInterval = setInterval(updateWebRTCStats, 2000);
+        }
+
+        function stopStatsUpdate() {
+            if (statsUpdateInterval) {
+                clearInterval(statsUpdateInterval);
+                statsUpdateInterval = null;
+            }
+        }
+
+        async function updateWebRTCStats() {
+            const statPing = document.getElementById('statPing');
+            const statJitter = document.getElementById('statJitter');
+            const statVideoRes = document.getElementById('statVideoRes');
+            const statVideoBitrate = document.getElementById('statVideoBitrate');
+            const statVideoCodec = document.getElementById('statVideoCodec');
+            const statVideoFrames = document.getElementById('statVideoFrames');
+            const statAudioBitrate = document.getElementById('statAudioBitrate');
+            const statAudioCodec = document.getElementById('statAudioCodec');
+            const statPacketsSent = document.getElementById('statPacketsSent');
+            const statPacketsReceived = document.getElementById('statPacketsReceived');
+            const statPacketsLost = document.getElementById('statPacketsLost');
+
+            const pingText = document.getElementById('pingText');
+            if (pingText && statPing) {
+                statPing.textContent = pingText.textContent;
+                statPing.className = 'stat-value ' + (parseInt(pingText.textContent) < 100 ? 'good' : parseInt(pingText.textContent) < 250 ? 'fair' : 'poor');
+            }
+
+            let totalPacketsSent = 0;
+            let totalPacketsReceived = 0;
+            let totalPacketsLost = 0;
+            let videoRes = '--';
+            let videoBitrate = '--';
+            let videoCodec = '--';
+            let videoFrames = '--';
+            let audioBitrate = '--';
+            let audioCodec = '--';
+            let jitter = '--';
+
+            const peerValues = Object.values(peers);
+
+            for (const pc of peerValues) {
+                try {
+                    const stats = await pc.getStats();
+                    stats.forEach(report => {
+                        if (report.type === 'inbound-rtp' && report.kind === 'video') {
+                            const width = report.frameWidth || 0;
+                            const height = report.frameHeight || 0;
+                            if (width > 0 && height > 0) {
+                                videoRes = `${width}x${height}`;
+                            }
+                            const fps = report.framesPerSecond || 0;
+                            if (fps > 0) {
+                                videoFrames = `${fps} fps`;
+                            }
+                            const bitrate = report.bytesReceived ? Math.round((report.bytesReceived * 8) / 1000) : 0;
+                            if (bitrate > 0) {
+                                videoBitrate = `${bitrate} kbps`;
+                            }
+                            totalPacketsReceived += report.packetsReceived || 0;
+                            totalPacketsLost += report.packetsLost || 0;
+                        } else if (report.type === 'inbound-rtp' && report.kind === 'audio') {
+                            const bitrate = report.bytesReceived ? Math.round((report.bytesReceived * 8) / 1000) : 0;
+                            if (bitrate > 0) {
+                                audioBitrate = `${bitrate} kbps`;
+                            }
+                            totalPacketsReceived += report.packetsReceived || 0;
+                            totalPacketsLost += report.packetsLost || 0;
+                        } else if (report.type === 'outbound-rtp' && report.kind === 'video') {
+                            const width = report.frameWidth || 0;
+                            const height = report.frameHeight || 0;
+                            if (width > 0 && height > 0 && videoRes === '--') {
+                                videoRes = `${width}x${height}`;
+                            }
+                            const fps = report.framesPerSecond || 0;
+                            if (fps > 0 && videoFrames === '--') {
+                                videoFrames = `${fps} fps`;
+                            }
+                            const bitrate = report.bytesSent ? Math.round((report.bytesSent * 8) / 1000) : 0;
+                            if (bitrate > 0 && videoBitrate === '--') {
+                                videoBitrate = `${bitrate} kbps`;
+                            }
+                            totalPacketsSent += report.packetsSent || 0;
+                        } else if (report.type === 'outbound-rtp' && report.kind === 'audio') {
+                            const bitrate = report.bytesSent ? Math.round((report.bytesSent * 8) / 1000) : 0;
+                            if (bitrate > 0 && audioBitrate === '--') {
+                                audioBitrate = `${bitrate} kbps`;
+                            }
+                            totalPacketsSent += report.packetsSent || 0;
+                        } else if (report.type === 'codec') {
+                            const codecName = report.mimeType || '';
+                            if (codecName.includes('video') && videoCodec === '--') {
+                                videoCodec = codecName.split('/')[1] || codecName;
+                            } else if (codecName.includes('audio') && audioCodec === '--') {
+                                audioCodec = codecName.split('/')[1] || codecName;
+                            }
+                        } else if (report.type === 'inbound-rtp') {
+                            if (report.jitter && !isNaN(parseFloat(report.jitter))) {
+                                jitter = `${Math.round(parseFloat(report.jitter) * 1000)}ms`;
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.warn('Error getting WebRTC stats:', e);
+                }
+            }
+
+            if (statJitter) statJitter.textContent = jitter;
+            if (statVideoRes) statVideoRes.textContent = videoRes;
+            if (statVideoBitrate) statVideoBitrate.textContent = videoBitrate;
+            if (statVideoCodec) statVideoCodec.textContent = videoCodec;
+            if (statVideoFrames) statVideoFrames.textContent = videoFrames;
+            if (statAudioBitrate) statAudioBitrate.textContent = audioBitrate;
+            if (statAudioCodec) statAudioCodec.textContent = audioCodec;
+            if (statPacketsSent) statPacketsSent.textContent = totalPacketsSent.toLocaleString();
+            if (statPacketsReceived) statPacketsReceived.textContent = totalPacketsReceived.toLocaleString();
+            if (statPacketsLost) statPacketsLost.textContent = totalPacketsLost.toLocaleString();
         }
 
         function sendPing() {
@@ -5708,6 +6008,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             clearActiveTabSession();
 
+            if (statsWindowVisible) {
+                toggleStatsWindow();
+            }
+
             playNotificationSound('disconnect');
 
             if (localStream) {
@@ -6847,6 +7151,94 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 <button onclick="applyCrop()" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all">Crop & Save</button>
             </div>
         </div>
+    </div>
+
+    <div id="statsWindow" class="stats-window" onclick="event.stopPropagation()">
+        <div class="stats-header">
+            <div class="stats-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                Connection Stats
+            </div>
+            <div class="stats-close" onclick="toggleStatsWindow()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </div>
+        </div>
+        <div class="stats-content">
+            <div class="stats-section">
+                <div class="stats-section-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                    Network
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">Ping</span>
+                        <span id="statPing" class="stat-value">--</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Jitter</span>
+                        <span id="statJitter" class="stat-value">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="stats-section-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8.5 8.5v.01"/><path d="M15.5 8.5v.01"/><path d="M8.5 15.5v.01"/><path d="M15.5 15.5v.01"/><path d="M3 12h18"/><path d="M12 3v18"/></svg>
+                    Video
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Resolution</span>
+                    <span id="statVideoRes" class="stats-row-value">--</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Bitrate</span>
+                    <span id="statVideoBitrate" class="stats-row-value">--</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Codec</span>
+                    <span id="statVideoCodec" class="stats-row-value">--</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Frames</span>
+                    <span id="statVideoFrames" class="stats-row-value">--</span>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="stats-section-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6"/><path d="M12 2v10"/><path d="m8 8 4-4 4 4"/></svg>
+                    Audio
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Bitrate</span>
+                    <span id="statAudioBitrate" class="stats-row-value">--</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Codec</span>
+                    <span id="statAudioCodec" class="stats-row-value">--</span>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="stats-section-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Packets
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Sent</span>
+                    <span id="statPacketsSent" class="stats-row-value">--</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Received</span>
+                    <span id="statPacketsReceived" class="stats-row-value">--</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Lost</span>
+                    <span id="statPacketsLost" class="stats-row-value">--</span>
+                </div>
+            </div>
+        </div>
+        <div class="stats-refresh">Updates every 2 seconds</div>
     </div>
 </body>
 </html>
