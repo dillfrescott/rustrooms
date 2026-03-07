@@ -4,8 +4,8 @@ use axum::{
         Path, State, Query,
     },
     http::header,
-    response::{Html, IntoResponse, Redirect, Json},
-    routing::{get, post},
+    response::{Html, IntoResponse, Redirect},
+    routing::get,
     Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
@@ -16,7 +16,6 @@ use std::{
 };
 use tokio::sync::Mutex;
 use uuid::Uuid;
-use std::time::Instant;
 
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message as WsMessage};
 use sha1::{Sha1, Digest};
@@ -171,7 +170,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     <meta name="theme-color" content="#09090b">
     <script src="/assets/tailwind.js"></script>
     <link href="/assets/inter.css" rel="stylesheet">
-    <script src="https://captcha.dill.moe/fcaptcha.js"></script>
     <style>
         :root {
             --bg-primary: #000000;
@@ -1389,33 +1387,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             <div class="flex gap-3">
                 <button onclick="closeKickModal()" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
                 <button id="kickSubmit" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all" style="background: var(--danger);">Kick</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="captchaModal" class="modal-overlay">
-        <div class="modal-content text-center space-y-6">
-            <div id="captchaAnalyzing" class="space-y-4">
-                <div class="flex justify-center">
-                    <div class="spinner" style="width: 48px; height: 48px; border: 4px solid var(--border-subtle); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                </div>
-                <h3 class="text-2xl font-bold text-white">Analyzing...</h3>
-                <p class="text-zinc-300">Verifying you're human</p>
-            </div>
-            <div id="captchaSuccess" class="hidden space-y-4">
-                <div class="flex justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                </div>
-                <h3 class="text-2xl font-bold text-white">Verification Passed!</h3>
-                <p class="text-zinc-300">Joining room...</p>
-            </div>
-            <div id="captchaFailed" class="hidden space-y-4">
-                <div class="flex justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-                </div>
-                <h3 class="text-2xl font-bold text-white">Verification Failed</h3>
-                <p id="captchaFailedMessage" class="text-zinc-300">Unable to verify. Please try again.</p>
-                <button onclick="closeCaptchaModal()" class="btn-primary w-full py-3 text-white rounded-xl font-medium transition-all">Try Again</button>
             </div>
         </div>
     </div>
@@ -3418,37 +3389,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 return;
             }
 
-            // Captcha verification
-            const existingToken = sessionStorage.getItem('rustrooms_captcha_token_' + roomId);
-            if (existingToken) {
-                window.captchaToken = existingToken;
-                proceedJoinRoom();
-                return;
-            }
-
-            showCaptchaModal();
-            try {
-                FCaptcha.configure({ serverUrl: 'https://captcha.dill.moe' });
-                const captchaResult = await FCaptcha.execute('rustrooms-site-key', { action: 'join_room' });
-
-                console.log('FCaptcha result:', captchaResult);
-
-                console.log('FCaptcha result:', captchaResult);
-
-                window.captchaToken = captchaResult.token;
-                sessionStorage.setItem('rustrooms_captcha_token_' + roomId, captchaResult.token);
-
-                showCaptchaSuccess();
-                setTimeout(() => {
-                    closeCaptchaModal();
-                    proceedJoinRoom();
-                }, 1500);
-            } catch (error) {
-                console.error('Captcha error:', error);
-                showCaptchaFailed('Unable to verify. Please try again.');
-                return;
-            }
-            return;
+            proceedJoinRoom();
         }
 
         async function proceedJoinRoom() {
@@ -3848,45 +3789,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         function closeCustomAlert() {
             document.getElementById('alertModal').classList.remove('open');
-        }
-
-        function showCaptchaModal() {
-            document.getElementById('captchaAnalyzing').classList.remove('hidden');
-            document.getElementById('captchaSuccess').classList.add('hidden');
-            document.getElementById('captchaFailed').classList.add('hidden');
-            document.getElementById('captchaModal').classList.add('open');
-        }
-
-        function closeCaptchaModal() {
-            document.getElementById('captchaModal').classList.remove('open');
-        }
-
-        function showCaptchaSuccess() {
-            document.getElementById('captchaAnalyzing').classList.add('hidden');
-            document.getElementById('captchaSuccess').classList.remove('hidden');
-            document.getElementById('captchaFailed').classList.add('hidden');
-        }
-
-        function showCaptchaFailed(message) {
-            document.getElementById('captchaAnalyzing').classList.add('hidden');
-            document.getElementById('captchaSuccess').classList.add('hidden');
-            document.getElementById('captchaFailed').classList.remove('hidden');
-            document.getElementById('captchaFailedMessage').innerText = message || 'Unable to verify. Please try again.';
-        }
-
-        async function verifyCaptcha(token) {
-            try {
-                const response = await fetch('/api/captcha/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: token })
-                });
-                const result = await response.json();
-                return result;
-            } catch (error) {
-                console.error('Captcha verification error:', error);
-                return { valid: false, score: null, message: 'Verification failed' };
-            }
         }
 
         function showPasswordModal(title, message, callback) {
@@ -4574,7 +4476,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 type: "join",
                                 data: {
                                     userId: persistentUserId,
-                                    captchaToken: window.captchaToken || sessionStorage.getItem('rustrooms_captcha_token_' + roomId),
                                     nickname: userNickname,
                                     avatar: userAvatar,
                                     isGif: userAvatarIsGif,
@@ -6987,10 +6888,8 @@ type UserTx = tokio::sync::mpsc::Sender<Result<Message, axum::Error>>;
 type ChannelMap = HashMap<String, HashMap<String, (UserTx, UserStatus)>>;
 type RoomMap = Arc<Mutex<HashMap<String, ChannelMap>>>;
 type RoomCleanupMap = Arc<Mutex<HashMap<String, u64>>>;
-type VerifiedSessionsMap = Arc<Mutex<HashMap<String, Instant>>>;
 type RemoteUsersMap = Arc<Mutex<HashMap<String, HashMap<String, HashMap<String, UserStatus>>>>>;
 const ROOM_EMPTY_GRACE_SECS: u64 = 120;
-const SESSION_VALIDITY_SECS: u64 = 86400; // 24 hours
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct ClusterMessage {
@@ -7013,7 +6912,6 @@ struct AppState {
     rooms: RoomMap,
     room_cleanup_generations: RoomCleanupMap,
     room_creation_password: Option<String>,
-    verified_sessions: VerifiedSessionsMap,
     cluster_tx: tokio::sync::broadcast::Sender<String>,
     remote_users: RemoteUsersMap,
     cluster_key: Option<String>,
@@ -7022,76 +6920,10 @@ struct AppState {
     pub cluster_msg_history: Arc<Mutex<VecDeque<String>>>,
 }
 
-#[derive(Deserialize)]
-struct CaptchaVerifyRequest {
-    token: String,
-}
-
-#[derive(Serialize)]
-struct CaptchaVerifyResponse {
-    valid: bool,
-    score: Option<f64>,
-    message: Option<String>,
-}
-
-async fn verify_captcha(
-    headers: axum::http::HeaderMap,
-    Json(payload): Json<CaptchaVerifyRequest>
-) -> impl IntoResponse {
-    let captcha_secret = "rustrooms-secret".to_string();
-
-    let mut client_ip = String::new();
-    if let Some(real_ip) = headers.get("X-Real-IP") {
-        client_ip = real_ip.to_str().unwrap_or("").to_string();
-    } else if let Some(forwarded_for) = headers.get("X-Forwarded-For") {
-        client_ip = forwarded_for.to_str().unwrap_or("").split(',').next().unwrap_or("").trim().to_string();
-    }
-
-    let client = reqwest::Client::new();
-    let mut request_builder = client.post("https://captcha.dill.moe/api/token/verify");
-
-    if !client_ip.is_empty() {
-        request_builder = request_builder.header("X-Forwarded-For", &client_ip);
-    }
-
-    let response = request_builder
-        .json(&serde_json::json!({
-            "token": payload.token,
-            "secret": captcha_secret
-        }))
-        .send()
-        .await;
-
-    match response {
-        Ok(resp) => {
-            let verify_result: serde_json::Value = resp.json().await.unwrap_or_default();
-            let valid = verify_result.get("valid").and_then(|v| v.as_bool()).unwrap_or(false);
-            let score = verify_result.get("score").and_then(|v| v.as_f64());
-
-            println!("CAPTCHA VERIFY: valid={}, score={:?}, ip={}", valid, score, client_ip);
-
-            Json(CaptchaVerifyResponse {
-                valid,
-                score,
-                message: None,
-            })
-        }
-        Err(e) => {
-            eprintln!("CAPTCHA VERIFY ERROR: {}", e);
-            Json(CaptchaVerifyResponse {
-                valid: false,
-                score: None,
-                message: Some("Failed to verify captcha".to_string()),
-            })
-        }
-    }
-}
-
 #[tokio::main]
 async fn main() {
     let rooms: RoomMap = Arc::new(Mutex::new(HashMap::new()));
     let room_cleanup_generations: RoomCleanupMap = Arc::new(Mutex::new(HashMap::new()));
-    let verified_sessions: VerifiedSessionsMap = Arc::new(Mutex::new(HashMap::new()));
 
     let room_creation_password = std::env::var("ROOM_CREATION_PASSWORD").ok().map(|p| p.trim().to_string()).filter(|s| !s.is_empty());
     let cluster_key = std::env::var("KEY").ok().map(|k| k.trim().to_string()).filter(|s| !s.is_empty());
@@ -7106,7 +6938,6 @@ async fn main() {
         rooms,
         room_cleanup_generations,
         room_creation_password,
-        verified_sessions,
         cluster_tx,
         remote_users,
         cluster_key,
@@ -7142,7 +6973,6 @@ async fn main() {
         .route("/ws/{room_id}/{channel_id}", get(ws_handler))
         .route("/ws/{room_id}/{channel_id}/", get(redirect_ws_trailing_slash))
         .route("/cluster-ws", get(cluster_ws_handler))
-        .route("/api/captcha/verify", post(verify_captcha))
         .with_state(state.clone());
 
     let port = std::env::var("PORT")
@@ -7218,7 +7048,7 @@ async fn index(State(_state): State<AppState>) -> impl IntoResponse {
     (
         [(
             header::CONTENT_SECURITY_POLICY,
-            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; script-src-elem 'self' 'unsafe-inline' https://captcha.dill.moe; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws: https://captcha.dill.moe; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; script-src-elem 'self' 'unsafe-inline'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
         )],
         Html(html)
     )
@@ -7838,7 +7668,7 @@ async fn broadcast_channel_list(rooms: &RoomMap, remote_users: &RemoteUsersMap, 
     }
 }
 
-async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, state: AppState, client_ip: String) {
+async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, state: AppState, _client_ip: String) {
     let rooms = state.rooms.clone();
     let remote_users = state.remote_users.clone(); // Added remote_users clone
     let cluster_tx = state.cluster_tx.clone(); // Added cluster_tx clone
@@ -7917,99 +7747,12 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 }
                             }
 
-                            let captcha_token = parsed.data.as_ref()
-                                .and_then(|d| d.get("captchaToken"))
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("");
-                                
-                            let is_reconnect = {
+                            let _is_reconnect = {
                                 let rooms_lock = rooms.lock().await;
                                 rooms_lock.get(&room_id).and_then(|r| r.get(&channel_id)).map(|c| c.contains_key(&user_id)).unwrap_or(false)
                             };
 
-                            let session_key = format!("{}:{}", room_id, user_id);
-                            let mut is_verified_session = false;
-
-                            if !is_reconnect {
-                                {
-                                    let mut sessions_lock = state.verified_sessions.lock().await;
-                                    // Cleanup old sessions occasionally
-                                    if sessions_lock.len() > 1000 {
-                                        let now = Instant::now();
-                                        sessions_lock.retain(|_, time| now.duration_since(*time).as_secs() < SESSION_VALIDITY_SECS);
-                                    }
-                                    
-                                    if let Some(time) = sessions_lock.get(&session_key) {
-                                        if time.elapsed().as_secs() < SESSION_VALIDITY_SECS {
-                                            is_verified_session = true;
-                                            // Extend the session duration
-                                            sessions_lock.insert(session_key.clone(), Instant::now());
-                                        }
-                                    }
-                                }
-
-                                if !is_verified_session && !captcha_token.is_empty() {
-                                    let captcha_secret = "rustrooms-secret".to_string();
-                                    let client = reqwest::Client::new();
-                                    let mut request_builder = client.post("https://captcha.dill.moe/api/token/verify");
-
-                                    if !client_ip.is_empty() {
-                                        request_builder = request_builder.header("X-Forwarded-For", &client_ip);
-                                    }
-
-                                    let resp = request_builder
-                                        .json(&serde_json::json!({
-                                            "token": captcha_token,
-                                            "secret": captcha_secret
-                                        }))
-                                        .send()
-                                        .await;
-                                    
-                                    if let Ok(response) = resp {
-                                        if let Ok(verify_result) = response.json::<serde_json::Value>().await {
-                                            let valid = verify_result.get("valid").and_then(|v| v.as_bool()).unwrap_or(false);
-                                            let score = verify_result.get("score").and_then(|v| v.as_f64()).unwrap_or(1.0);
-                                            if valid && score < 0.5 {
-                                                is_verified_session = true;
-                                                let mut sessions_lock = state.verified_sessions.lock().await;
-                                                sessions_lock.insert(session_key.clone(), Instant::now());
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                if !is_verified_session {
-                                    if captcha_token.is_empty() {
-                                        let error_msg = serde_json::to_string(&SignalMessage {
-                                            msg_type: "error".into(),
-                                            user_id: None,
-                                            target: None,
-                                            data: Some(serde_json::json!({
-                                                "code": "CAPTCHA_REQUIRED",
-                                                "message": "Captcha token is required to join."
-                                            })),
-                                        }).unwrap();
-                                        let _ = tx.send(Ok(Message::Text(error_msg.into()))).await;
-                                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                                        return;
-                                    } else {
-                                        let error_msg = serde_json::to_string(&SignalMessage {
-                                            msg_type: "error".into(),
-                                            user_id: None,
-                                            target: None,
-                                            data: Some(serde_json::json!({
-                                                "code": "CAPTCHA_FAILED",
-                                                "message": "Captcha verification failed."
-                                            })),
-                                        }).unwrap();
-                                        let _ = tx.send(Ok(Message::Text(error_msg.into()))).await;
-                                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                                        return;
-                                    }
-                                }
-                            }
-
-                             {
+                            {
                                 let mut rooms_lock = rooms.lock().await;
 
                                 if let Some(ref required_pass) = state.room_creation_password {
