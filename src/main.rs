@@ -2254,6 +2254,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             if (bitrate > 0) {
                                 audioBitrate = `${bitrate} kbps`;
                             }
+                            if (report.jitter && !isNaN(parseFloat(report.jitter))) {
+                                jitter = `${Math.round(parseFloat(report.jitter) * 1000)}ms`;
+                            }
                             totalPacketsReceived += report.packetsReceived || 0;
                             totalPacketsLost += report.packetsLost || 0;
                         } else if (report.type === 'outbound-rtp' && report.kind === 'video') {
@@ -2283,10 +2286,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 videoCodec = codecName.split('/')[1] || codecName;
                             } else if (codecName.includes('audio') && audioCodec === '--') {
                                 audioCodec = codecName.split('/')[1] || codecName;
-                            }
-                        } else if (report.type === 'inbound-rtp') {
-                            if (report.jitter && !isNaN(parseFloat(report.jitter))) {
-                                jitter = `${Math.round(parseFloat(report.jitter) * 1000)}ms`;
                             }
                         }
                     });
