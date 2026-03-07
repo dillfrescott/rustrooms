@@ -2172,6 +2172,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
+        document.addEventListener('click', (event) => {
+            if (statsWindowVisible) {
+                const statsWindow = document.getElementById('statsWindow');
+                const statusPillWrapper = document.getElementById('statusPillWrapper');
+                if (statsWindow && statusPillWrapper &&
+                    !statsWindow.contains(event.target) &&
+                    !statusPillWrapper.contains(event.target)) {
+                    toggleStatsWindow();
+                }
+            }
+        });
+
         function startStatsUpdate() {
             if (statsUpdateInterval) return;
             updateWebRTCStats();
