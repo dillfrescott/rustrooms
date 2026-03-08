@@ -519,6 +519,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             transform: scale(1.03) translateY(-2px);
         }
 
+        @media (max-width: 400px), (max-height: 500px) {
+            .pip-wrapper {
+                display: none;
+            }
+        }
+
         .connection-dot {
             width: 9px;
             height: 9px;
@@ -587,6 +593,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .stats-window {
             position: fixed;
             width: 320px;
+            max-width: calc(100vw - 32px);
+            max-height: calc(100vh - 32px);
             background: var(--bg-elevated-strong);
             backdrop-filter: blur(40px) saturate(200%) brightness(110%);
             -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(110%);
@@ -599,6 +607,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             transform: translateY(-8px);
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             overflow: hidden;
+            overflow-y: auto;
         }
 
         .stats-window.visible {
