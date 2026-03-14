@@ -2072,7 +2072,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         let heartbeatInterval = null;
         const heartbeatIntervalMs = 3000;
-        const heartbeatTimeoutMs = 5000;
+        const heartbeatTimeoutMs = 10000;
         let lastPingSentTime = 0;
         let lastPongTime = Date.now();
         let heartbeatTimeout = null;
@@ -2435,46 +2435,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             loadPreferences();
             try {
-
-                if (pendingCamToggle) {
-                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                } else {
-                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-                }
-                if (localStream) {
-                    if (pendingMicToggle) {
-                        const audioTrack = localStream.getAudioTracks()[0];
-                        if (audioTrack) audioTrack.enabled = !audioTrack.enabled;
-                        pendingMicToggle = false;
-                    }
-                }
-                previewVideo.srcObject = localStream;
-                document.getElementById('previewPlaceholder').style.display = 'none';
-                updatePreviewButtons();
-                await new Promise(r => setTimeout(r, 500));
                 await populateDeviceList();
                 navigator.mediaDevices.ondevicechange = populateDeviceList;
 
-                initAudioWorklet();
-
+                await initAudioWorklet();
                 await startPreview();
 
             } catch (e) {
-                console.warn("Device access failed", e);
-                try {
-                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                    if (localStream && pendingMicToggle) {
-                        const audioTrack = localStream.getAudioTracks()[0];
-                        if (audioTrack) audioTrack.enabled = !audioTrack.enabled;
-                        pendingMicToggle = false;
-                    }
-                    updatePreviewButtons();
-                    await populateDeviceList();
-                    await startPreview();
-                } catch(e2) {
-                     console.error("Audio failed too", e2);
-                     updatePreviewButtons();
-                }
+                console.warn("Device access initialization failed", e);
+                updatePreviewButtons();
             }
 
             if(btnJoin) {
