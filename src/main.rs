@@ -207,10 +207,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             --warning: #f59e0b;
             --warning-glow: rgba(245, 158, 11, 0.25);
 
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-            --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+            --shadow-sm: 0 0 0 rgba(0, 0, 0, 0);
+            --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.18);
+            --shadow-lg: 0 2px 8px rgba(0, 0, 0, 0.22);
+            --shadow-xl: 0 4px 16px rgba(0, 0, 0, 0.26);
         }
 
         html {
@@ -260,16 +260,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .glass-panel {
             background: var(--bg-elevated);
-            backdrop-filter: blur(40px) saturate(200%) brightness(110%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(110%);
             border: 1px solid var(--border-subtle);
-            box-shadow: var(--shadow-xl);
+            box-shadow: var(--shadow-lg);
+            border-radius: 14px;
         }
 
         .video-container {
             position: relative;
             background: var(--bg-secondary);
-            border-radius: 16px;
+            border-radius: 8px;
             overflow: hidden;
             border: 1px solid var(--border-subtle);
             transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -277,27 +276,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             flex-direction: column;
             width: 100%;
             height: 100%;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .video-container::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%);
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.35s ease;
-        }
-
-        .video-container:hover::before {
-            opacity: 1;
+            box-shadow: none;
         }
 
         .video-container:hover {
             border-color: var(--border-medium);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-            transform: translateY(-3px);
+            box-shadow: none;
+            transform: none;
         }
 
         .video-container video {
@@ -338,7 +323,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             position: relative;
             width: 120px;
             height: 120px;
-            border-radius: 16px;
+            border-radius: 8px;
             overflow: hidden;
             border: 2px solid var(--border-subtle);
             background: var(--bg-tertiary);
@@ -347,7 +332,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .avatar-center:hover {
             border-color: var(--border-medium);
-            box-shadow: var(--shadow-md);
+            box-shadow: none;
         }
 
         .avatar-center img {
@@ -388,42 +373,27 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .control-btn {
             padding: 0;
-            border-radius: 14px;
+            border-radius: 6px;
             border: 1px solid var(--border-subtle);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-tertiary) 100%);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            background: var(--bg-elevated);
             color: var(--text-primary);
             width: 52px;
             height: 52px;
             overflow: hidden;
             position: relative;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .control-btn::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 100%);
-            opacity: 0;
-            transition: opacity 0.25s ease;
-        }
-
-        .control-btn:hover::before {
-            opacity: 1;
+            box-shadow: none;
         }
 
         .control-btn:hover {
-            background: linear-gradient(180deg, var(--bg-elevated-strong) 0%, var(--bg-elevated) 100%);
+            background: var(--bg-elevated-strong);
             border-color: var(--border-medium);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+            transform: none;
+            box-shadow: none;
         }
 
         .control-btn:active {
@@ -432,37 +402,37 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .control-btn.active-red:active {
-            background: linear-gradient(180deg, var(--danger) 0%, var(--accent-dark-red) 100%);
+            background: var(--danger);
         }
 
         .control-btn.active-red {
-            background: linear-gradient(180deg, var(--danger) 0%, var(--accent-dark-red) 100%);
+            background: var(--danger);
             border-color: var(--danger);
-            box-shadow: 0 2px 12px rgba(239, 68, 68, 0.4);
+            box-shadow: none;
         }
 
         .control-btn.active-red:hover {
-            background: linear-gradient(180deg, var(--accent-red-hover) 0%, var(--danger) 100%);
+            background: var(--accent-red-hover);
             border-color: var(--accent-red-hover);
-            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
-            transform: translateY(-2px);
+            box-shadow: none;
+            transform: none;
         }
 
         .control-btn.active-green {
-            background: linear-gradient(180deg, var(--success) 0%, var(--accent-green) 100%);
+            background: var(--success);
             border-color: var(--success);
-            box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
+            box-shadow: none;
         }
 
         .control-btn.active-green:active {
-            background: linear-gradient(180deg, var(--success) 0%, var(--accent-green) 100%);
+            background: var(--success);
         }
 
         .control-btn.active-green:hover {
-            background: linear-gradient(180deg, var(--accent-green-hover) 0%, var(--success) 100%);
+            background: var(--accent-green-hover);
             border-color: var(--accent-green-hover);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
-            transform: translateY(-2px);
+            box-shadow: none;
+            transform: none;
         }
 
         .control-btn:disabled {
@@ -504,19 +474,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             touch-action: none;
             width: 160px;
             aspect-ratio: 16/9;
-            border-radius: 14px;
+            border-radius: 6px;
             border: 1px solid var(--border-subtle);
             overflow: hidden;
             z-index: 75;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-secondary) 100%);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+            background: var(--bg-elevated);
+            box-shadow: var(--shadow-md);
         }
 
         .pip-wrapper:hover {
             border-color: var(--border-medium);
-            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
-            transform: scale(1.03) translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            transform: none;
         }
 
         @media (max-width: 400px), (max-height: 500px) {
@@ -596,11 +566,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             max-width: calc(100vw - 32px);
             max-height: calc(100vh - 32px);
             background: var(--bg-elevated-strong);
-            backdrop-filter: blur(40px) saturate(200%) brightness(110%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(110%);
             border: 1px solid var(--border-medium);
-            border-radius: 12px;
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            box-shadow: var(--shadow-xl);
             z-index: 9999;
             opacity: 0;
             visibility: hidden;
@@ -767,7 +735,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             backdrop-filter: blur(32px) saturate(200%);
             -webkit-backdrop-filter: blur(32px) saturate(200%);
             padding: 10px 14px;
-            border-radius: 12px;
+            border-radius: 8px;
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -906,12 +874,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .taskbar {
-            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            background: var(--bg-secondary);
             border-top: 1px solid var(--border-subtle);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
             padding-bottom: env(safe-area-inset-bottom);
-            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5), 0 -4px 16px rgba(0, 0, 0, 0.3);
+            box-shadow: none;
         }
 
         @media (min-width: 768px) {
@@ -934,12 +900,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         input[type="text"],
         input[type="password"],
         select {
-            background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+            background: var(--bg-tertiary);
             border: 1px solid var(--border-subtle);
             color: var(--text-primary);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            box-shadow: none;
         }
 
         input[type="text"]:focus,
@@ -947,8 +913,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         select:focus {
             outline: none;
             border-color: var(--accent);
-            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
-            box-shadow: 0 0 0 3px var(--accent-glow), 0 4px 16px rgba(59, 130, 246, 0.2);
+            background: var(--bg-secondary);
+            box-shadow: 0 0 0 2px var(--accent-glow);
         }
 
         select option {
@@ -963,15 +929,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .btn-primary {
-            background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark-blue) 100%);
+            background: var(--accent);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3), var(--shadow-md);
+            border-radius: 8px;
+            box-shadow: none;
         }
         .btn-primary:hover {
-            background: linear-gradient(180deg, var(--accent-hover) 0%, var(--accent) 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 24px rgba(59, 130, 246, 0.45);
+            background: var(--accent-hover);
+            transform: none;
+            box-shadow: none;
         }
 
         .btn-primary:active {
@@ -980,13 +946,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .btn-secondary {
-            background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-tertiary) 100%);
+            background: var(--bg-elevated);
             border: 1px solid var(--border-subtle);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 12px;
-            box-shadow: var(--shadow-sm);
+            border-radius: 8px;
+            box-shadow: none;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
@@ -995,10 +959,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
         @media (hover: hover) {
             .btn-secondary:hover {
-                background: linear-gradient(180deg, var(--bg-elevated-strong) 0%, var(--bg-elevated) 100%);
+                background: var(--bg-elevated-strong);
                 border-color: var(--border-medium);
-                transform: translateY(-1px);
-                box-shadow: var(--shadow-md);
+                transform: none;
+                box-shadow: none;
             }
         }
         .btn-secondary:focus {
@@ -1010,23 +974,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
         @media (hover: none) {
             .btn-secondary:active, .btn-secondary.is-pressed {
-                background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-tertiary) 100%);
+                background: var(--bg-elevated);
                 border-color: var(--border-subtle);
                 transform: scale(0.96);
-                box-shadow: var(--shadow-sm);
+                box-shadow: none;
             }
             .btn-secondary.active-red:active, .btn-secondary.active-red.is-pressed {
-                background: linear-gradient(180deg, var(--danger) 0%, var(--accent-dark-red) 100%);
+                background: var(--danger);
                 border-color: var(--danger);
                 transform: scale(0.96);
-                box-shadow: 0 2px 12px rgba(239, 68, 68, 0.4);
+                box-shadow: none;
             }
         }
 
         .btn-secondary.active-red {
-            background: linear-gradient(180deg, var(--danger) 0%, var(--accent-dark-red) 100%);
+            background: var(--danger);
             border-color: var(--danger);
-            box-shadow: 0 2px 12px rgba(239, 68, 68, 0.4);
+            box-shadow: none;
         }
 
         .btn-icon-test:active, .btn-icon-test.is-pressed {
@@ -1036,27 +1000,25 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         @media (hover: hover) {
             .btn-secondary.active-red:hover {
-                background: linear-gradient(180deg, var(--accent-red-hover) 0%, var(--danger) 100%);
+                background: var(--accent-red-hover);
                 border-color: var(--accent-red-hover);
-                box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
-                transform: translateY(-2px);
+                box-shadow: none;
+                transform: none;
             }
         }
 
         .status-pill {
-            background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-tertiary) 100%);
+            background: var(--bg-elevated);
             border: 1px solid var(--border-subtle);
-            backdrop-filter: blur(32px) saturate(180%);
-            -webkit-backdrop-filter: blur(32px) saturate(180%);
             border-radius: 99px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            box-shadow: none;
         }
 
         .status-pill:hover {
-            background: linear-gradient(180deg, var(--bg-elevated-strong) 0%, var(--bg-elevated) 100%);
+            background: var(--bg-elevated-strong);
             border-color: var(--border-medium);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            box-shadow: none;
         }
 
         .label-text {
@@ -1094,7 +1056,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             height: 100%;
             pointer-events: none;
             z-index: 1;
-            opacity: 0.6;
+            opacity: 0.16;
         }
 
         #roomSidebar {
@@ -1105,11 +1067,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             width: 340px;
             z-index: 100;
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            background: var(--bg-secondary);
             border-right: 1px solid var(--border-medium);
             display: flex;
             flex-direction: column;
-            box-shadow: 0 0 64px rgba(0, 0, 0, 0.6), 0 0 128px rgba(0, 0, 0, 0.4);
+            box-shadow: var(--shadow-xl);
         }
 
         #roomSidebar.open {
@@ -1130,7 +1092,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            background: var(--bg-secondary);
         }
 
         .sidebar-content {
@@ -1140,27 +1102,27 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .room-item {
-            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            background: var(--bg-secondary);
             border: 1px solid var(--border-subtle);
-            border-radius: 14px;
+            border-radius: 8px;
             padding: 16px;
             margin-bottom: 12px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: none;
         }
 
         .room-item:hover {
             border-color: var(--accent);
-            background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
-            transform: translateX(6px);
-            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+            background: var(--bg-tertiary);
+            transform: none;
+            box-shadow: none;
         }
 
         .room-item.active {
             border-color: var(--accent);
-            background: linear-gradient(180deg, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.04) 100%);
-            box-shadow: 0 0 0 1px var(--border-accent), 0 4px 16px rgba(59, 130, 246, 0.2);
+            background: rgba(59, 130, 246, 0.08);
+            box-shadow: 0 0 0 1px var(--border-accent);
         }
 
         .room-name {
@@ -1254,7 +1216,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(16px);
             z-index: 300;
             display: flex;
             align-items: center;
@@ -1270,17 +1231,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .modal-content {
-            background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-tertiary) 100%);
+            background: var(--bg-elevated);
             border: 1px solid var(--border-medium);
-            backdrop-filter: blur(32px) saturate(180%);
-            -webkit-backdrop-filter: blur(32px) saturate(180%);
-            border-radius: 28px;
+            border-radius: 12px;
             width: 90%;
             max-width: 420px;
             padding: 40px 32px;
             transform: scale(0.92) translateY(16px);
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 32px 96px rgba(0, 0, 0, 0.7), 0 8px 32px rgba(0, 0, 0, 0.5);
+            box-shadow: var(--shadow-xl);
         }
 
         .modal-overlay.open .modal-content {
@@ -1292,7 +1251,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             align-items: center;
             gap: 12px;
             padding: 10px 12px;
-            border-radius: 10px;
+            border-radius: 6px;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -1329,13 +1288,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             z-index: 200;
             min-width: 220px;
             max-width: 260px;
-            background: linear-gradient(180deg, var(--bg-elevated-strong) 0%, var(--bg-elevated) 100%);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            background: var(--bg-elevated-strong);
             border: 1px solid var(--border-medium);
-            border-radius: 14px;
+            border-radius: 6px;
             padding: 14px 16px;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.4);
+            box-shadow: var(--shadow-lg);
             opacity: 0;
             transform: scale(0.92) translateY(-4px);
             pointer-events: none;
@@ -1551,22 +1508,22 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="welcomeOverlay" class="fixed inset-0 z-[70] flex flex-col items-center justify-center p-4" style="display: none; background: radial-gradient(ellipse at center top, #0a0a0a 0%, #000000 100%);">
+    <div id="welcomeOverlay" class="fixed inset-0 z-[70] flex flex-col items-center justify-center p-4" style="display: none; background: var(--bg-primary);">
         <canvas id="particleCanvas"></canvas>
         <div class="text-center space-y-10 max-w-md w-full relative z-10">
             <div class="space-y-4" id="welcomeTitleContainer">
-                <h1 class="text-5xl md:text-7xl font-bold tracking-tight" style="color: #ffffff; text-shadow: 0 0 40px rgba(59, 130, 246, 0.4), 0 0 80px rgba(59, 130, 246, 0.2); font-weight: 800; letter-spacing: -0.03em;">Rust Rooms</h1>
+                <h1 class="text-5xl md:text-7xl font-bold tracking-tight" style="color: #ffffff; font-weight: 800; letter-spacing: -0.03em;">Rust Rooms</h1>
                 <p style="color: var(--text-secondary);" class="text-base md:text-lg font-normal opacity-80">Simple, secure, and fast video conferencing.</p>
             </div>
 
             <div id="startActionContainer" class="relative min-h-[72px] flex justify-center items-center">
-                 <button id="btnStartRoom" onclick="createRoom()" class="btn-primary absolute w-full md:w-auto px-12 py-4 text-white rounded-2xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl" style="box-shadow: 0 4px 24px rgba(59, 130, 246, 0.3);">
+                 <button id="btnStartRoom" onclick="createRoom()" class="btn-primary absolute w-full md:w-auto px-12 py-4 text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl">
                     Start Room
                 </button>
 
                 <div id="passwordInputContainer" class="absolute w-full max-w-xs transition-all duration-300 transform translate-y-4 opacity-0 pointer-events-none flex gap-2">
-                     <input type="password" id="roomPasswordInput" placeholder="Password required" class="flex-1 rounded-xl px-4 py-3 text-white bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none transition-all" onkeypress="if(event.key==='Enter') submitPassword()">
-                     <button onclick="submitPassword()" class="btn-primary px-5 py-3 text-white rounded-xl font-medium transition-all flex items-center justify-center">
+                     <input type="password" id="roomPasswordInput" placeholder="Password required" class="flex-1 rounded-lg px-4 py-3 text-white bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none transition-all" onkeypress="if(event.key==='Enter') submitPassword()">
+                     <button onclick="submitPassword()" class="btn-primary px-5 py-3 text-white rounded-lg font-medium transition-all flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                      </button>
                 </div>
@@ -1574,9 +1531,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="configOverlay" class="fixed inset-0 z-[60] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(20px);">
+    <div id="configOverlay" class="fixed inset-0 z-[60] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: rgba(0, 0, 0, 0.9);">
         <canvas id="particleCanvasConfig" class="absolute inset-0 pointer-events-none" style="z-index: 1;"></canvas>
-        <div id="configPanel" class="glass-panel p-8 md:p-10 rounded-[32px] max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
+        <div id="configPanel" class="glass-panel p-8 md:p-10 rounded-[14px] max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
             <div class="text-center space-y-2 mb-8">
                 <h1 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--text-primary);">Setup</h1>
                 <p style="color: var(--text-secondary);" class="text-sm font-normal opacity-80">Configure your camera and microphone.</p>
@@ -1585,21 +1542,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
 
                 <div class="lg:w-1/2 flex flex-col gap-4">
-                    <div class="relative aspect-video rounded-2xl overflow-hidden flex-shrink-0 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] shadow-lg">
+                    <div class="relative aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] shadow-lg">
                         <video id="previewVideo" autoplay playsinline muted class="w-full h-full object-contain"></video>
                         <div class="absolute inset-0 flex items-center justify-center pointer-events-none" id="previewPlaceholder" style="color: var(--text-muted);">
                             <span>Camera Off</span>
                         </div>
-                        <div class="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg text-xs font-medium backdrop-blur-md bg-black/60 border border-[var(--border-subtle)]" style="color: var(--text-primary);">
+                        <div class="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg text-xs font-medium bg-black/60 border border-[var(--border-subtle)]" style="color: var(--text-primary);">
                             Preview
                         </div>
                     </div>
 
                     <div class="flex gap-3">
-                        <button onclick="togglePreviewMic()" id="btnPreviewMic" disabled class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
+                        <button onclick="togglePreviewMic()" id="btnPreviewMic" disabled class="btn-secondary flex-1 py-3 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
                             Mute
                         </button>
-                        <button onclick="togglePreviewCam()" id="btnPreviewCam" disabled class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
+                        <button onclick="togglePreviewCam()" id="btnPreviewCam" disabled class="btn-secondary flex-1 py-3 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
                             Stop Cam
                         </button>
                     </div>
@@ -1610,7 +1567,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         <div class="flex-shrink-0 flex justify-center sm:justify-start">
                             <div class="text-center">
                                 <label class="label-text block mb-2">Avatar</label>
-                                <div onclick="document.getElementById('avatarInput').click()" class="w-20 h-20 rounded-2xl cursor-pointer overflow-hidden flex items-center justify-center transition-all group relative mx-auto" style="background: var(--bg-secondary); border: 2px solid var(--border-subtle);">
+                                <div onclick="document.getElementById('avatarInput').click()" class="w-20 h-20 rounded-lg cursor-pointer overflow-hidden flex items-center justify-center transition-all group relative mx-auto" style="background: var(--bg-secondary); border: 2px solid var(--border-subtle);">
                                     <img id="avatarPreview" src="" class="hidden w-full h-full object-cover" draggable="false">
                                     <span id="avatarPlaceholder" class="text-3xl" style="color: var(--text-muted);">👤</span>
                                     <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold" style="background: rgba(0, 0, 0, 0.7); color: var(--text-primary);">Edit</div>
@@ -1623,14 +1580,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                         <div class="flex-1">
                             <label class="label-text block mb-2">Nickname</label>
-                            <input type="text" id="nicknameInput" placeholder="Enter your name" class="w-full rounded-xl px-4 py-2.5 text-white transition-all" style="font-size: 0.875rem;" maxlength="32">
+                            <input type="text" id="nicknameInput" placeholder="Enter your name" class="w-full rounded-lg px-4 py-2.5 text-white transition-all" style="font-size: 0.875rem;" maxlength="32">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 gap-3">
                         <div>
                             <label class="label-text block mb-2">Microphone</label>
-                            <select id="audioSource" onchange="startPreview()" class="w-full rounded-xl px-3 py-2.5 text-sm text-white transition-all">
+                            <select id="audioSource" onchange="startPreview()" class="w-full rounded-lg px-3 py-2.5 text-sm text-white transition-all">
                                 <option value="">Default</option>
                             </select>
                             <div class="mic-meter"><div id="setupMicBar" class="mic-bar"></div></div>
@@ -1638,23 +1595,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         <div>
                             <label class="label-text block mb-2">Speaker</label>
                             <div class="flex gap-2">
-                                <select id="audioOutputSource" onchange="changeAudioOutput(this.value)" class="flex-1 min-w-0 rounded-xl px-3 py-2.5 text-sm text-white transition-all">
+                                <select id="audioOutputSource" onchange="changeAudioOutput(this.value)" class="flex-1 min-w-0 rounded-lg px-3 py-2.5 text-sm text-white transition-all">
                                     <option value="default">Default</option>
                                 </select>
-                                <button onclick="testSpeaker('audioOutputSource')" class="btn-icon-test p-2.5 rounded-xl transition-all" style="background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%); color: var(--text-primary); border: 1px solid var(--border-subtle); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);" title="Test Speaker">
+                                <button onclick="testSpeaker('audioOutputSource')" class="btn-icon-test p-2.5 rounded-lg transition-all" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-subtle);" title="Test Speaker">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                                 </button>
                             </div>
                         </div>
                         <div>
                             <label class="label-text block mb-2">Camera</label>
-                            <select id="videoSource" onchange="startPreview()" class="w-full rounded-xl px-3 py-2.5 text-sm text-white transition-all">
+                            <select id="videoSource" onchange="startPreview()" class="w-full rounded-lg px-3 py-2.5 text-sm text-white transition-all">
                                 <option value="">Default</option>
                             </select>
                         </div>
                     </div>
 
-                    <button id="btnJoin" onclick="joinRoom()" disabled class="btn-primary w-full py-3.5 text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button id="btnJoin" onclick="joinRoom()" disabled class="btn-primary w-full py-3.5 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                         Loading...
                     </button>
                 </div>
@@ -1662,9 +1619,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="settingsOverlay" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden" style="background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(24px);" onclick="if(event.target === this) closeSettings()">
-        <div class="glass-panel p-8 md:p-10 rounded-[32px] max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
-             <button onclick="closeSettings()" class="absolute top-6 right-6 transition-all p-2 rounded-xl hover:bg-white/10" style="color: var(--text-muted);" title="Close">
+    <div id="settingsOverlay" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden" style="background: rgba(0, 0, 0, 0.85);" onclick="if(event.target === this) closeSettings()">
+        <div class="glass-panel p-8 md:p-10 rounded-[14px] max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
+             <button onclick="closeSettings()" class="absolute top-6 right-6 transition-all p-2 rounded-lg hover:bg-white/10" style="color: var(--text-muted);" title="Close">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
 
@@ -1676,10 +1633,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
 
                 <div class="lg:w-1/2 space-y-4">
-                    <div class="flex flex-col items-center gap-5 p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] shadow-md">
+                    <div class="flex flex-col items-center gap-5 p-6 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] shadow-md">
                         <label class="label-text">Avatar</label>
                         <div class="flex flex-col items-center gap-4">
-                            <div onclick="document.getElementById('settingsAvatarInput').click()" class="w-32 h-32 rounded-3xl cursor-pointer overflow-hidden flex items-center justify-center transition-all relative bg-[var(--bg-tertiary)] border-2 border-[var(--border-subtle)] hover:border-[var(--accent)] group shadow-lg">
+                            <div onclick="document.getElementById('settingsAvatarInput').click()" class="w-32 h-32 rounded-xl cursor-pointer overflow-hidden flex items-center justify-center transition-all relative bg-[var(--bg-tertiary)] border-2 border-[var(--border-subtle)] hover:border-[var(--accent)] group shadow-lg">
                                 <img id="settingsAvatarPreview" src="" class="hidden w-full h-full object-cover" draggable="false">
                                 <span id="settingsAvatarPlaceholder" class="text-6xl" style="color: var(--text-muted);">👤</span>
                                 <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold bg-black/80" style="color: var(--text-primary);">Change</div>
@@ -1691,7 +1648,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     </div>
                     <div>
                         <label class="label-text block mb-2">Nickname</label>
-                        <input type="text" id="settingsNicknameInput" placeholder="Enter your name" class="w-full rounded-xl px-4 py-3 text-white transition-all" style="font-size: 0.875rem;" maxlength="32">
+                        <input type="text" id="settingsNicknameInput" placeholder="Enter your name" class="w-full rounded-lg px-4 py-3 text-white transition-all" style="font-size: 0.875rem;" maxlength="32">
                     </div>
                 </div>
 
@@ -1699,23 +1656,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     <div class="grid grid-cols-1 gap-4">
                          <div>
                             <label class="label-text block mb-2">Microphone</label>
-                            <select id="settingsAudioSource" onchange="currentAudioInputId=this.value" class="w-full rounded-xl px-3 py-2.5 text-sm text-white transition-all">
+                            <select id="settingsAudioSource" onchange="currentAudioInputId=this.value" class="w-full rounded-lg px-3 py-2.5 text-sm text-white transition-all">
                             </select>
                             <div class="mic-meter"><div id="settingsMicBar" class="mic-bar"></div></div>
                         </div>
                          <div>
                             <label class="label-text block mb-2">Speaker</label>
                             <div class="flex gap-2">
-                                <select id="settingsAudioOutputSource" onchange="changeAudioOutput(this.value)" class="flex-1 min-w-0 rounded-xl px-3 py-2.5 text-sm text-white transition-all">
+                                <select id="settingsAudioOutputSource" onchange="changeAudioOutput(this.value)" class="flex-1 min-w-0 rounded-lg px-3 py-2.5 text-sm text-white transition-all">
                                 </select>
-                                <button onclick="testSpeaker('settingsAudioOutputSource')" class="btn-icon-test p-2.5 rounded-xl transition-all" style="background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%); color: var(--text-primary); border: 1px solid var(--border-subtle); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);" title="Test Speaker">
+                                <button onclick="testSpeaker('settingsAudioOutputSource')" class="btn-icon-test p-2.5 rounded-lg transition-all" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-subtle);" title="Test Speaker">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                                 </button>
                             </div>
                         </div>
                         <div>
                             <label class="label-text block mb-2">Camera</label>
-                            <select id="settingsVideoSource" onchange="currentVideoInputId=this.value" class="w-full rounded-xl px-3 py-2.5 text-sm text-white transition-all">
+                            <select id="settingsVideoSource" onchange="currentVideoInputId=this.value" class="w-full rounded-lg px-3 py-2.5 text-sm text-white transition-all">
                             </select>
                         </div>
                     </div>
@@ -1723,7 +1680,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             </div>
 
             <div class="pt-2 mt-2">
-                <button onclick="saveSettings()" class="btn-primary w-full py-3.5 text-white rounded-xl font-semibold transition-all">
+                <button onclick="saveSettings()" class="btn-primary w-full py-3.5 text-white rounded-lg font-semibold transition-all">
                     Save Changes
                 </button>
             </div>
@@ -1731,7 +1688,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     </div>
 
     <div id="appLayout" class="hidden flex-col h-full w-full">
-        <div class="flex-none p-3 sm:p-4 md:p-5 z-40 flex justify-between items-center gap-2 md:gap-4 pl-3 md:pl-4" style="background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%); backdrop-filter: blur(8px);">
+        <div class="flex-none p-3 sm:p-4 md:p-5 z-40 flex justify-between items-center gap-2 md:gap-4 pl-3 md:pl-4" style="background: rgba(0,0,0,0.72); border-bottom: 1px solid var(--border-subtle);">
             <div class="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                 <button id="sidebarToggle" onclick="toggleSidebar()" class="control-btn shadow-lg hidden !w-10 !h-10 md:!w-12 md:!h-12 flex-shrink-0" title="Channels">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
@@ -1784,14 +1741,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  <div class="w-full h-full relative flex flex-col">
                     <div id="localAvatarLayer" class="absolute inset-0 z-20 flex items-center justify-center" style="display: none; background: var(--bg-secondary);">
                         <img id="localAvatarImg" src="" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-30 hidden" draggable="false">
-                        <div class="relative w-14 h-14 md:w-20 md:h-20 rounded-2xl flex items-center justify-center overflow-hidden z-10" style="background: var(--bg-secondary); border: 2px solid var(--border-subtle);">
+                        <div class="relative w-14 h-14 md:w-20 md:h-20 rounded-lg flex items-center justify-center overflow-hidden z-10" style="background: var(--bg-secondary); border: 2px solid var(--border-subtle);">
                              <img id="localAvatarCenterImg" src="" class="w-full h-full object-cover hidden" draggable="false">
                              <div id="localAvatarPlaceholder" class="text-2xl md:text-3xl flex items-center justify-center w-full h-full" style="color: var(--text-muted); line-height: 1;">👤</div>
                         </div>
                     </div>
 
                     <video id="localVideo" autoplay playsinline muted class="w-full h-full object-cover z-10"></video>
-                    <div id="localLabel" class="name-tag absolute bottom-2 left-2 px-2.5 py-1 rounded-lg text-[10px] md:text-xs font-medium backdrop-blur-sm z-30" style="background: rgba(0, 0, 0, 0.6); color: var(--text-primary);">
+                    <div id="localLabel" class="name-tag absolute bottom-2 left-2 px-2.5 py-1 rounded-lg text-[10px] md:text-xs font-medium z-30" style="background: rgba(0, 0, 0, 0.6); color: var(--text-primary); border: 1px solid var(--border-subtle);">
                         You
                     </div>
                 </div>
@@ -2390,9 +2347,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             workletLoadingPromise = (async () => {
                 try {
-                    if (audioContext.state === 'suspended') {
-                        await audioContext.resume();
-                    }
                     await audioContext.audioWorklet.addModule('/rnnoise_processor.js');
                     console.log("AudioWorklet loaded");
                     return true;
@@ -2404,6 +2358,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             })();
 
             return workletLoadingPromise;
+        }
+
+        async function tryResumeAudioContext(timeoutMs = 300) {
+            if (!audioContext) return false;
+            if (audioContext.state === 'running') return true;
+            if (audioContext.state === 'closed') return false;
+
+            try {
+                const resumed = await Promise.race([
+                    audioContext.resume().then(() => true).catch(() => false),
+                    new Promise(resolve => setTimeout(() => resolve(false), timeoutMs))
+                ]);
+                return resumed && audioContext.state === 'running';
+            } catch (err) {
+                console.warn("AudioContext resume failed", err);
+                return false;
+            }
         }
 
         async function requestWakeLock() {
@@ -2438,7 +2409,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 await populateDeviceList();
                 navigator.mediaDevices.ondevicechange = populateDeviceList;
 
-                await initAudioWorklet();
                 await startPreview();
 
             } catch (e) {
@@ -2705,8 +2675,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (!audioContext) return;
             if (!stream.getAudioTracks().length) return;
 
-            if (audioContext.state === 'suspended') {
-                await audioContext.resume();
+            const audioReady = await tryResumeAudioContext();
+            if (!audioReady) {
+                return;
             }
 
             if (!audioMonitorGeneration[targetId]) audioMonitorGeneration[targetId] = 0;
@@ -3016,7 +2987,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioContext.state === 'suspended') await audioContext.resume();
+            const audioReady = await tryResumeAudioContext();
+            if (!audioReady) {
+                bar.style.width = '0%';
+                return;
+            }
 
             const source = audioContext.createMediaStreamSource(stream);
             const analyser = audioContext.createAnalyser();
@@ -3261,12 +3236,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                  if (rawStream.getAudioTracks().length > 0) {
                      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-                     const workletLoaded = await initAudioWorklet();
-
-                     if (audioContext.state === 'suspended') {
-                         audioContext.resume().catch(e => {});
-                     }
+                     const audioReady = await tryResumeAudioContext();
+                     const workletLoaded = audioReady ? await initAudioWorklet() : false;
 
                      if (workletLoaded) {
                          const source = audioContext.createMediaStreamSource(rawStream);
@@ -3378,12 +3349,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                     if (rawStream.getAudioTracks().length > 0) {
                          if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-                         const workletLoaded = await initAudioWorklet();
-
-                         if (audioContext.state === 'suspended') {
-                             audioContext.resume().catch(e => {});
-                         }
+                         const audioReady = await tryResumeAudioContext();
+                         const workletLoaded = audioReady ? await initAudioWorklet() : false;
 
                          if (workletLoaded) {
                              const source = audioContext.createMediaStreamSource(rawStream);
@@ -3691,9 +3658,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
-            if (audioContext.state === 'suspended') {
-                await audioContext.resume();
-            }
+            await tryResumeAudioContext(2000);
+            await initAudioWorklet();
 
             previewVideo.srcObject = null;
 
@@ -7132,7 +7098,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     </script>
 
     <div id="cropModal" class="fixed inset-0 z-[250] flex items-center justify-center p-4 hidden" style="background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px) saturate(140%);">
-        <div class="glass-panel p-6 md:p-8 rounded-3xl w-full max-w-md max-h-[95vh] flex flex-col items-center relative z-10">
+        <div class="glass-panel p-6 md:p-8 rounded-[14px] w-full max-w-md max-h-[95vh] flex flex-col items-center relative z-10">
             <h3 class="text-xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">Crop Your Avatar</h3>
             <div id="cropWrapper" class="w-full relative"></div>
             <div class="flex gap-4 w-full mt-2">
