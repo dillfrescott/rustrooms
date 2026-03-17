@@ -262,13 +262,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             background: var(--bg-elevated);
             border: 1px solid var(--border-subtle);
             box-shadow: var(--shadow-lg);
-            border-radius: 14px;
+            border-radius: 10px;
         }
 
         .video-container {
             position: relative;
             background: var(--bg-secondary);
-            border-radius: 8px;
+            border-radius: 6px;
             overflow: hidden;
             border: 1px solid var(--border-subtle);
             transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -323,7 +323,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             position: relative;
             width: 120px;
             height: 120px;
-            border-radius: 8px;
+            border-radius: 6px;
             overflow: hidden;
             border: 2px solid var(--border-subtle);
             background: var(--bg-tertiary);
@@ -373,7 +373,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .control-btn {
             padding: 0;
-            border-radius: 6px;
+            border-radius: 4px;
             border: 1px solid var(--border-subtle);
             cursor: pointer;
             display: flex;
@@ -567,7 +567,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             max-height: calc(100vh - 32px);
             background: var(--bg-elevated-strong);
             border: 1px solid var(--border-medium);
-            border-radius: 8px;
+            border-radius: 6px;
             box-shadow: var(--shadow-xl);
             z-index: 9999;
             opacity: 0;
@@ -605,7 +605,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .stats-close {
             width: 24px;
             height: 24px;
-            border-radius: 6px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -931,7 +931,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .btn-primary {
             background: var(--accent);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 8px;
+            border-radius: 6px;
             box-shadow: none;
         }
         .btn-primary:hover {
@@ -949,7 +949,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             background: var(--bg-elevated);
             border: 1px solid var(--border-subtle);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 8px;
+            border-radius: 6px;
             box-shadow: none;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
@@ -1010,7 +1010,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .status-pill {
             background: var(--bg-elevated);
             border: 1px solid var(--border-subtle);
-            border-radius: 99px;
+            border-radius: 16px !important;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: none;
         }
@@ -1086,13 +1086,65 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
+        .app-topbar,
         .sidebar-header {
-            padding: 28px 24px;
+            box-sizing: border-box;
+            height: 52px;
+        }
+
+        @media (min-width: 640px) {
+            .app-topbar,
+            .sidebar-header {
+                height: 60px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .app-topbar,
+            .sidebar-header {
+                height: 88px;
+            }
+        }
+
+        .sidebar-header {
+            padding: 12px 24px;
             border-bottom: 1px solid var(--border-subtle);
             display: flex;
             align-items: center;
             justify-content: space-between;
             background: var(--bg-secondary);
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .sidebar-header button {
+            margin: 0;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: transparent;
+            border: 0;
+        }
+
+        @media (min-width: 640px) {
+            .sidebar-header {
+                padding-top: 16px;
+                padding-bottom: 16px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .sidebar-header {
+                padding-top: 20px;
+                padding-bottom: 20px;
+            }
         }
 
         .sidebar-content {
@@ -1104,7 +1156,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .room-item {
             background: var(--bg-secondary);
             border: 1px solid var(--border-subtle);
-            border-radius: 8px;
+            border-radius: 6px;
             padding: 16px;
             margin-bottom: 12px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1154,7 +1206,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .mini-avatar {
             width: 26px;
             height: 26px;
-            border-radius: 8px;
+            border-radius: 6px;
             background: var(--bg-primary);
             border: 1px solid var(--border-subtle);
             overflow: hidden;
@@ -1233,7 +1285,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .modal-content {
             background: var(--bg-elevated);
             border: 1px solid var(--border-medium);
-            border-radius: 12px;
+            border-radius: 10px;
             width: 90%;
             max-width: 420px;
             padding: 40px 32px;
@@ -1290,7 +1342,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             max-width: 260px;
             background: var(--bg-elevated-strong);
             border: 1px solid var(--border-medium);
-            border-radius: 6px;
+            border-radius: 4px;
             padding: 14px 16px;
             box-shadow: var(--shadow-lg);
             opacity: 0;
@@ -1330,7 +1382,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             color: var(--text-muted);
             cursor: pointer;
             padding: 2px;
-            border-radius: 6px;
+            border-radius: 4px;
             transition: all 0.15s ease;
             display: flex;
             align-items: center;
@@ -1374,7 +1426,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             color: var(--text-primary);
             cursor: pointer;
             padding: 4px;
-            border-radius: 8px;
+            border-radius: 6px;
             transition: all 0.15s ease;
             display: flex;
             align-items: center;
@@ -1688,7 +1740,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     </div>
 
     <div id="appLayout" class="hidden flex-col h-full w-full">
-        <div class="flex-none p-3 sm:p-4 md:p-5 z-40 flex justify-between items-center gap-2 md:gap-4 pl-3 md:pl-4" style="background: rgba(0,0,0,0.72); border-bottom: 1px solid var(--border-subtle);">
+        <div class="app-topbar flex-none p-3 sm:p-4 md:p-5 z-40 flex justify-between items-center gap-2 md:gap-4 pl-3 md:pl-4" style="background: rgba(0,0,0,0.72); border-bottom: 1px solid var(--border-subtle);">
             <div class="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                 <button id="sidebarToggle" onclick="toggleSidebar()" class="control-btn shadow-lg hidden !w-10 !h-10 md:!w-12 md:!h-12 flex-shrink-0" title="Channels">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
