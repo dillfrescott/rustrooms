@@ -1056,7 +1056,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             height: 100%;
             pointer-events: none;
             z-index: 1;
-            opacity: 0.16;
         }
 
         #roomSidebar {
