@@ -1994,6 +1994,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         let wsUrl = roomId ? `${wsProtocol}//${window.location.host}/ws/${roomId}/${encodeURIComponent(channelId)}` : '';
 
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         let ws;
         let localStream;
         let screenStream;
@@ -2615,7 +2616,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         audio: {
                             deviceId: { exact: audioId },
                             echoCancellation: true,
-                            noiseSuppression: false,
+                            noiseSuppression: isIOS ? true : false,
                             autoGainControl: true,
                             sampleRate: 48000
                         }
@@ -2623,16 +2624,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      let stream = await navigator.mediaDevices.getUserMedia(constraints);
 
                      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                     await initAudioWorklet();
+                     const workletLoaded = !isIOS ? await initAudioWorklet() : false;
                      if (audioContext.state === 'suspended') audioContext.resume().catch(e => {});
 
-                     const source = audioContext.createMediaStreamSource(stream);
-                     const worklet = new AudioWorkletNode(audioContext, 'rnnoise-processor');
-                     const dest = audioContext.createMediaStreamDestination();
-                     source.connect(worklet);
-                     worklet.connect(dest);
-
-                     const newTrack = dest.stream.getAudioTracks()[0];
+                     let newTrack;
+                     if (workletLoaded) {
+                         const source = audioContext.createMediaStreamSource(stream);
+                         const worklet = new AudioWorkletNode(audioContext, 'rnnoise-processor');
+                         const dest = audioContext.createMediaStreamDestination();
+                         source.connect(worklet);
+                         worklet.connect(dest);
+                         newTrack = dest.stream.getAudioTracks()[0];
+                     } else {
+                         newTrack = stream.getAudioTracks()[0];
+                     }
 
                      if (localStream && localStream._originalStream) {
                          localStream._originalStream.getTracks().forEach(t => t.stop());
@@ -3262,7 +3267,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     audio: {
                         deviceId: audioSource ? { exact: audioSource } : undefined,
                         echoCancellation: true,
-                        noiseSuppression: false,
+                        noiseSuppression: isIOS ? true : false,
                         autoGainControl: true,
                         sampleRate: 48000
                     },
@@ -3288,7 +3293,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  if (rawStream.getAudioTracks().length > 0) {
                      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                      const audioReady = await tryResumeAudioContext();
-                     const workletLoaded = audioReady ? await initAudioWorklet() : false;
+                     const workletLoaded = (audioReady && !isIOS) ? await initAudioWorklet() : false;
 
                      if (workletLoaded) {
                          const source = audioContext.createMediaStreamSource(rawStream);
@@ -3393,7 +3398,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 console.error("Preview failed", e);
                 document.getElementById('previewPlaceholder').style.display = 'flex';
                  try {
-                    let rawStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    let rawStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: isIOS ? true : false,
+                            autoGainControl: true,
+                        }, 
+                        video: false 
+                    });
 
                     const newA = rawStream.getAudioTracks()[0];
                     if (newA) newA.enabled = previousAudioEnabled;
@@ -3401,7 +3413,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     if (rawStream.getAudioTracks().length > 0) {
                          if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                          const audioReady = await tryResumeAudioContext();
-                         const workletLoaded = audioReady ? await initAudioWorklet() : false;
+                         const workletLoaded = (audioReady && !isIOS) ? await initAudioWorklet() : false;
 
                          if (workletLoaded) {
                              const source = audioContext.createMediaStreamSource(rawStream);
