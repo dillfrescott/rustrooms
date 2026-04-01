@@ -7813,18 +7813,6 @@ async fn cleanup_dead_remote_users(
             }
         }
         affected_rooms.insert(room_id.clone());
-
-        // Broadcast user-left to the cluster for each dead user
-        cluster_broadcast(cluster_tx, &ClusterMessage {
-            msg_type: "user-left".into(),
-            room_id: room_id.clone(),
-            channel_id: channel_id.clone(),
-            user_id: user_id.clone(),
-            msg_id: Uuid::new_v4().to_string(),
-            status: None,
-            data: None,
-            signal_msg: None,
-        });
     }
     for room_id in &affected_rooms {
         broadcast_channel_list(rooms, remote_users, room_id).await;
@@ -8629,6 +8617,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
         }
     }
 
+    let mut actually_removed = false;
     let mut schedule_room_cleanup = false;
     {
         let mut rooms_lock = rooms.lock().await;
@@ -8684,14 +8673,17 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                     }
                 }
 
-                if removed && room.values().all(|c| c.is_empty()) {
-                    schedule_room_cleanup = true;
+                if removed {
+                    actually_removed = true;
+                    if room.values().all(|c| c.is_empty()) {
+                        schedule_room_cleanup = true;
+                    }
                 }
             }
         }
     }
 
-    if is_joined {
+    if is_joined && actually_removed {
         cluster_broadcast(&state.cluster_tx, &ClusterMessage {
             msg_type: "user-left".into(),
             room_id: room_id.clone(),
