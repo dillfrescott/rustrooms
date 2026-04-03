@@ -2004,6 +2004,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let peerScreenHasAudio = {};
         let peerMicTrackId = {};
         let peerScreenAudioTrackId = {};
+        let pendingCandidates = {};
         let userNickname = "Guest";
         let userAvatar = null;
         let userAvatarIsGif = false;
@@ -3828,6 +3829,44 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 reconnectionAttempts = 0;
                 connectWs();
             });
+
+            if (isIOS) {
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible' && !hasLeftRoom) {
+                        if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+                            console.log('iOS returned from background, WebSocket dead, reconnecting...');
+                            isReconnecting = false;
+                            reconnectionAttempts = 0;
+                            connectWs();
+                        } else if (ws.readyState === WebSocket.OPEN) {
+                            let hasDeadPeer = false;
+                            for (const uid in peers) {
+                                const state = peers[uid].connectionState || peers[uid].iceConnectionState;
+                                if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+                                    hasDeadPeer = true;
+                                    break;
+                                }
+                            }
+                            if (hasDeadPeer) {
+                                console.log('iOS returned from background, dead peers detected, re-establishing...');
+                                for (const uid in peers) {
+                                    removePeer(uid);
+                                }
+                                peerCamStatus = {};
+                                peerScreenStatus = {};
+                                peerScreenHasAudio = {};
+                                ws.close();
+                                isReconnecting = false;
+                                reconnectionAttempts = 0;
+                                setTimeout(() => connectWs(), 300);
+                            }
+                        }
+                        if (audioContext && audioContext.state === 'suspended') {
+                            audioContext.resume().catch(e => {});
+                        }
+                    }
+                });
+            }
 
             await requestWakeLock();
         }
@@ -5892,20 +5931,48 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
+        async function flushPendingCandidates(userId, pc) {
+            if (!pendingCandidates[userId] || pendingCandidates[userId].length === 0) return;
+            const candidates = pendingCandidates[userId].splice(0);
+            for (const candidate of candidates) {
+                try {
+                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (e) {
+                    console.warn("Failed to flush buffered ICE candidate for", userId.substr(0,4), e);
+                }
+            }
+        }
+
         async function handleSignal(userId, data) {
             if (!peers[userId]) initPeer(userId, false, undefined, null);
             const pc = peers[userId];
 
             try {
                 if (data.type === 'offer') {
+                    if (pc.signalingState !== 'stable' && pc.signalingState !== 'have-local-offer') {
+                        console.warn(`Ignoring offer from ${userId.substr(0,4)} in state ${pc.signalingState}`);
+                        return;
+                    }
+                    pendingCandidates[userId] = [];
                     await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                    await flushPendingCandidates(userId, pc);
                     const answer = await pc.createAnswer();
                     answer.sdp = forceStereoAudio(answer.sdp);
                     await pc.setLocalDescription(answer);
                     sendSignal(userId, { type: 'answer', sdp: answer });
                 } else if (data.type === 'answer') {
+                    if (pc.signalingState !== 'have-local-offer') {
+                        console.warn(`Ignoring answer from ${userId.substr(0,4)} in state ${pc.signalingState}`);
+                        return;
+                    }
                     await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                    await flushPendingCandidates(userId, pc);
                 } else if (data.type === 'candidate') {
+                    if (!pc.remoteDescription || !pc.remoteDescription.type) {
+                        if (!pendingCandidates[userId]) pendingCandidates[userId] = [];
+                        pendingCandidates[userId].push(data.candidate);
+                        return;
+                    }
                     await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
                 }
             } catch (e) {
@@ -5936,6 +6003,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             delete peerMicTrackId[userId];
             delete peerScreenAudioTrackId[userId];
+            delete pendingCandidates[userId];
             checkEmpty();
         }
 
@@ -7784,7 +7852,7 @@ async fn cleanup_dead_remote_users(
     dead: &HashSet<(String, String, String)>,
     rooms: &RoomMap,
     remote_users: &RemoteUsersMap,
-    cluster_tx: &tokio::sync::broadcast::Sender<String>,
+    _cluster_tx: &tokio::sync::broadcast::Sender<String>,
 ) {
     let mut affected_rooms = HashSet::new();
     for (room_id, channel_id, user_id) in dead {
