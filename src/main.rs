@@ -499,7 +499,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         @media (max-height: 500px) {
             .pip-wrapper {
                 width: 120px;
-                bottom: 100px;
+                bottom: 120px;
                 right: 10px;
             }
         }
