@@ -2178,6 +2178,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         let statsWindowVisible = false;
         let statsUpdateInterval = null;
+        let prevStatsData = {};
+        let prevStatsTimestamp = 0;
 
         function toggleStatsWindow() {
             const statsWindow = document.getElementById('statsWindow');
@@ -2193,6 +2195,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 statsWindow.style.top = `${top}px`;
                 statsWindow.style.right = `${right}px`;
                 statsWindow.classList.add('visible');
+                prevStatsData = {};
+                prevStatsTimestamp = 0;
                 startStatsUpdate();
             } else {
                 statsWindow.classList.remove('visible');
@@ -2225,6 +2229,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
+        function calcBitrateKbps(reportId, currentBytes, nowMs) {
+            const prev = prevStatsData[reportId];
+            if (!prev || !prev.bytes || !prev.timestamp) {
+                return 0;
+            }
+            const deltaBytes = currentBytes - prev.bytes;
+            const deltaSec = (nowMs - prev.timestamp) / 1000;
+            if (deltaSec <= 0 || deltaBytes <= 0) return 0;
+            return Math.round((deltaBytes * 8) / (deltaSec * 1000));
+        }
+
         async function updateWebRTCStats() {
             const statPing = document.getElementById('statPing');
             const statJitter = document.getElementById('statJitter');
@@ -2255,6 +2270,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             let audioCodec = '--';
             let jitter = '--';
 
+            const nowMs = Date.now();
+            const newStatsData = {};
             const peerValues = Object.values(peers);
 
             for (const pc of peerValues) {
@@ -2271,16 +2288,24 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             if (fps > 0) {
                                 videoFrames = `${fps} fps`;
                             }
-                            const bitrate = report.bytesReceived ? Math.round((report.bytesReceived * 8) / 1000) : 0;
-                            if (bitrate > 0) {
-                                videoBitrate = `${bitrate} kbps`;
+                            if (report.bytesReceived) {
+                                const key = report.id + '_recv';
+                                newStatsData[key] = { bytes: report.bytesReceived, timestamp: nowMs };
+                                const bitrate = calcBitrateKbps(key, report.bytesReceived, nowMs);
+                                if (bitrate > 0) {
+                                    videoBitrate = `${bitrate} kbps`;
+                                }
                             }
                             totalPacketsReceived += report.packetsReceived || 0;
                             totalPacketsLost += report.packetsLost || 0;
                         } else if (report.type === 'inbound-rtp' && report.kind === 'audio') {
-                            const bitrate = report.bytesReceived ? Math.round((report.bytesReceived * 8) / 1000) : 0;
-                            if (bitrate > 0) {
-                                audioBitrate = `${bitrate} kbps`;
+                            if (report.bytesReceived) {
+                                const key = report.id + '_recv';
+                                newStatsData[key] = { bytes: report.bytesReceived, timestamp: nowMs };
+                                const bitrate = calcBitrateKbps(key, report.bytesReceived, nowMs);
+                                if (bitrate > 0) {
+                                    audioBitrate = `${bitrate} kbps`;
+                                }
                             }
                             if (report.jitter && !isNaN(parseFloat(report.jitter))) {
                                 jitter = `${Math.round(parseFloat(report.jitter) * 1000)}ms`;
@@ -2297,15 +2322,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             if (fps > 0 && videoFrames === '--') {
                                 videoFrames = `${fps} fps`;
                             }
-                            const bitrate = report.bytesSent ? Math.round((report.bytesSent * 8) / 1000) : 0;
-                            if (bitrate > 0 && videoBitrate === '--') {
-                                videoBitrate = `${bitrate} kbps`;
+                            if (report.bytesSent) {
+                                const key = report.id + '_sent';
+                                newStatsData[key] = { bytes: report.bytesSent, timestamp: nowMs };
+                                const bitrate = calcBitrateKbps(key, report.bytesSent, nowMs);
+                                if (bitrate > 0 && videoBitrate === '--') {
+                                    videoBitrate = `${bitrate} kbps`;
+                                }
                             }
                             totalPacketsSent += report.packetsSent || 0;
                         } else if (report.type === 'outbound-rtp' && report.kind === 'audio') {
-                            const bitrate = report.bytesSent ? Math.round((report.bytesSent * 8) / 1000) : 0;
-                            if (bitrate > 0 && audioBitrate === '--') {
-                                audioBitrate = `${bitrate} kbps`;
+                            if (report.bytesSent) {
+                                const key = report.id + '_sent';
+                                newStatsData[key] = { bytes: report.bytesSent, timestamp: nowMs };
+                                const bitrate = calcBitrateKbps(key, report.bytesSent, nowMs);
+                                if (bitrate > 0 && audioBitrate === '--') {
+                                    audioBitrate = `${bitrate} kbps`;
+                                }
                             }
                             totalPacketsSent += report.packetsSent || 0;
                         } else if (report.type === 'codec') {
@@ -2322,6 +2355,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }
             }
 
+            prevStatsData = newStatsData;
+            prevStatsTimestamp = nowMs;
+
             if (statJitter) statJitter.textContent = jitter;
             if (statVideoRes) statVideoRes.textContent = videoRes;
             if (statVideoBitrate) statVideoBitrate.textContent = videoBitrate;
@@ -2334,6 +2370,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (statPacketsLost) statPacketsLost.textContent = totalPacketsLost.toLocaleString();
         }
 
+        let lastVisibilityHidden = 0;
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                lastVisibilityHidden = Date.now();
+            } else if (document.visibilityState === 'visible') {
+                const wasFrozenMs = Date.now() - lastVisibilityHidden;
+                if (wasFrozenMs > heartbeatIntervalMs && ws && ws.readyState === WebSocket.OPEN) {
+                    console.log(`Tab was hidden for ${Math.round(wasFrozenMs / 1000)}s, restarting heartbeat`);
+                    startHeartbeat();
+                }
+            }
+        });
+
         function sendPing() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 lastPingSentTime = Date.now();
@@ -2341,7 +2391,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 if (heartbeatTimeout) clearTimeout(heartbeatTimeout);
                 heartbeatTimeout = setTimeout(() => {
-                    const timeSincePong = Date.now() - lastPongTime;
+                    if (document.visibilityState === 'hidden') {
+                        return;
+                    }
+                    const now = Date.now();
+                    const timeSincePong = now - lastPongTime;
+                    const timeSinceHidden = now - lastVisibilityHidden;
+                    if (timeSinceHidden < heartbeatTimeoutMs * 2) {
+                        console.log('Heartbeat timeout skipped - tab was recently hidden, restarting heartbeat');
+                        startHeartbeat();
+                        return;
+                    }
                     if (timeSincePong > heartbeatIntervalMs + heartbeatTimeoutMs) {
                         console.warn('Heartbeat timeout - no pong received, closing connection');
                         ws.close();
@@ -3842,16 +3902,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (isIOS) {
                 document.addEventListener('visibilitychange', () => {
                     if (document.visibilityState === 'visible' && !hasLeftRoom) {
+                        stopHeartbeat();
+
                         if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
                             console.log('iOS returned from background, WebSocket dead, reconnecting...');
                             isReconnecting = false;
                             reconnectionAttempts = 0;
                             connectWs();
                         } else if (ws.readyState === WebSocket.OPEN) {
+                            startHeartbeat();
+
                             let hasDeadPeer = false;
                             for (const uid in peers) {
-                                const state = peers[uid].connectionState || peers[uid].iceConnectionState;
-                                if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+                                const peerState = peers[uid].connectionState || peers[uid].iceConnectionState;
+                                if (peerState === 'disconnected' || peerState === 'failed' || peerState === 'closed') {
                                     hasDeadPeer = true;
                                     break;
                                 }
