@@ -489,9 +489,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             transform: none;
         }
 
-        @media (max-width: 400px), (max-height: 500px) {
+        @media (max-width: 400px) {
             .pip-wrapper {
                 width: 120px;
+                right: 10px;
+            }
+        }
+
+        @media (max-height: 500px) {
+            .pip-wrapper {
+                width: 120px;
+                bottom: 100px;
                 right: 10px;
             }
         }
