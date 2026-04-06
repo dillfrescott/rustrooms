@@ -4882,6 +4882,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         function connectWs() {
             updateStatus('connecting', 'Connecting...');
+
+            Object.keys(peers).forEach(uid => {
+                removePeer(uid);
+            });
+            peerCamStatus = {};
+            peerScreenStatus = {};
+            peerScreenHasAudio = {};
+            pendingCandidates = {};
+
             ws = new WebSocket(wsUrl);
 
                         ws.onopen = () => {
@@ -4966,6 +4975,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 case 'room-deleted':
                                     alert("The room has been deleted.");
                                     window.location.href = "/";
+                                    break;
+                                case 'existing-users':
+                                    if (msg.data && Array.isArray(msg.data.users)) {
+                                        msg.data.users.forEach(user => {
+                                            if (user.status.isScreenSharing !== undefined) {
+                                                peerScreenStatus[user.id] = user.status.isScreenSharing;
+                                            }
+                                            if (peers[user.id]) {
+                                                updatePeerInfo(user.id, user.status.nickname, user.status.avatar, user.status.isMuted, user.status.isDeafened, user.status.isGif, user.status.staticFrame);
+                                            } else {
+                                                initPeer(user.id, false, user.status.nickname, user.status.avatar, user.status.isMuted, user.status.isDeafened, user.status.isGif, user.status.staticFrame);
+                                            }
+                                        });
+                                    }
                                     break;
                                 case 'user-joined':
                                     playNotificationSound('join');
@@ -5585,8 +5608,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             return sdpLines.join('\r\n');
         }
 
-        function negotiate(userId, pc) {
-            pc.createOffer()
+        function negotiate(userId, pc, iceRestart = false) {
+            pc.createOffer({ iceRestart: iceRestart })
                 .then(offer => {
                     offer.sdp = forceStereoAudio(offer.sdp);
                     return pc.setLocalDescription(offer);
@@ -5960,6 +5983,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                     console.warn(`Peer ${userId.substr(0,4)} temporarily disconnected, waiting for recovery...`);
                     updateConnectionStatus();
+
+                    if (initiator) {
+                        setTimeout(() => {
+                            if (pc.connectionState === 'disconnected') {
+                                console.log(`Triggering ICE restart for ${userId.substr(0,4)}`);
+                                negotiate(userId, pc, true);
+                            }
+                        }, 2000);
+                    }
 
                     if (!pc._disconnectTimeout) {
                         pc._disconnectTimeout = setTimeout(() => {
@@ -8368,6 +8400,30 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 println!("CLEANUP: Canceled pending deletion for room '{}'", room_id);
                             }
                             is_joined = true;
+
+                            {
+                                let rooms_lock = rooms.lock().await;
+                                let mut existing_users: Vec<serde_json::Value> = Vec::new();
+                                if let Some(room) = rooms_lock.get(&room_id) {
+                                    if let Some(channel) = room.get(&channel_id) {
+                                        for (uid, (_, status)) in channel.iter() {
+                                            if *uid != user_id {
+                                                existing_users.push(serde_json::json!({
+                                                    "id": uid,
+                                                    "status": status,
+                                                }));
+                                            }
+                                        }
+                                    }
+                                }
+                                let existing_users_msg = serde_json::to_string(&SignalMessage {
+                                    msg_type: "existing-users".into(),
+                                    user_id: None,
+                                    target: None,
+                                    data: Some(serde_json::json!({ "users": existing_users })),
+                                }).unwrap();
+                                let _ = tx.try_send(Ok(Message::Text(existing_users_msg.into())));
+                            }
 
                              let mut notify_data = parsed.data.clone();
                              if let Some(serde_json::Value::Object(ref mut map)) = notify_data {
