@@ -5068,33 +5068,41 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     }
                                     break;
                                 case 'room-list':
-                                    globalRoomList = msg.data;
-                                    if (typeof updateRoomListUI === 'function') updateRoomListUI();
+                                    try {
+                                        globalRoomList = msg.data;
+                                        if (typeof updateRoomListUI === 'function') updateRoomListUI();
+                                    } catch (e) { console.error("Error updating room-list UI:", e); }
                                     break;
                                 case 'room-deleted':
                                     alert("The room has been deleted.");
                                     window.location.href = "/";
                                     break;
                                 case 'existing-users':
-                                    if (msg.data && Array.isArray(msg.data.users)) {
-                                        msg.data.users.forEach(user => {
-                                            if (user.status.isScreenSharing !== undefined) {
-                                                peerScreenStatus[user.id] = user.status.isScreenSharing;
-                                            }
-                                            if (peers[user.id]) {
-                                                updatePeerInfo(user.id, user.status.nickname, user.status.avatar, user.status.isMuted, user.status.isDeafened, user.status.isGif, user.status.staticFrame);
-                                            } else {
-                                                initPeer(user.id, false, user.status.nickname, user.status.avatar, user.status.isMuted, user.status.isDeafened, user.status.isGif, user.status.staticFrame);
-                                            }
-                                        });
-                                    }
+                                    try {
+                                        if (msg.data && Array.isArray(msg.data.users)) {
+                                            msg.data.users.forEach(user => {
+                                                if (user.status.isScreenSharing !== undefined) {
+                                                    peerScreenStatus[user.id] = user.status.isScreenSharing;
+                                                }
+                                                if (peers[user.id]) {
+                                                    updatePeerInfo(user.id, user.status.nickname, user.status.avatar, user.status.isMuted, user.status.isDeafened, user.status.isGif, user.status.staticFrame);
+                                                } else {
+                                                    initPeer(user.id, false, user.status.nickname, user.status.avatar, user.status.isMuted, user.status.isDeafened, user.status.isGif, user.status.staticFrame);
+                                                }
+                                            });
+                                        }
+                                    } catch (e) { console.error("Error processing existing-users:", e); }
                                     break;
                                 case 'user-joined':
                                     playNotificationSound('join');
                                     const joinedScreenAudio = getScreenAudioFlag(msg.data);
                                     updatePeerTrackHints(msg.userId, msg.data);
 
-                                    if (peers[msg.userId]) {
+                                case 'user-joined':
+                                    try {
+                                        playNotificationSound('join');
+                                        const joinedScreenAudio = getScreenAudioFlag(msg.data);
+                                        updatePeerTrackHints(msg.userId, msg.data);
 
                                         if (msg.data.camEnabled !== undefined) {
                                             peerCamStatus[msg.userId] = msg.data.camEnabled;
@@ -5102,58 +5110,47 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         if (msg.data.screenEnabled !== undefined) {
                                             peerScreenStatus[msg.userId] = msg.data.screenEnabled;
                                         }
-                                        if (joinedScreenAudio !== undefined) {
-                                            peerScreenHasAudio[msg.userId] = joinedScreenAudio;
-                                        }
-                                        if (peerScreenStatus[msg.userId] === true && joinedScreenAudio === true) {
-                                            ensureScreenAudioUI(msg.userId);
-                                        }
-                                        updatePeerInfo(msg.userId, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened, msg.data?.isGif, msg.data?.staticFrame);
-                                    } else {
 
-                                        if (document.getElementById(`wrapper-${msg.userId}`)) {
-                                            removePeer(msg.userId);
+                                        if (peers[msg.userId]) {
+                                            updatePeerInfo(msg.userId, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened, msg.data?.isGif, msg.data?.staticFrame);
+                                            if (joinedScreenAudio !== undefined) {
+                                                peerScreenHasAudio[msg.userId] = joinedScreenAudio;
+                                            }
+                                        } else {
+                                            if (joinedScreenAudio !== undefined) {
+                                                peerScreenHasAudio[msg.userId] = joinedScreenAudio;
+                                            }
+                                            initPeer(msg.userId, true, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened, msg.data?.isGif, msg.data?.staticFrame);
+                                            if (peerScreenStatus[msg.userId] === true && joinedScreenAudio === true) {
+                                                ensureScreenAudioUI(msg.userId);
+                                            }
                                         }
 
-                                        if (msg.data.camEnabled !== undefined) {
-                                            peerCamStatus[msg.userId] = msg.data.camEnabled;
-                                        }
-                                        if (msg.data.screenEnabled !== undefined) {
-                                            peerScreenStatus[msg.userId] = msg.data.screenEnabled;
-                                        }
-                                        if (joinedScreenAudio !== undefined) {
-                                            peerScreenHasAudio[msg.userId] = joinedScreenAudio;
-                                        }
-                                        initPeer(msg.userId, true, msg.data?.nickname, msg.data?.avatar, msg.data?.isMuted, msg.data?.isDeafened, msg.data?.isGif, msg.data?.staticFrame);
-                                        if (peerScreenStatus[msg.userId] === true && joinedScreenAudio === true) {
-                                            ensureScreenAudioUI(msg.userId);
-                                        }
-                                    }
+                                        const myAudioTrack = localStream && localStream.getAudioTracks()[0];
+                                        const myMuted = !myAudioTrack || !myAudioTrack.enabled;
+                                        const myCamEnabled = localStream && localStream.getVideoTracks()[0] && localStream.getVideoTracks()[0].enabled;
+                                        const myScreenEnabled = !!screenStream;
+                                        const myScreenHasAudio = screenStream && screenStream.getAudioTracks().length > 0;
 
-                                    const myAudioTrack = localStream && localStream.getAudioTracks()[0];
-                                    const myMuted = !myAudioTrack || !myAudioTrack.enabled;
-                                    const myCamEnabled = localStream && localStream.getVideoTracks()[0] && localStream.getVideoTracks()[0].enabled;
-                                    const myScreenEnabled = !!screenStream;
-                                    const myScreenHasAudio = screenStream && screenStream.getAudioTracks().length > 0;
-
-                                    ws.send(JSON.stringify({
-                                        type: 'identify',
-                                        target: msg.userId,
-                                        data: {
-                                            userId: persistentUserId,
-                                            nickname: userNickname,
-                                            avatar: userAvatar,
-                                            isGif: userAvatarIsGif,
-                                            staticFrame: userAvatarStaticFrame,
-                                            camEnabled: myCamEnabled,
-                                            screenEnabled: myScreenEnabled,
-                                            screenAudio: myScreenHasAudio,
-                                            micTrackId: myAudioTrack ? myAudioTrack.id : null,
-                                            screenAudioTrackId: screenStream ? (screenStream.getAudioTracks()[0]?.id || null) : null,
-                                            isMuted: myMuted,
-                                            isDeafened: isDeafened
-                                        }
-                                    }));
+                                        ws.send(JSON.stringify({
+                                            type: 'identify',
+                                            target: msg.userId,
+                                            data: {
+                                                userId: persistentUserId,
+                                                nickname: userNickname,
+                                                avatar: userAvatar,
+                                                isGif: userAvatarIsGif,
+                                                staticFrame: userAvatarStaticFrame,
+                                                camEnabled: myCamEnabled,
+                                                screenEnabled: myScreenEnabled,
+                                                screenAudio: myScreenHasAudio,
+                                                micTrackId: myAudioTrack ? myAudioTrack.id : null,
+                                                screenAudioTrackId: screenStream ? (screenStream.getAudioTracks()[0]?.id || null) : null,
+                                                isMuted: myMuted,
+                                                isDeafened: isDeafened
+                                            }
+                                        }));
+                                    } catch (e) { console.error("Error processing user-joined:", e); }
                                     break;
                                 case 'user-left':
 
@@ -5223,25 +5220,27 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     }
                                     break;
                                 case 'identify':
-                                    const identifiedScreenAudio = getScreenAudioFlag(msg.data);
-                                    updatePeerTrackHints(msg.userId, msg.data);
-                                    if (msg.data.camEnabled !== undefined) {
-                                        peerCamStatus[msg.userId] = msg.data.camEnabled;
-                                    }
-                                    if (msg.data.screenEnabled !== undefined) {
-                                        peerScreenStatus[msg.userId] = msg.data.screenEnabled;
-                                    }
-                                    if (identifiedScreenAudio !== undefined) {
-                                        peerScreenHasAudio[msg.userId] = identifiedScreenAudio;
-                                    }
-                                    if (peers[msg.userId]) {
-                                        updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened, msg.data.isGif, msg.data.staticFrame);
-                                    } else {
-                                        initPeer(msg.userId, false, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened, msg.data.isGif, msg.data.staticFrame);
-                                    }
-                                    if (peerScreenStatus[msg.userId] === true && identifiedScreenAudio === true) {
-                                        ensureScreenAudioUI(msg.userId);
-                                    }
+                                    try {
+                                        const identifiedScreenAudio = getScreenAudioFlag(msg.data);
+                                        updatePeerTrackHints(msg.userId, msg.data);
+                                        if (msg.data.camEnabled !== undefined) {
+                                            peerCamStatus[msg.userId] = msg.data.camEnabled;
+                                        }
+                                        if (msg.data.screenEnabled !== undefined) {
+                                            peerScreenStatus[msg.userId] = msg.data.screenEnabled;
+                                        }
+                                        if (identifiedScreenAudio !== undefined) {
+                                            peerScreenHasAudio[msg.userId] = identifiedScreenAudio;
+                                        }
+                                        if (peers[msg.userId]) {
+                                            updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened, msg.data.isGif, msg.data.staticFrame);
+                                        } else {
+                                            initPeer(msg.userId, false, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened, msg.data.isGif, msg.data.staticFrame);
+                                        }
+                                        if (peerScreenStatus[msg.userId] === true && identifiedScreenAudio === true) {
+                                            ensureScreenAudioUI(msg.userId);
+                                        }
+                                    } catch (e) { console.error("Error processing identify:", e); }
                                     break;
                                 case 'rename-channel':
                                     if (roomId === msg.data.roomId && channelId === msg.data.oldName) {
@@ -5723,8 +5722,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             return sdpLines.join('\r\n');
         }
 
-        function negotiate(userId, pc, iceRestart = false) {
-            pc.createOffer({ iceRestart: iceRestart })
+        function negotiate(userId, pc, isIceRestart = false) {
+            const options = isIceRestart ? { iceRestart: true } : undefined;
+            pc.createOffer(options)
                 .then(offer => {
                     offer.sdp = forceStereoAudio(offer.sdp);
                     return pc.setLocalDescription(offer);
