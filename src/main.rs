@@ -2003,7 +2003,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         let wsUrl = roomId ? `${wsProtocol}//${window.location.host}/ws/${roomId}/${encodeURIComponent(channelId)}` : '';
 
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isIOS = (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         let ws;
         let localStream;
         let screenStream;
@@ -2037,9 +2037,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         let reconnectionAttempts = 0;
-        const maxReconnectionAttempts = 10;
+        const maxReconnectionAttempts = isIOS ? 50 : 20;
         const baseReconnectionDelay = 1000;
-        const maxReconnectionDelay = 30000;
+        const maxReconnectionDelay = isIOS ? 15000 : 30000;
         let hasLeftRoom = false;
         let isReconnecting = false;
         let awaitingPassword = false;
@@ -2090,11 +2090,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const reconnectDelayMs = 5000;
 
         let heartbeatInterval = null;
-        const heartbeatIntervalMs = 3000;
-        const heartbeatTimeoutMs = 10000;
+        const heartbeatIntervalMs = isIOS ? 5000 : 3000;
+        const heartbeatTimeoutMs = isIOS ? 25000 : 15000;
         let lastPingSentTime = 0;
         let lastPongTime = Date.now();
         let heartbeatTimeout = null;
+        let missedPongCount = 0;
 
         function getScreenAudioFlag(data) {
             if (!data) return undefined;
@@ -2399,12 +2400,31 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     const timeSinceHidden = now - lastVisibilityHidden;
                     if (timeSinceHidden < heartbeatTimeoutMs * 2) {
                         console.log('Heartbeat timeout skipped - tab was recently hidden, restarting heartbeat');
+                        missedPongCount = 0;
                         startHeartbeat();
                         return;
                     }
                     if (timeSincePong > heartbeatIntervalMs + heartbeatTimeoutMs) {
-                        console.warn('Heartbeat timeout - no pong received, closing connection');
-                        ws.close();
+                        missedPongCount++;
+                        if (missedPongCount < 2) {
+                            console.warn(`Heartbeat: missed pong #${missedPongCount}, sending emergency ping before disconnect`);
+                            try { ws.send(JSON.stringify({ type: 'ping' })); } catch(e) {}
+                            heartbeatTimeout = setTimeout(() => {
+                                const recheckPong = Date.now() - lastPongTime;
+                                if (recheckPong > heartbeatIntervalMs + heartbeatTimeoutMs) {
+                                    console.warn('Heartbeat timeout - emergency ping also failed, closing connection');
+                                    missedPongCount = 0;
+                                    ws.close();
+                                } else {
+                                    console.log('Heartbeat recovered after emergency ping');
+                                    missedPongCount = 0;
+                                }
+                            }, isIOS ? 8000 : 5000);
+                        } else {
+                            console.warn('Heartbeat timeout - no pong received after retries, closing connection');
+                            missedPongCount = 0;
+                            ws.close();
+                        }
                     }
                 }, heartbeatTimeoutMs);
             }
@@ -2433,6 +2453,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         function handlePong() {
             lastPongTime = Date.now();
+            missedPongCount = 0;
             const pingMs = lastPongTime - lastPingSentTime;
 
             if (lastPingSentTime > 0) {
@@ -2499,6 +2520,43 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
+        let noSleepVideo = null;
+
+        function startNoSleepVideo() {
+            if (noSleepVideo) return;
+            try {
+                noSleepVideo = document.createElement('video');
+                noSleepVideo.setAttribute('playsinline', '');
+                noSleepVideo.setAttribute('muted', '');
+                noSleepVideo.setAttribute('loop', '');
+                noSleepVideo.muted = true;
+                noSleepVideo.style.position = 'fixed';
+                noSleepVideo.style.top = '-1px';
+                noSleepVideo.style.left = '-1px';
+                noSleepVideo.style.width = '1px';
+                noSleepVideo.style.height = '1px';
+                noSleepVideo.style.opacity = '0.01';
+                noSleepVideo.style.pointerEvents = 'none';
+                noSleepVideo.style.zIndex = '-1';
+                // Tiny silent MP4 — keeps iOS Safari from throttling/suspending WebSockets
+                noSleepVideo.src = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAA3BtZGF0AAACrwYF//+r3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NCByMzA5NSBiYWVlNDAwIC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyMiAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9jaz0xOjA6MCBhbmFseXNlPTB4MzoweDExMyBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MSA4eDhkY3Q9MSBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTEgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0zIGJfcHlyYW1pZD0yIGJfYWRhcHQ9MSBiX2JpYXM9MCBkaXJlY3Q9MSB3ZWlnaHRiPTEgb3Blbl9nb3A9MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBrZXlpbnRfbWluPTI1IHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAMZWliAAADrfBccwAAAAMAAAMAAAMAIBBgAJQAAAAwAAADAAADAAADAAADAAjUAAADAAADAAADAAADAAADAAADAAADAAADAAADAAADAAADAAAYxgAABwBAAAAGuUGaIAD//vbcvgSuBfAAAAMAAAMAUJgAoEqwEAAAAwAAAwAAAwAADQChIAAAAwAAADAAADAAADAAADAAADAi0AAAAwAAADAAADAAADAAADAAADAAEroAAAAwDMAAABakGaQgwhBAAAAwEC0AAAAwAAAwAA';
+                document.body.appendChild(noSleepVideo);
+                const playPromise = noSleepVideo.play();
+                if (playPromise) playPromise.catch(() => {});
+                console.log('NoSleep video started for iOS');
+            } catch(e) {
+                console.warn('NoSleep video failed:', e);
+            }
+        }
+
+        function stopNoSleepVideo() {
+            if (noSleepVideo) {
+                noSleepVideo.pause();
+                noSleepVideo.remove();
+                noSleepVideo = null;
+            }
+        }
+
         async function requestWakeLock() {
             try {
                 if ('wakeLock' in navigator) {
@@ -2507,9 +2565,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         console.log('Wake Lock released');
                     });
                     console.log('Wake Lock active');
+                } else if (isIOS) {
+                    // iOS Safari doesn't support Wake Lock API — use NoSleep video trick
+                    startNoSleepVideo();
                 }
             } catch (err) {
                 console.error(`${err.name}, ${err.message}`);
+                if (isIOS) startNoSleepVideo();
             }
         }
 
@@ -3941,6 +4003,43 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 });
             }
 
+            // iOS WebSocket watchdog — catches silent WS deaths that don't trigger onclose
+            if (isIOS) {
+                let iosWatchdogInterval = setInterval(() => {
+                    if (hasLeftRoom) return;
+                    const now = Date.now();
+                    const pongAge = now - lastPongTime;
+                    // If we haven't received a pong in 3x the heartbeat interval, WS is probably dead
+                    const watchdogThreshold = heartbeatIntervalMs * 3 + heartbeatTimeoutMs;
+                    if (ws && ws.readyState === WebSocket.OPEN && pongAge > watchdogThreshold) {
+                        console.warn(`iOS watchdog: no pong in ${Math.round(pongAge/1000)}s, force-reconnecting`);
+                        missedPongCount = 0;
+                        ws.close();
+                    } else if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+                        if (!isReconnecting && !hasLeftRoom) {
+                            console.warn('iOS watchdog: WebSocket is dead and no reconnection in progress, reconnecting...');
+                            reconnectionAttempts = 0;
+                            isReconnecting = false;
+                            connectWs();
+                        }
+                    }
+                }, 30000);
+            }
+
+            // Handle iOS BFCache restoration (back-forward cache)
+            window.addEventListener('pageshow', (event) => {
+                if (event.persisted && !hasLeftRoom) {
+                    console.log('Page restored from BFCache, checking WebSocket...');
+                    if (!ws || ws.readyState !== WebSocket.OPEN) {
+                        isReconnecting = false;
+                        reconnectionAttempts = 0;
+                        connectWs();
+                    } else {
+                        startHeartbeat();
+                    }
+                }
+            });
+
             await requestWakeLock();
         }
 
@@ -5181,12 +5280,28 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             isReconnecting = true;
                             reconnectionAttempts++;
                             if (reconnectionAttempts >= maxReconnectionAttempts) {
-                                updateStatus('disconnected', 'Disconnected');
-                                const btn = document.getElementById('btnReconnect');
-                                if (btn) btn.classList.remove('hidden');
-                                isReconnecting = false;
-                                console.error('WebSocket disconnected after multiple retries. No further attempts will be made.');
-                                stopHeartbeat();
+                                if (isIOS) {
+                                    // On iOS, never fully give up — fall back to slow periodic retries
+                                    console.warn(`iOS: exhausted ${maxReconnectionAttempts} fast retries, switching to slow retry every 30s`);
+                                    updateStatus('connecting', 'Connection lost — retrying...');
+                                    const btn = document.getElementById('btnReconnect');
+                                    if (btn) btn.classList.remove('hidden');
+                                    isReconnecting = false;
+                                    setTimeout(() => {
+                                        if (!hasLeftRoom && (!ws || ws.readyState !== WebSocket.OPEN)) {
+                                            reconnectionAttempts = Math.floor(maxReconnectionAttempts * 0.75);
+                                            isReconnecting = false;
+                                            connectWs();
+                                        }
+                                    }, 30000);
+                                } else {
+                                    updateStatus('disconnected', 'Disconnected');
+                                    const btn = document.getElementById('btnReconnect');
+                                    if (btn) btn.classList.remove('hidden');
+                                    isReconnecting = false;
+                                    console.error('WebSocket disconnected after multiple retries. No further attempts will be made.');
+                                    stopHeartbeat();
+                                }
                             } else {
                                 const delay = getReconnectDelay(reconnectionAttempts);
 
@@ -8250,6 +8365,12 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
     let mut user_id = String::new();
     let mut is_joined = false;
 
+    // Server-side ping to detect dead iOS Safari connections
+    let tx_ping = tx.clone();
+    let (ping_shutdown_tx, mut ping_shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+    let last_activity = Arc::new(tokio::sync::Mutex::new(std::time::Instant::now()));
+    let last_activity_writer = last_activity.clone();
+
     tokio::spawn(async move {
         while let Some(result) = rx.recv().await {
             if let Ok(msg) = result {
@@ -8260,7 +8381,42 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
         }
     });
 
+    // Server-side ping task: sends a ping every 30s, closes connection after 120s of silence
+    let tx_for_ping = tx_ping.clone();
+    let last_activity_for_ping = last_activity.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+        interval.tick().await; // skip first immediate tick
+        loop {
+            tokio::select! {
+                _ = interval.tick() => {
+                    let elapsed = last_activity_for_ping.lock().await.elapsed();
+                    if elapsed > std::time::Duration::from_secs(120) {
+                        // No activity for 120s, client is likely dead (iOS Safari silent drop)
+                        let _ = tx_for_ping.try_send(Ok(Message::Close(None)));
+                        break;
+                    }
+                    // Send server-side ping
+                    let ping_msg = serde_json::to_string(&SignalMessage {
+                        msg_type: "pong".into(), // reuse pong as keep-alive
+                        user_id: None,
+                        target: None,
+                        data: None,
+                    }).unwrap();
+                    if tx_for_ping.try_send(Ok(Message::Text(ping_msg.into()))).is_err() {
+                        break;
+                    }
+                }
+                _ = &mut ping_shutdown_rx => {
+                    break;
+                }
+            }
+        }
+    });
+
     while let Some(result) = user_ws_rx.next().await {
+        // Update last activity timestamp on any received message
+        *last_activity_writer.lock().await = std::time::Instant::now();
         if let Ok(msg) = result {
             if let Message::Text(text) = msg {
                 if let Ok(parsed) = serde_json::from_str::<SignalMessage>(&text) {
@@ -8813,6 +8969,9 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
             break;
         }
     }
+
+    // Stop the server-side ping task
+    let _ = ping_shutdown_tx.send(());
 
     let mut actually_removed = false;
     let mut schedule_room_cleanup = false;
