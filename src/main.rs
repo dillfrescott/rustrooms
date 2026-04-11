@@ -6276,7 +6276,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
 
             if (!isFullscreen) {
-                if (el.requestFullscreen) {
+                const vid = document.getElementById(`vid-${userId}`);
+                const isIPhone = /iPhone|iPod/i.test(navigator.userAgent);
+
+                if (isIPhone && vid && vid.webkitEnterFullscreen) {
+                    vid.webkitEnterFullscreen();
+                } else if (el.requestFullscreen) {
                     el.requestFullscreen().catch(err => {
                         console.error(`Error attempting to enable fullscreen: ${err.message}`);
                     });
@@ -6286,11 +6291,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     el.mozRequestFullScreen();
                 } else if (el.msRequestFullscreen) {
                     el.msRequestFullscreen();
-                } else {
-                    const vid = document.getElementById(`vid-${userId}`);
-                    if (vid && vid.webkitEnterFullscreen) {
-                        vid.webkitEnterFullscreen();
-                    }
+                } else if (vid && vid.webkitEnterFullscreen) {
+                    vid.webkitEnterFullscreen();
                 }
             } else {
                 if (document.exitFullscreen) {
