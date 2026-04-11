@@ -1896,22 +1896,25 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             function animate() {
+                animationId = requestAnimationFrame(animate);
                 const overlay = document.getElementById('welcomeOverlay');
                 const isVisible = overlay && !overlay.classList.contains('hidden') && overlay.style.display !== 'none' && !document.hidden;
 
                 if (!isVisible) {
-                    if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-                    particles = [];
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    if (particles.length > 0) {
+                        particles = [];
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
                     return;
                 }
+
+                if (particles.length === 0) init();
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 particles.forEach(p => {
                     p.update();
                     p.draw();
                 });
-                animationId = requestAnimationFrame(animate);
             }
 
             init();
@@ -1965,22 +1968,25 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             function animate() {
+                animationId = requestAnimationFrame(animate);
                 const overlay = document.getElementById('configOverlay');
                 const isVisible = overlay && !overlay.classList.contains('hidden') && overlay.style.display !== 'none' && !document.hidden;
 
                 if (!isVisible) {
-                    if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-                    particles = [];
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    if (particles.length > 0) {
+                        particles = [];
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
                     return;
                 }
+
+                if (particles.length === 0) init();
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 particles.forEach(p => {
                     p.update();
                     p.draw();
                 });
-                animationId = requestAnimationFrame(animate);
             }
 
             init();
