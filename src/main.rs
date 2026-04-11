@@ -6273,12 +6273,35 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const el = document.getElementById(`wrapper-${userId}`);
             if (!el) return;
 
-            if (!document.fullscreenElement) {
-                el.requestFullscreen().catch(err => {
-                    console.error(`Error attempting to enable fullscreen: ${err.message}`);
-                });
+            const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+
+            if (!isFullscreen) {
+                if (el.requestFullscreen) {
+                    el.requestFullscreen().catch(err => {
+                        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                    });
+                } else if (el.webkitRequestFullscreen) {
+                    el.webkitRequestFullscreen();
+                } else if (el.mozRequestFullScreen) {
+                    el.mozRequestFullScreen();
+                } else if (el.msRequestFullscreen) {
+                    el.msRequestFullscreen();
+                } else {
+                    const vid = document.getElementById(`vid-${userId}`);
+                    if (vid && vid.webkitEnterFullscreen) {
+                        vid.webkitEnterFullscreen();
+                    }
+                }
             } else {
-                document.exitFullscreen();
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
             }
         };
 
