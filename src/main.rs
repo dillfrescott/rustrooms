@@ -2102,6 +2102,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         window.addEventListener('beforeunload', clearActiveTabSession);
 
         let reconnectStatusTimeout = null;
+        let reconnectTimer = null;
+        let iosSlowRetryTimer = null;
+        let wsConnectionId = 0;
         const reconnectDelayMs = 5000;
 
         let heartbeatInterval = null;
@@ -4025,10 +4028,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 peerCamStatus = {};
                                 peerScreenStatus = {};
                                 peerScreenHasAudio = {};
-                                ws.close();
                                 isReconnecting = false;
                                 reconnectionAttempts = 0;
-                                setTimeout(() => connectWs(), 300);
+                                connectWs();
                             }
                         }
                         if (audioContext && audioContext.state === 'suspended') {
@@ -4707,6 +4709,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             if (ws) {
                 ws.onclose = null;
+                ws.onerror = null;
                 ws.close();
 
                 await new Promise(resolve => setTimeout(resolve, 200));
@@ -5015,6 +5018,34 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function connectWs() {
+            // Close any existing WebSocket to prevent ghost connections
+            wsConnectionId++;
+            const thisConnectionId = wsConnectionId;
+
+            if (ws) {
+                const oldWs = ws;
+                oldWs.onclose = null;
+                oldWs.onerror = null;
+                if (oldWs.readyState === WebSocket.OPEN || oldWs.readyState === WebSocket.CONNECTING) {
+                    oldWs.close();
+                }
+            }
+
+            // Cancel any pending timers from previous connection attempts
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            if (iosSlowRetryTimer) {
+                clearTimeout(iosSlowRetryTimer);
+                iosSlowRetryTimer = null;
+            }
+            if (reconnectStatusTimeout) {
+                clearTimeout(reconnectStatusTimeout);
+                reconnectStatusTimeout = null;
+            }
+
+            stopHeartbeat();
             updateStatus('connecting', 'Connecting...');
 
             Object.keys(peers).forEach(uid => {
@@ -5028,10 +5059,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             ws = new WebSocket(wsUrl);
 
                         ws.onopen = () => {
+                            if (wsConnectionId !== thisConnectionId) return; // stale connection
 
                             if (reconnectStatusTimeout) {
                                 clearTimeout(reconnectStatusTimeout);
                                 reconnectStatusTimeout = null;
+                            }
+                            if (iosSlowRetryTimer) {
+                                clearTimeout(iosSlowRetryTimer);
+                                iosSlowRetryTimer = null;
+                            }
+                            if (reconnectTimer) {
+                                clearTimeout(reconnectTimer);
+                                reconnectTimer = null;
                             }
 
                             playNotificationSound('join');
@@ -5067,6 +5107,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         };
 
                         ws.onmessage = async (event) => {
+                            if (wsConnectionId !== thisConnectionId) return; // stale connection
                             const msg = JSON.parse(event.data);
 
                             switch (msg.type) {
@@ -5287,6 +5328,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         };
 
                         ws.onclose = () => {
+                            if (wsConnectionId !== thisConnectionId) return; // stale connection
 
                             stopHeartbeat();
 
@@ -5316,7 +5358,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     const btn = document.getElementById('btnReconnect');
                                     if (btn) btn.classList.remove('hidden');
                                     isReconnecting = false;
-                                    setTimeout(() => {
+                                    iosSlowRetryTimer = setTimeout(() => {
+                                        iosSlowRetryTimer = null;
                                         if (!hasLeftRoom && (!ws || ws.readyState !== WebSocket.OPEN)) {
                                             reconnectionAttempts = Math.floor(maxReconnectionAttempts * 0.75);
                                             isReconnecting = false;
@@ -5342,8 +5385,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 }, reconnectDelayMs);
 
                                 console.log(`Reconnecting in ${Math.round(delay)}ms...`);
-                                setTimeout(() => {
-
+                                reconnectTimer = setTimeout(() => {
+                                    reconnectTimer = null;
                                     if (reconnectStatusTimeout) {
                                         clearTimeout(reconnectStatusTimeout);
                                         reconnectStatusTimeout = null;
@@ -5360,6 +5403,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
 
         function retryConnection() {
+            // Cancel any pending timers from previous connection attempts
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            if (iosSlowRetryTimer) {
+                clearTimeout(iosSlowRetryTimer);
+                iosSlowRetryTimer = null;
+            }
+            if (reconnectStatusTimeout) {
+                clearTimeout(reconnectStatusTimeout);
+                reconnectStatusTimeout = null;
+            }
+
             const btn = document.getElementById('btnReconnect');
             if (btn) {
                 btn.classList.add('text-green-500', 'bg-green-500/10');
@@ -5753,13 +5810,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function negotiate(userId, pc, isIceRestart = false) {
+            if (!peers[userId] || peers[userId] !== pc) return; // peer was removed
+            if (pc.connectionState === 'closed' || pc.connectionState === 'failed') return; // peer is dead
             const options = isIceRestart ? { iceRestart: true } : {};
             pc.createOffer(options)
                 .then(offer => {
+                    if (!peers[userId] || peers[userId] !== pc) return; // peer was removed during async op
                     offer.sdp = forceStereoAudio(offer.sdp);
                     return pc.setLocalDescription(offer);
                 })
-                .then(() => sendSignal(userId, { type: 'offer', sdp: pc.localDescription }))
+                .then(() => {
+                    if (!peers[userId] || peers[userId] !== pc) return; // peer was removed during async op
+                    sendSignal(userId, { type: 'offer', sdp: pc.localDescription });
+                })
                 .catch(e => console.error("Negotiation error", e));
         }
 
@@ -6131,7 +6194,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                     if (initiator) {
                         setTimeout(() => {
-                            if (pc.connectionState === 'disconnected') {
+                            if (peers[userId] === pc && pc.connectionState === 'disconnected') {
                                 console.log(`Triggering ICE restart for ${userId.substr(0,4)}`);
                                 negotiate(userId, pc, true);
                             }
@@ -6140,7 +6203,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                     if (!pc._disconnectTimeout) {
                         pc._disconnectTimeout = setTimeout(() => {
-                            if (pc.connectionState === 'disconnected') {
+                            if (peers[userId] === pc && pc.connectionState === 'disconnected') {
                                 console.warn(`Peer ${userId.substr(0,4)} did not recover, removing...`);
                                 removePeer(userId);
                             }
@@ -6196,6 +6259,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         async function handleSignal(userId, data) {
             if (!peers[userId]) initPeer(userId, false, undefined, null);
             const pc = peers[userId];
+            if (!pc || pc.connectionState === 'closed' || pc.connectionState === 'failed') return; // peer is dead
 
             try {
                 if (data.type === 'offer') {
@@ -6205,7 +6269,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                     pendingCandidates[userId] = [];
                     await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                    if (!peers[userId] || peers[userId] !== pc) return; // peer was removed during async op
                     await flushPendingCandidates(userId, pc);
+                    if (!peers[userId] || peers[userId] !== pc) return;
                     const answer = await pc.createAnswer();
                     answer.sdp = forceStereoAudio(answer.sdp);
                     await pc.setLocalDescription(answer);
@@ -6216,6 +6282,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         return;
                     }
                     await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                    if (!peers[userId] || peers[userId] !== pc) return; // peer was removed during async op
                     await flushPendingCandidates(userId, pc);
                 } else if (data.type === 'candidate') {
                     if (!pc.remoteDescription || !pc.remoteDescription.type) {
@@ -6443,6 +6510,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             });
 
             if (ws) {
+                ws.onclose = null;
+                ws.onerror = null;
                 ws.close();
                 ws = null;
             }
