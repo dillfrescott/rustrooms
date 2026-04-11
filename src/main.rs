@@ -1,6 +1,6 @@
 use axum::{
     extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
+        ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade},
         Path, State, Query,
     },
     http::header,
@@ -2058,6 +2058,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let hasLeftRoom = false;
         let isReconnecting = false;
         let awaitingPassword = false;
+        let desktopSlowRetryCount = 0;
+        let desktopSlowRetryTimer = null;
 
         const tabId = crypto.randomUUID();
         let tabHeartbeatInterval = null;
@@ -2104,6 +2106,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let reconnectStatusTimeout = null;
         let reconnectTimer = null;
         let iosSlowRetryTimer = null;
+        let desktopSlowRetryTimer = null;
         let wsConnectionId = 0;
         const reconnectDelayMs = 5000;
 
@@ -5040,12 +5043,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 clearTimeout(iosSlowRetryTimer);
                 iosSlowRetryTimer = null;
             }
+            if (desktopSlowRetryTimer) {
+                clearTimeout(desktopSlowRetryTimer);
+                desktopSlowRetryTimer = null;
+            }
             if (reconnectStatusTimeout) {
                 clearTimeout(reconnectStatusTimeout);
                 reconnectStatusTimeout = null;
             }
 
             stopHeartbeat();
+            isReconnecting = false;
             updateStatus('connecting', 'Connecting...');
 
             Object.keys(peers).forEach(uid => {
@@ -5069,6 +5077,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 clearTimeout(iosSlowRetryTimer);
                                 iosSlowRetryTimer = null;
                             }
+                            if (desktopSlowRetryTimer) {
+                                clearTimeout(desktopSlowRetryTimer);
+                                desktopSlowRetryTimer = null;
+                            }
                             if (reconnectTimer) {
                                 clearTimeout(reconnectTimer);
                                 reconnectTimer = null;
@@ -5076,6 +5088,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                             playNotificationSound('join');
                             reconnectionAttempts = 0;
+                            desktopSlowRetryCount = 0;
                             isReconnecting = false;
                             updateStatus('connected', 'Connected');
                             startHeartbeat();
@@ -5327,8 +5340,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             }
                         };
 
-                        ws.onclose = () => {
+                        ws.onclose = (event) => {
                             if (wsConnectionId !== thisConnectionId) return; // stale connection
+
+                            // Code 4001 = server inactivity timeout — skip reconnect, show disconnected
+                            if (event.code === 4001) {
+                                stopHeartbeat();
+                                updateStatus('disconnected', 'Disconnected (inactive)');
+                                const btn = document.getElementById('btnReconnect');
+                                if (btn) btn.classList.remove('hidden');
+                                isReconnecting = false;
+                                return;
+                            }
 
                             stopHeartbeat();
 
@@ -5367,12 +5390,28 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         }
                                     }, 30000);
                                 } else {
-                                    updateStatus('disconnected', 'Disconnected');
+                                    // Desktop: fall back to slow periodic retries (every 60s, up to 5 times)
+                                    // before giving up entirely, so transient outages don't require manual action
+                                    console.warn(`Desktop: exhausted ${maxReconnectionAttempts} fast retries, switching to slow retry every 60s`);
+                                    updateStatus('connecting', 'Connection lost — retrying...');
                                     const btn = document.getElementById('btnReconnect');
                                     if (btn) btn.classList.remove('hidden');
                                     isReconnecting = false;
-                                    console.error('WebSocket disconnected after multiple retries. No further attempts will be made.');
-                                    stopHeartbeat();
+                                    desktopSlowRetryCount = (desktopSlowRetryCount || 0) + 1;
+                                    if (desktopSlowRetryCount <= 5) {
+                                        desktopSlowRetryTimer = setTimeout(() => {
+                                            desktopSlowRetryTimer = null;
+                                            if (!hasLeftRoom && (!ws || ws.readyState !== WebSocket.OPEN)) {
+                                                reconnectionAttempts = Math.floor(maxReconnectionAttempts * 0.75);
+                                                isReconnecting = false;
+                                                connectWs();
+                                            }
+                                        }, 60000);
+                                    } else {
+                                        updateStatus('disconnected', 'Disconnected');
+                                        console.error('WebSocket disconnected after multiple retries. No further attempts will be made.');
+                                        stopHeartbeat();
+                                    }
                                 }
                             } else {
                                 const delay = getReconnectDelay(reconnectionAttempts);
@@ -5399,6 +5438,28 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                         ws.onerror = (error) => {
                             console.error('WebSocket Error:', error);
+                            // onerror is usually followed by onclose which handles reconnection,
+                            // but on some mobile browsers onclose may not fire after onerror.
+                            // Kick off a fallback reconnect after a short delay if onclose doesn't fire.
+                            const errConnectionId = thisConnectionId;
+                            setTimeout(() => {
+                                if (wsConnectionId !== errConnectionId) return; // stale
+                                if (hasLeftRoom) return;
+                                if (ws && ws.readyState === WebSocket.CONNECTING) return; // still connecting
+                                if (isReconnecting) return;
+                                // If the socket is closed/closing and onclose never fired, trigger reconnect
+                                if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+                                    console.warn('onerror fallback: socket appears dead without onclose, triggering reconnect');
+                                    reconnectionAttempts++;
+                                    isReconnecting = true;
+                                    const delay = getReconnectDelay(reconnectionAttempts);
+                                    reconnectTimer = setTimeout(() => {
+                                        reconnectTimer = null;
+                                        isReconnecting = false;
+                                        connectWs();
+                                    }, delay);
+                                }
+                            }, 2000);
                         };
                     }
 
@@ -5411,6 +5472,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (iosSlowRetryTimer) {
                 clearTimeout(iosSlowRetryTimer);
                 iosSlowRetryTimer = null;
+            }
+            if (desktopSlowRetryTimer) {
+                clearTimeout(desktopSlowRetryTimer);
+                desktopSlowRetryTimer = null;
             }
             if (reconnectStatusTimeout) {
                 clearTimeout(reconnectStatusTimeout);
@@ -5430,6 +5495,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     hasLeftRoom = false;
                     isReconnecting = false;
                     reconnectionAttempts = 0;
+                    desktopSlowRetryCount = 0;
                     connectWs();
                 }, 300);
             }
@@ -7725,6 +7791,9 @@ type RoomMap = Arc<Mutex<HashMap<String, ChannelMap>>>;
 type RoomCleanupMap = Arc<Mutex<HashMap<String, u64>>>;
 type RemoteUsersMap = Arc<Mutex<HashMap<String, HashMap<String, HashMap<String, UserStatus>>>>>;
 const ROOM_EMPTY_GRACE_SECS: u64 = 120;
+const MAX_ROOM_ID_LEN: usize = 64;
+const MAX_CHANNEL_ID_LEN: usize = 32;
+const MAX_NICKNAME_LEN: usize = 32;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct ClusterMessage {
@@ -7896,7 +7965,10 @@ async fn ws_handler(
     headers: axum::http::HeaderMap,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let channel_id = channel_id.chars().take(32).collect::<String>();
+    let channel_id = channel_id.chars().take(MAX_CHANNEL_ID_LEN).collect::<String>();
+    if room_id.len() > MAX_ROOM_ID_LEN {
+        return (axum::http::StatusCode::BAD_REQUEST, "Room ID too long").into_response();
+    }
     if let (Some(origin), Some(host)) = (headers.get("origin"), headers.get("host")) {
         if let (Ok(origin_str), Ok(host_str)) = (origin.to_str(), host.to_str()) {
              if !origin_str.ends_with(host_str) {
@@ -8530,7 +8602,10 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                     let elapsed = last_activity_for_ping.lock().await.elapsed();
                     if elapsed > std::time::Duration::from_secs(120) {
                         // No activity for 120s, client is likely dead (iOS Safari silent drop)
-                        let _ = tx_for_ping.try_send(Ok(Message::Close(None)));
+                        let _ = tx_for_ping.try_send(Ok(Message::Close(Some(CloseFrame {
+                            code: 4001,
+                            reason: "Inactivity timeout".into(),
+                        }))));
                         break;
                     }
                     // Send server-side ping
@@ -8583,7 +8658,9 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 .and_then(|d| d.get("nickname"))
                                 .and_then(|v| v.as_str())
                                 .unwrap_or("Guest")
-                                .to_string();
+                                .chars()
+                                .take(MAX_NICKNAME_LEN)
+                                .collect::<String>();
 
                             let mut avatar = parsed.data.as_ref()
                                 .and_then(|d| d.get("avatar"))
@@ -8610,11 +8687,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     avatar = None;
                                 }
                             }
-
-                            let _is_reconnect = {
-                                let rooms_lock = rooms.lock().await;
-                                rooms_lock.get(&room_id).and_then(|r| r.get(&channel_id)).map(|c| c.contains_key(&user_id)).unwrap_or(false)
-                            };
 
                             {
                                 let mut rooms_lock = rooms.lock().await;
@@ -8676,6 +8748,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                             let static_frame = parsed.data.as_ref()
                                 .and_then(|d| d.get("staticFrame"))
                                 .and_then(|v| v.as_str())
+                                .filter(|s| s.len() <= 7_000_000)
                                 .map(|s| s.to_string());
 
                                 channel.insert(user_id.clone(), (tx.clone(), UserStatus {
@@ -8787,7 +8860,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         if let Some((_, status)) = channel.get_mut(&user_id) {
                                             if let Some(d) = data {
                                                 if let Some(n) = d.get("nickname").and_then(|v| v.as_str()) {
-                                                    status.nickname = n.to_string();
+                                                    status.nickname = n.chars().take(MAX_NICKNAME_LEN).collect();
                                                 }
                                                 if let Some(a) = d.get("avatar") {
                                                     if a.is_null() {
@@ -8804,8 +8877,14 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                                     status.is_gif = g;
                                                 }
                                                 if d.contains_key("staticFrame") {
-                                                    let sf = d.get("staticFrame").and_then(|v| v.as_str()).map(|s| s.to_string());
-                                                    status.static_frame = sf;
+                                                    let sf = d.get("staticFrame").and_then(|v| v.as_str())
+                                                        .filter(|s| s.len() <= 7_000_000)
+                                                        .map(|s| s.to_string());
+                                                    if sf.is_some() {
+                                                        status.static_frame = sf;
+                                                    } else if d.get("staticFrame").map_or(false, |v| v.is_null()) {
+                                                        status.static_frame = None;
+                                                    }
                                                 }
                                                 if let Some(m) = d.get("isMuted").and_then(|v| v.as_bool()) {
                                                     status.is_muted = m;
