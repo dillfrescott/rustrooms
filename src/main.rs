@@ -2405,6 +2405,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         });
 
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
         function sendPing() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 lastPingSentTime = Date.now();
@@ -4498,7 +4503,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             let html = `
                 <div class="uvm-header">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    <span class="uvm-name">${nickname}</span>
+                    <span class="uvm-name">${escapeHtml(nickname)}</span>
                     <button class="uvm-close" onclick="closeUserVolumeMenu()">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
@@ -4866,11 +4871,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     const isScreenSharing = u.isScreenSharing === true;
 
                     usersHtml += `
-                        <div class="room-user-row pointer-events-auto cursor-pointer" data-user-id="${uid}" data-user-nickname="${u.nickname.replace(/"/g, '&quot;')}" onclick="handleUserClick(this)" oncontextmenu="handleUserContextMenu(event, this)" ontouchstart="handleUserTouchStart(event, this)" ontouchend="handleUserTouchEnd(event)" ontouchmove="handleUserTouchCancel()">
+                        <div class="room-user-row pointer-events-auto cursor-pointer" data-user-id="${uid}" data-user-nickname="${escapeHtml(u.nickname)}" onclick="handleUserClick(this)" oncontextmenu="handleUserContextMenu(event, this)" ontouchstart="handleUserTouchStart(event, this)" ontouchend="handleUserTouchEnd(event)" ontouchmove="handleUserTouchCancel()">
                             <div class="mini-avatar">
-                                ${u.avatar ? (u.isGif && u.staticFrame ? `<img src="${u.staticFrame}" data-gif-src="${u.avatar}" data-static-src="${u.staticFrame}">` : `<img src="${u.avatar}">`) : `<div class="mini-avatar-placeholder">${u.nickname.charAt(0).toUpperCase()}</div>`}
+                                ${u.avatar ? (u.isGif && u.staticFrame ? `<img src="${escapeHtml(u.staticFrame)}" data-gif-src="${escapeHtml(u.avatar)}" data-static-src="${escapeHtml(u.staticFrame)}">` : `<img src="${escapeHtml(u.avatar)}">`) : `<div class="mini-avatar-placeholder">${escapeHtml(u.nickname.charAt(0).toUpperCase())}</div>`}
                             </div>
-                            <span class="room-user-name">${u.nickname}</span>
+                            <span class="room-user-name">${escapeHtml(u.nickname)}</span>
                             <div class="status-indicators">
                                 ${isScreenSharing ? `
                                     <div class="status-icon active" style="color: #10b981;" title="Screen Sharing">
@@ -5249,8 +5254,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     break;
                                 case 'user-kicked':
                                     if (msg.userId === persistentUserId) {
-                                        alert("You have been kicked from the room.");
                                         hasLeftRoom = true;
+                                        alert("You have been kicked from the room.");
                                         sessionStorage.removeItem('rustrooms_setup_done');
                                         window.location.href = "/";
                                     } else {
@@ -5332,6 +5337,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     break;
                                 case 'signal':
                                     handleSignal(msg.userId, msg.data);
+                                    break;
+                                case 'keepalive':
+                                    // Server keepalive — ignore (not a pong response to our ping)
                                     break;
                                 case 'pong':
                                     handlePong();
@@ -7192,7 +7200,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }
             }
 
-            label.innerHTML = `<span class="flex items-center">${userNickname} (You)${statusIcons}</span>`;
+            label.innerHTML = `<span class="flex items-center">${escapeHtml(userNickname)} (You)${statusIcons}</span>`;
         }
 
         function copyLink() {
@@ -7901,15 +7909,13 @@ async fn main() {
 }
 
 async fn new_room(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Redirect, (axum::http::StatusCode, &'static str)> {
-    if let Ok(password) = std::env::var("ROOM_CREATION_PASSWORD") {
-        if !password.is_empty() {
-             match params.get("password") {
-                 Some(p) if p == &password => {},
-                 _ => return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized")),
-             }
+    if let Some(ref required_pass) = state.room_creation_password {
+        match params.get("password") {
+            Some(p) if p == required_pass => {},
+            _ => return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized")),
         }
     }
 
@@ -7917,7 +7923,12 @@ async fn new_room(
         if custom_name.is_empty() {
             Uuid::new_v4().to_string()
         } else {
-            custom_name.clone()
+            // Validate custom room name: alphanumeric, hyphens, underscores only, max length
+            let trimmed = custom_name.trim();
+            if trimmed.len() > MAX_ROOM_ID_LEN || trimmed.is_empty() || !trimmed.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+                return Err((axum::http::StatusCode::BAD_REQUEST, "Invalid room name: use only letters, numbers, hyphens, and underscores (max 64 characters)"));
+            }
+            trimmed.to_string()
         }
     } else {
         Uuid::new_v4().to_string()
@@ -8457,13 +8468,37 @@ async fn handle_cluster_message(msg: &ClusterMessage, rooms: &RoomMap, remote_us
             if let Some(ref data) = msg.data {
                 let new_name = data.get("newName").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 if !new_name.is_empty() {
+                    let old_name = msg.channel_id.clone();
+                    let rename_notify = serde_json::to_string(&SignalMessage {
+                        msg_type: "rename-channel".into(),
+                        user_id: Some(msg.user_id.clone()),
+                        target: None,
+                        data: Some(serde_json::json!({
+                            "roomId": msg.room_id,
+                            "oldName": old_name,
+                            "newName": new_name,
+                        })),
+                    }).unwrap();
+
                     let mut rl = remote_users.lock().await;
                     if let Some(room) = rl.get_mut(&msg.room_id) {
                         if let Some(channel_data) = room.remove(&msg.channel_id) {
-                            room.insert(new_name, channel_data);
+                            room.insert(new_name.clone(), channel_data);
                         }
                     }
                     drop(rl);
+
+                    // Forward rename-channel to local WebSocket clients in this room
+                    let rooms_lock = rooms.lock().await;
+                    if let Some(room) = rooms_lock.get(&msg.room_id) {
+                        for (_ch_name, channel) in room.iter() {
+                            for (_uid, (tx, _)) in channel.iter() {
+                                let _ = tx.try_send(Ok(Message::Text(rename_notify.clone().into())));
+                            }
+                        }
+                    }
+                    drop(rooms_lock);
+
                     broadcast_channel_list(rooms, remote_users, &msg.room_id).await;
                 }
             }
@@ -8607,9 +8642,9 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                         }))));
                         break;
                     }
-                    // Send server-side ping
+                    // Send server-side keepalive
                     let ping_msg = serde_json::to_string(&SignalMessage {
-                        msg_type: "pong".into(), // reuse pong as keep-alive
+                        msg_type: "keepalive".into(),
                         user_id: None,
                         target: None,
                         data: None,
@@ -8687,6 +8722,17 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 }
                             }
 
+                            let is_gif = parsed.data.as_ref()
+                                .and_then(|d| d.get("isGif"))
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+
+                            let static_frame = parsed.data.as_ref()
+                                .and_then(|d| d.get("staticFrame"))
+                                .and_then(|v| v.as_str())
+                                .filter(|s| s.len() <= 7_000_000)
+                                .map(|s| s.to_string());
+
                             {
                                 let mut rooms_lock = rooms.lock().await;
 
@@ -8738,17 +8784,6 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     }
                                     channel.remove(&user_id);
                                 }
-
-                            let is_gif = parsed.data.as_ref()
-                                .and_then(|d| d.get("isGif"))
-                                .and_then(|v| v.as_bool())
-                                .unwrap_or(false);
-
-                            let static_frame = parsed.data.as_ref()
-                                .and_then(|d| d.get("staticFrame"))
-                                .and_then(|v| v.as_str())
-                                .filter(|s| s.len() <= 7_000_000)
-                                .map(|s| s.to_string());
 
                                 channel.insert(user_id.clone(), (tx.clone(), UserStatus {
                                     nickname: nickname.clone(),
@@ -8833,14 +8868,14 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 channel_id: channel_id.clone(),
                                 user_id: user_id.clone(),
                                 msg_id: Uuid::new_v4().to_string(),
-                                status: Some(UserStatus { 
-                                    nickname: nickname.clone(), 
-                                    avatar: avatar.clone(), 
-                                    is_muted, 
-                                    is_deafened, 
+                                status: Some(UserStatus {
+                                    nickname: nickname.clone(),
+                                    avatar: avatar.clone(),
+                                    is_muted,
+                                    is_deafened,
                                     is_screen_sharing,
-                                    is_gif: false,
-                                    static_frame: None,
+                                    is_gif,
+                                    static_frame: static_frame.clone(),
                                 }),
                                 data: notify_data.clone(),
                                 signal_msg: None,
@@ -9086,6 +9121,27 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                              room.insert(new_name_str.clone(), channel);
                                          }
                                      }
+
+                                     // Broadcast rename-channel to local users in this room
+                                     let rename_msg = serde_json::to_string(&SignalMessage {
+                                         msg_type: "rename-channel".into(),
+                                         user_id: Some(user_id.clone()),
+                                         target: None,
+                                         data: Some(serde_json::json!({
+                                             "roomId": room_id,
+                                             "oldName": target_channel_id,
+                                             "newName": new_name_str,
+                                         })),
+                                     }).unwrap();
+
+                                     if let Some(room) = rooms_lock.get(&room_id) {
+                                         for (_ch_name, channel) in room.iter() {
+                                             for (_uid, (tx, _)) in channel.iter() {
+                                                 let _ = tx.try_send(Ok(Message::Text(rename_msg.clone().into())));
+                                             }
+                                         }
+                                     }
+
                                      drop(rooms_lock);
 
                                      cluster_broadcast(&cluster_tx, &ClusterMessage {
@@ -9095,7 +9151,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                          user_id: user_id.clone(),
                                          msg_id: Uuid::new_v4().to_string(),
                                          status: None,
-                                         data: Some(serde_json::json!({ "newName": new_name_str })),
+                                         data: Some(serde_json::json!({ "roomId": room_id, "oldName": target_channel_id, "newName": new_name_str })),
                                          signal_msg: None,
                                      });
                                      broadcast_channel_list(&rooms, &remote_users, &room_id).await;
