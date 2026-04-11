@@ -2106,7 +2106,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let reconnectStatusTimeout = null;
         let reconnectTimer = null;
         let iosSlowRetryTimer = null;
-        let desktopSlowRetryTimer = null;
         let wsConnectionId = 0;
         const reconnectDelayMs = 5000;
 
