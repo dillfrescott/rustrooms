@@ -5124,11 +5124,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     } catch (e) { console.error("Error processing existing-users:", e); }
                                     break;
                                 case 'user-joined':
-                                    playNotificationSound('join');
-                                    const joinedScreenAudio = getScreenAudioFlag(msg.data);
-                                    updatePeerTrackHints(msg.userId, msg.data);
-
-                                case 'user-joined':
                                     try {
                                         playNotificationSound('join');
                                         const joinedScreenAudio = getScreenAudioFlag(msg.data);
