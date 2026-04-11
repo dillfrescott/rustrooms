@@ -5753,7 +5753,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function negotiate(userId, pc, isIceRestart = false) {
-            const options = isIceRestart ? { iceRestart: true } : undefined;
+            const options = isIceRestart ? { iceRestart: true } : {};
             pc.createOffer(options)
                 .then(offer => {
                     offer.sdp = forceStereoAudio(offer.sdp);
@@ -8609,7 +8609,15 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                             if *uid != user_id {
                                                 existing_users.push(serde_json::json!({
                                                     "id": uid,
-                                                    "status": status,
+                                                    "status": {
+                                                        "nickname": status.nickname,
+                                                        "avatar": status.avatar,
+                                                        "isGif": status.is_gif,
+                                                        "staticFrame": status.static_frame,
+                                                        "isMuted": status.is_muted,
+                                                        "isDeafened": status.is_deafened,
+                                                        "isScreenSharing": status.is_screen_sharing,
+                                                    }
                                                 }));
                                             }
                                         }
