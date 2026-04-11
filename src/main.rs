@@ -842,22 +842,25 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             -webkit-user-select: none;
         }
 
-        .video-container:fullscreen {
+        .video-container:fullscreen, .video-container:-webkit-full-screen {
             border-radius: 0;
             background: #000;
             display: flex;
             align-items: center;
             justify-content: center;
+            width: 100vw;
+            height: 100vh;
         }
 
-        .video-container:fullscreen video {
+        .video-container:fullscreen video, .video-container:-webkit-full-screen video {
             max-height: 100vh;
             max-width: 100vw;
             height: 100%;
             width: 100%;
+            object-fit: contain;
         }
 
-        .video-container:fullscreen .volume-controls {
+        .video-container:fullscreen .volume-controls, .video-container:-webkit-full-screen .volume-controls {
             bottom: 40px;
             right: 40px;
             transform: scale(1.1);
@@ -1476,7 +1479,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .video-container:fullscreen .volume-controls,
-        .video-container:fullscreen .name-tag {
+        .video-container:fullscreen .name-tag,
+        .video-container:-webkit-full-screen .volume-controls,
+        .video-container:-webkit-full-screen .name-tag {
             transition: opacity 0.2s ease-in;
         }
     </style>
