@@ -6422,11 +6422,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             if (!isFullscreen) {
                 const vid = document.getElementById(`vid-${userId}`);
-                const isIPhone = /iPhone|iPod/i.test(navigator.userAgent);
 
-                if (isIPhone && vid && vid.webkitEnterFullscreen) {
-                    vid.webkitEnterFullscreen();
-                } else if (el.requestFullscreen) {
+                if (el.requestFullscreen) {
                     el.requestFullscreen().catch(err => {
                         console.error(`Error attempting to enable fullscreen: ${err.message}`);
                     });
