@@ -1900,7 +1900,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 const isVisible = overlay && !overlay.classList.contains('hidden') && overlay.style.display !== 'none' && !document.hidden;
 
                 if (!isVisible) {
-                    animationId = requestAnimationFrame(animate);
+                    if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+                    particles = [];
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
                     return;
                 }
 
@@ -1967,7 +1969,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 const isVisible = overlay && !overlay.classList.contains('hidden') && overlay.style.display !== 'none' && !document.hidden;
 
                 if (!isVisible) {
-                    animationId = requestAnimationFrame(animate);
+                    if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+                    particles = [];
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
                     return;
                 }
 
@@ -2858,8 +2862,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         let audioMonitorGeneration = {};
+        let audioMonitorNodes = {};
+
+        function cleanupAudioMonitor(targetId) {
+            if (audioMonitorNodes[targetId]) {
+                try { audioMonitorNodes[targetId].source.disconnect(); } catch(e) {}
+                try { audioMonitorNodes[targetId].analyser.disconnect(); } catch(e) {}
+                delete audioMonitorNodes[targetId];
+            }
+            if (audioMonitorGeneration[targetId]) {
+                audioMonitorGeneration[targetId]++;
+            }
+        }
 
         async function setupAudioMonitor(stream, targetId) {
+            if (isIOS) return;
             if (!audioContext) return;
             if (!stream.getAudioTracks().length) return;
 
@@ -2867,6 +2884,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (!audioReady) {
                 return;
             }
+
+            cleanupAudioMonitor(targetId);
 
             if (!audioMonitorGeneration[targetId]) audioMonitorGeneration[targetId] = 0;
             audioMonitorGeneration[targetId]++;
@@ -2877,14 +2896,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             analyser.fftSize = 256;
             source.connect(analyser);
 
+            audioMonitorNodes[targetId] = { source, analyser };
+
             const bufferLength = analyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
 
             function checkAudio() {
                 if (audioMonitorGeneration[targetId] !== myGeneration) {
+                    try { source.disconnect(); } catch(e) {}
+                    try { analyser.disconnect(); } catch(e) {}
                     return;
                 }
                 if (targetId !== 'local' && !document.getElementById(targetId)) {
+                    cleanupAudioMonitor(targetId);
                     return;
                 }
 
@@ -6201,6 +6225,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function removePeer(userId) {
+            cleanupAudioMonitor(`wrapper-${userId}`);
+
             if (peers[userId]) {
 
                 if (peers[userId]._disconnectTimeout) {
@@ -6210,11 +6236,22 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 peers[userId].close();
                 delete peers[userId];
             }
+
+            const vid = document.getElementById(`vid-${userId}`);
+            if (vid) {
+                vid.pause();
+                vid.srcObject = null;
+            }
+
             const el = document.getElementById(`wrapper-${userId}`);
             if (el) el.remove();
 
             const screenAud = document.getElementById(`aud-screen-${userId}`);
-            if (screenAud) screenAud.remove();
+            if (screenAud) {
+                screenAud.pause();
+                screenAud.srcObject = null;
+                screenAud.remove();
+            }
             const volRow = document.getElementById(`vol-row-screen-${userId}`);
             if (volRow) volRow.remove();
 
