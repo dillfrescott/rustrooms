@@ -5128,6 +5128,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             const msg = JSON.parse(event.data);
 
                             switch (msg.type) {
+                                case 'joined':
+                                    if (msg.userId) {
+                                        persistentUserId = msg.userId;
+                                        localStorage.setItem('rustrooms_user_id', persistentUserId);
+                                    }
+                                    break;
                                 case 'error':
                                     if (msg.data && msg.data.code === 'PASSWORD_REQUIRED') {
 
@@ -7978,7 +7984,14 @@ async fn ws_handler(
     }
     if let (Some(origin), Some(host)) = (headers.get("origin"), headers.get("host")) {
         if let (Ok(origin_str), Ok(host_str)) = (origin.to_str(), host.to_str()) {
-             if !origin_str.ends_with(host_str) {
+             // Prevent bypass: "evil-example.com" must not match "example.com"
+             let origin_host = origin_str.strip_prefix("https://")
+                 .or_else(|| origin_str.strip_prefix("http://"))
+                 .unwrap_or(origin_str)
+                 .split('/').next().unwrap_or(origin_str)
+                 .split(':').next().unwrap_or(origin_str);
+             let host_base = host_str.split(':').next().unwrap_or(host_str);
+             if origin_host != host_base && !origin_host.ends_with(&format!(".{}", host_base)) {
                   return (axum::http::StatusCode::FORBIDDEN, "Forbidden Origin").into_response();
              }
         }
@@ -8008,7 +8021,8 @@ async fn cluster_ws_handler(
     } else {
         return (axum::http::StatusCode::FORBIDDEN, "Clustering not enabled").into_response();
     }
-    ws.on_upgrade(move |socket| handle_inbound_cluster(socket, state))
+    ws.max_message_size(8 * 1024 * 1024)
+        .on_upgrade(move |socket| handle_inbound_cluster(socket, state))
 }
 
 async fn handle_inbound_cluster(socket: WebSocket, state: AppState) {
@@ -8676,14 +8690,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
 
                     if !is_joined {
                         if parsed.msg_type == "join" {
-                            user_id = if let Some(ref data) = parsed.data {
-                                data.get("userId")
-                                    .and_then(|v| v.as_str())
-                                    .map(|s| s.to_string())
-                                    .unwrap_or_else(|| Uuid::new_v4().to_string())
-                            } else {
-                                Uuid::new_v4().to_string()
-                            };
+                            user_id = Uuid::new_v4().to_string();
 
                             let nickname = parsed.data.as_ref()
                                 .and_then(|d| d.get("nickname"))
@@ -8797,6 +8804,15 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 println!("CLEANUP: Canceled pending deletion for room '{}'", room_id);
                             }
                             is_joined = true;
+
+                            // Send the server-assigned userId back to the client
+                            let joined_msg = serde_json::to_string(&SignalMessage {
+                                msg_type: "joined".into(),
+                                user_id: Some(user_id.clone()),
+                                target: None,
+                                data: None,
+                            }).unwrap();
+                            let _ = tx.try_send(Ok(Message::Text(joined_msg.into())));
 
                             {
                                 let rooms_lock = rooms.lock().await;
@@ -9141,7 +9157,17 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
 
                                      drop(rooms_lock);
 
-                                     cluster_broadcast(&cluster_tx, &ClusterMessage {
+                                     // Also rename in remote_users so signal routing stays consistent
+                                     {
+                                         let mut rl = remote_users.lock().await;
+                                         if let Some(room) = rl.get_mut(&room_id) {
+                                             if let Some(channel_data) = room.remove(&target_channel_id) {
+                                                 room.insert(new_name_str.clone(), channel_data);
+                                             }
+                                         }
+                                     }
+
+                                     cluster_broadcast(&cluster_tx, & ClusterMessage {
                                          msg_type: "rename-channel".into(),
                                          room_id: room_id.clone(),
                                          channel_id: target_channel_id.clone(),
