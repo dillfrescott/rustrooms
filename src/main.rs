@@ -8690,7 +8690,14 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
 
                     if !is_joined {
                         if parsed.msg_type == "join" {
-                            user_id = Uuid::new_v4().to_string();
+                            user_id = if let Some(ref data) = parsed.data {
+                                data.get("userId")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string())
+                                    .unwrap_or_else(|| Uuid::new_v4().to_string())
+                            } else {
+                                Uuid::new_v4().to_string()
+                            };
 
                             let nickname = parsed.data.as_ref()
                                 .and_then(|d| d.get("nickname"))
