@@ -4,7 +4,7 @@ class RnnoiseProcessor extends AudioWorkletProcessor {
     static get parameterDescriptors() {
         return [{
             name: 'denoiseStrength',
-            defaultValue: 0.9,
+            defaultValue: 0.99,
             minValue: 0,
             maxValue: 1,
             automationRate: 'k-rate'
