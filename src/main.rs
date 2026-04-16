@@ -7829,6 +7829,7 @@ struct AppState {
     cluster_tx: tokio::sync::broadcast::Sender<String>,
     remote_users: RemoteUsersMap,
     cluster_key: Option<String>,
+    allowed_url: Option<String>,
     connected_peers: Arc<Mutex<HashSet<String>>>,
     pub recent_cluster_msg_ids: Arc<Mutex<HashSet<String>>>,
     pub cluster_msg_history: Arc<Mutex<VecDeque<String>>>,
@@ -7841,11 +7842,25 @@ async fn main() {
 
     let room_creation_password = std::env::var("ROOM_CREATION_PASSWORD").ok().map(|p| p.trim().to_string()).filter(|s| !s.is_empty());
     let cluster_key = std::env::var("KEY").ok().map(|k| k.trim().to_string()).filter(|s| !s.is_empty());
+    let allowed_url = std::env::var("URL").ok().map(|u| {
+        let u = u.trim();
+        let without_scheme = u.strip_prefix("https://")
+            .or_else(|| u.strip_prefix("http://"))
+            .unwrap_or(u);
+        let host = without_scheme.trim_end_matches('/');
+        let host = host.split('/').next().unwrap_or(host);
+        let host = host.split(':').next().unwrap_or(host);
+        host.to_string()
+    }).filter(|s| !s.is_empty());
     let (cluster_tx, _) = tokio::sync::broadcast::channel::<String>(10000);
     let remote_users: RemoteUsersMap = Arc::new(Mutex::new(HashMap::new()));
 
     if cluster_key.is_some() {
         println!("CLUSTER: Enabled via KEY env var (DHT discovery)");
+    }
+
+    if let Some(ref url) = allowed_url {
+        println!("URL RESTRICTION: Enabled - only allowing access from {}", url);
     }
 
     let state = AppState {
@@ -7855,6 +7870,7 @@ async fn main() {
         cluster_tx,
         remote_users,
         cluster_key,
+        allowed_url,
         connected_peers: Arc::new(Mutex::new(HashSet::new())),
         recent_cluster_msg_ids: Arc::new(Mutex::new(HashSet::new())),
         cluster_msg_history: Arc::new(Mutex::new(VecDeque::new())),
@@ -7913,8 +7929,18 @@ async fn main() {
 
 async fn new_room(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Redirect, (axum::http::StatusCode, &'static str)> {
+    if let Some(ref allowed_url) = state.allowed_url {
+        let host = headers.get("host")
+            .and_then(|v| v.to_str().ok())
+            .map(|h| h.split(':').next().unwrap_or(h));
+        match host {
+            Some(h) if h == allowed_url => {},
+            _ => return Err((axum::http::StatusCode::FORBIDDEN, "Forbidden")),
+        }
+    }
     if let Some(ref required_pass) = state.room_creation_password {
         match params.get("password") {
             Some(p) if p == required_pass => {},
@@ -7956,7 +7982,17 @@ async fn redirect_ws_trailing_slash(Path((room_id, channel_id)): Path<(String, S
     Redirect::to(&format!("/ws/{}/{}", room_id, channel_id))
 }
 
-async fn index(State(_state): State<AppState>) -> impl IntoResponse {
+async fn index(State(state): State<AppState>, headers: axum::http::HeaderMap) -> axum::response::Response {
+    if let Some(ref allowed_url) = state.allowed_url {
+        let host = headers.get("host")
+            .and_then(|v| v.to_str().ok())
+            .map(|h| h.split(':').next().unwrap_or(h));
+        match host {
+            Some(h) if h == allowed_url => {},
+            _ => return (axum::http::StatusCode::FORBIDDEN, "Forbidden").into_response(),
+        }
+    }
+
     let turn_url = std::env::var("TURN_URL").unwrap_or_default();
     let turn_username = std::env::var("TURN_USERNAME").unwrap_or_default();
     let turn_credential = std::env::var("TURN_CREDENTIAL").unwrap_or_default();
@@ -7968,7 +8004,7 @@ async fn index(State(_state): State<AppState>) -> impl IntoResponse {
             "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; script-src-elem 'self' 'unsafe-inline'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
         )],
         Html(html)
-    )
+    ).into_response()
 }
 
 async fn ws_handler(
@@ -7981,6 +8017,15 @@ async fn ws_handler(
     let channel_id = channel_id.chars().take(MAX_CHANNEL_ID_LEN).collect::<String>();
     if room_id.len() > MAX_ROOM_ID_LEN {
         return (axum::http::StatusCode::BAD_REQUEST, "Room ID too long").into_response();
+    }
+    if let Some(ref allowed_url) = state.allowed_url {
+        let host = headers.get("host")
+            .and_then(|v| v.to_str().ok())
+            .map(|h| h.split(':').next().unwrap_or(h));
+        match host {
+            Some(h) if h == allowed_url => {},
+            _ => return (axum::http::StatusCode::FORBIDDEN, "Forbidden").into_response(),
+        }
     }
     if let (Some(origin), Some(host)) = (headers.get("origin"), headers.get("host")) {
         if let (Ok(origin_str), Ok(host_str)) = (origin.to_str(), host.to_str()) {
