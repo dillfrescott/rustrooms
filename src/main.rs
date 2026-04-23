@@ -2506,6 +2506,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const avatarPreview = document.getElementById('avatarPreview');
         const avatarPlaceholder = document.getElementById('avatarPlaceholder');
 
+        if (nicknameInput) {
+            nicknameInput.addEventListener('input', () => {
+                savePreferences();
+            });
+        }
+
         async function initAudioWorklet() {
             if (workletLoadingPromise) return workletLoadingPromise;
 
@@ -3107,13 +3113,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 const sAudio = document.getElementById('settingsAudioSource');
                 const sVideo = document.getElementById('settingsVideoSource');
                 const sAudioOut = document.getElementById('settingsAudioOutputSource');
+                const sNickname = document.getElementById('settingsNicknameInput');
                 if (sAudio && sAudio.value !== undefined) audioInputId = sAudio.value;
                 if (sVideo && sVideo.value !== undefined) videoInputId = sVideo.value;
                 if (sAudioOut && sAudioOut.value !== undefined) audioOutputId = sAudioOut.value;
+                if (sNickname) userNickname = sNickname.value.trim() || "Guest";
             } else if (isConfigOpen) {
                 if (audioSelect) audioInputId = audioSelect.value;
                 if (videoSelect) videoInputId = videoSelect.value;
                 if (audioOutputSelect) audioOutputId = audioOutputSelect.value;
+                const cNickname = document.getElementById('nicknameInput');
+                if (cNickname) userNickname = cNickname.value.trim() || "Guest";
             }
 
             let isMuted = pendingMicToggle;
@@ -3279,6 +3289,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         avatarPlaceholder.classList.add('hidden');
                         const removeBtn = document.getElementById('btnRemoveSetupAvatar');
                         if (removeBtn) removeBtn.classList.remove('hidden');
+                        savePreferences();
                     });
                 } else {
                     openCropModal(e.target.result, 'setup');
@@ -3297,6 +3308,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             avatarPlaceholder.classList.remove('hidden');
             const removeBtn = document.getElementById('btnRemoveSetupAvatar');
             if (removeBtn) removeBtn.classList.add('hidden');
+            savePreferences();
         }
 
         function removeSettingsAvatar() {
@@ -7646,6 +7658,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     avatarPlaceholder.classList.add('hidden');
                     const removeBtn = document.getElementById('btnRemoveSetupAvatar');
                     if (removeBtn) removeBtn.classList.remove('hidden');
+                    savePreferences();
                 } else if (currentCropTarget === 'settings') {
                     newAvatarCandidate = base64;
                     newAvatarCandidateIsGif = false;
