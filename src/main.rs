@@ -2882,22 +2882,28 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                          }
                       }
 
-                     if (currentVideoTrack) {
-                         localStream.removeTrack(currentVideoTrack);
-                         currentVideoTrack.stop();
-                     }
+                      if (currentVideoTrack) {
+                          localStream.removeTrack(currentVideoTrack);
+                          currentVideoTrack.stop();
+                      }
 
-                 } catch (e) {
-                     console.error("Video switch failed", e);
-                 } finally {
+                      currentVideoInputId = videoId;
+                      const newFacingMode = newTrack.getSettings().facingMode;
+                      if (newFacingMode) {
+                          currentFacingMode = newFacingMode;
+                      }
 
-                     if (settingsVideoEl) {
-                         settingsVideoEl.disabled = false;
-                     }
-                 }
-             }
+                  } catch (e) {
+                      console.error("Video switch failed", e);
+                  } finally {
 
-             updateLocalAvatar();
+                      if (settingsVideoEl) {
+                          settingsVideoEl.disabled = false;
+                      }
+                  }
+              }
+
+              updateLocalAvatar();
         }
 
         let audioMonitorGeneration = {};
@@ -6886,9 +6892,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 let trackIsBroken = false;
                 if (tracks.length > 0) {
                     const track = tracks[0];
-                    if (track.readyState === 'ended' || track.muted || !track.enabled) {
+                    if (track.readyState === 'ended' || track.muted) {
                         trackIsBroken = true;
-                        console.warn("Camera track is broken/disabled, cleaning up");
+                        console.warn("Camera track is broken, cleaning up");
                         track.stop();
                         localStream.removeTrack(track);
                         tracks = [];
@@ -7127,13 +7133,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     localVideoEl.srcObject = localStream;
                 }
 
-                currentFacingMode = newFacingMode;
+                currentFacingMode = newTrack.getSettings().facingMode || newFacingMode;
                 currentVideoInputId = newTrack.getSettings().deviceId || null;
 
                 const settingsVideo = document.getElementById('settingsVideoSource');
                 if (settingsVideo && currentVideoInputId) {
                     if ([...settingsVideo.options].some(o => o.value === currentVideoInputId)) {
                         settingsVideo.value = currentVideoInputId;
+                    }
+                }
+
+                const setupVideo = document.getElementById('videoSource');
+                if (setupVideo && currentVideoInputId) {
+                    if ([...setupVideo.options].some(o => o.value === currentVideoInputId)) {
+                        setupVideo.value = currentVideoInputId;
                     }
                 }
 
