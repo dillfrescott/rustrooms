@@ -3448,6 +3448,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const savedAudioValue = audioSelectEl ? audioSelectEl.value : null;
             const savedVideoValue = videoSelectEl ? videoSelectEl.value : null;
 
+            savePreferences();
+
             const originalVideoSelectContent = videoSelectEl ? videoSelectEl.innerHTML : null;
             const originalAudioSelectContent = audioSelectEl ? audioSelectEl.innerHTML : null;
             if (videoSelectEl) {
@@ -3469,8 +3471,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 const audioSource = savedAudioValue || (audioSelectEl ? audioSelectEl.value : null);
                 const videoSource = savedVideoValue || (videoSelectEl ? videoSelectEl.value : null);
-
-                savePreferences();
 
                 const shouldGetVideo = !pendingCamToggle;
 
