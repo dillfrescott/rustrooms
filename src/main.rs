@@ -909,6 +909,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
+        @media (hover: hover) and (pointer: fine) {
+            #btnSwitchCam {
+                display: none !important;
+            }
+        }
+
         input[type="text"],
         input[type="password"],
         select {
@@ -1831,6 +1837,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 <button class="control-btn" id="btnCam" onclick="toggleCam()" title="Toggle Camera" disabled>
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
                 </button>
+                <button class="control-btn hidden" id="btnSwitchCam" onclick="switchCamera()" title="Switch Camera">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><path d="m15 3-3 3 3 3"/><path d="m9 21 3-3-3-3"/></svg>
+                </button>
                 <button class="control-btn" id="btnShare" onclick="toggleScreen()" title="Share Screen">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
                 </button>
@@ -2622,6 +2631,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             loadPreferences();
             try {
                 await populateDeviceList();
+                await detectCameras();
                 navigator.mediaDevices.ondevicechange = populateDeviceList;
 
                 await startPreview();
@@ -2689,6 +2699,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 if (targetVideoId && [...videoSelect.options].some(o => o.value === targetVideoId)) {
                     videoSelect.value = targetVideoId;
                 }
+
+                detectCameras();
 
             } catch(e) {
                 console.error("Enumeration error", e);
@@ -3097,6 +3109,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     if (data.isDeafened !== undefined) {
                         isDeafened = data.isDeafened;
                     }
+                    if (data.facingMode) {
+                        currentFacingMode = data.facingMode;
+                    }
                 } catch (e) { console.error("Load pref error", e); }
             }
         }
@@ -3146,7 +3161,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     videoInputId: videoInputId,
                     isMuted: isMuted,
                     isCamOff: isCamOff,
-                    isDeafened: isDeafened
+                    isDeafened: isDeafened,
+                    facingMode: currentFacingMode
                 }));
             } catch(e) {
                 console.warn('Could not save preferences to localStorage:', e.message);
@@ -7045,6 +7061,79 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 camToggleInProgress = false;
                 isCameraReady = true;
                 btn.disabled = false;
+            }
+        }
+
+        let currentFacingMode = 'user';
+        let switchCamInProgress = false;
+
+        async function switchCamera() {
+            if (switchCamInProgress || !isCameraReady) return;
+            if (!localStream) return;
+
+            const videoTrack = localStream.getVideoTracks()[0];
+            if (!videoTrack) return;
+
+            switchCamInProgress = true;
+            const btn = document.getElementById('btnSwitchCam');
+            if (btn) btn.disabled = true;
+
+            try {
+                const newFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+
+                const newStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { exact: newFacingMode } }
+                });
+
+                const newTrack = newStream.getVideoTracks()[0];
+                if (!newTrack || newTrack.readyState !== 'live') {
+                    newTrack?.stop();
+                    throw new Error('Could not get camera track');
+                }
+
+                localStream.removeTrack(videoTrack);
+                videoTrack.stop();
+                localStream.addTrack(newTrack);
+
+                if (!screenStream) {
+                    for (const userId in peers) {
+                        const pc = peers[userId];
+                        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                        if (sender) {
+                            sender.replaceTrack(newTrack);
+                        } else {
+                            pc.addTrack(newTrack, localStream);
+                        }
+                        negotiate(userId, pc);
+                    }
+                }
+
+                const localVideoEl = document.getElementById('localVideo');
+                if (localVideoEl) {
+                    localVideoEl.srcObject = null;
+                    localVideoEl.srcObject = localStream;
+                }
+
+                currentFacingMode = newFacingMode;
+                savePreferences();
+            } catch (e) {
+                console.error("Camera switch failed", e);
+            } finally {
+                switchCamInProgress = false;
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async function detectCameras() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                const btnSwitchCam = document.getElementById('btnSwitchCam');
+                if (btnSwitchCam && videoDevices.length > 1) {
+                    btnSwitchCam.classList.remove('hidden');
+                }
+            } catch (e) {
+                console.warn('Could not enumerate devices for camera detection:', e);
             }
         }
 
