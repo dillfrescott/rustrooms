@@ -7128,6 +7128,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }
 
                 currentFacingMode = newFacingMode;
+                currentVideoInputId = newTrack.getSettings().deviceId || null;
+
+                const settingsVideo = document.getElementById('settingsVideoSource');
+                if (settingsVideo && currentVideoInputId) {
+                    if ([...settingsVideo.options].some(o => o.value === currentVideoInputId)) {
+                        settingsVideo.value = currentVideoInputId;
+                    }
+                }
+
                 savePreferences();
             } catch (e) {
                 console.error("Camera switch failed", e);
