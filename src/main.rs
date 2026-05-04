@@ -7079,7 +7079,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (btn) btn.disabled = true;
 
             try {
-                const newFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+                const trackSettings = videoTrack.getSettings();
+                const actualFacing = trackSettings.facingMode || currentFacingMode;
+                const newFacingMode = actualFacing === 'user' ? 'environment' : 'user';
 
                 const newStream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: { exact: newFacingMode } }
