@@ -3819,6 +3819,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const track = localStream.getAudioTracks()[0];
             if (track) {
                 track.enabled = !track.enabled;
+                if (track.enabled && isDeafened) {
+                    isDeafened = false;
+                }
                 updatePreviewButtons();
                 savePreferences();
             }
@@ -3942,6 +3945,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         async function proceedJoinRoom() {
             userNickname = nicknameInput.value.trim() || "Guest";
+            isDeafened = false;
             savePreferences();
 
             setActiveTabSession();
