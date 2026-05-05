@@ -8004,6 +8004,7 @@ struct AppState {
     cluster_tx: tokio::sync::broadcast::Sender<String>,
     remote_users: RemoteUsersMap,
     cluster_key: Option<String>,
+    cluster_scheme: String,
     allowed_url: Option<String>,
     connected_peers: Arc<Mutex<HashSet<String>>>,
     pub recent_cluster_msg_ids: Arc<Mutex<HashSet<String>>>,
@@ -8017,6 +8018,10 @@ async fn main() {
 
     let room_creation_password = std::env::var("ROOM_CREATION_PASSWORD").ok().map(|p| p.trim().to_string()).filter(|s| !s.is_empty());
     let cluster_key = std::env::var("KEY").ok().map(|k| k.trim().to_string()).filter(|s| !s.is_empty());
+    let cluster_scheme = std::env::var("CLUSTER_SCHEME").ok()
+        .map(|s| s.trim().to_lowercase())
+        .filter(|s| s == "wss")
+        .unwrap_or_else(|| "ws".to_string());
     let allowed_url = std::env::var("URL").ok().map(|u| {
         let u = u.trim();
         let without_scheme = u.strip_prefix("https://")
@@ -8031,7 +8036,11 @@ async fn main() {
     let remote_users: RemoteUsersMap = Arc::new(Mutex::new(HashMap::new()));
 
     if cluster_key.is_some() {
-        println!("CLUSTER: Enabled via KEY env var (DHT discovery)");
+        println!("CLUSTER: Enabled via KEY env var (DHT discovery, scheme: {})", cluster_scheme);
+        if cluster_scheme == "ws" {
+            eprintln!("WARNING: CLUSTER: Using unencrypted ws:// for inter-instance traffic.");
+            eprintln!("WARNING: Set CLUSTER_SCHEME=wss and put a TLS-terminating proxy in front of cluster-ws if exposing over untrusted networks.");
+        }
     }
 
     if let Some(ref url) = allowed_url {
@@ -8045,6 +8054,7 @@ async fn main() {
         cluster_tx,
         remote_users,
         cluster_key,
+        cluster_scheme,
         allowed_url,
         connected_peers: Arc::new(Mutex::new(HashSet::new())),
         recent_cluster_msg_ids: Arc::new(Mutex::new(HashSet::new())),
@@ -8394,11 +8404,12 @@ fn spawn_dht_discovery(state: AppState, port: u16) {
                     let addr_str_clean = addr_str.trim().to_string();
                     println!("CLUSTER: Discovered new peer: {}", addr_str_clean);
                     let state_clone = state.clone();
+                    let scheme = state.cluster_scheme.clone();
                     tokio::spawn(async move {
                         let mut target_addr = addr_str_clean.clone();
                         let mut failures = 0u32;
                         loop {
-                            let url = format!("ws://{}/cluster-ws", target_addr);
+                            let url = format!("{}://{}/cluster-ws", scheme, target_addr);
                             match connect_to_peer(&url, &state_clone).await {
                                 Ok(_) => {
                                     println!("CLUSTER: Connection to {} closed", target_addr);
@@ -8965,36 +8976,46 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 .map(|s| s.to_string());
 
                             {
-                                let mut rooms_lock = rooms.lock().await;
-
-                                if let Some(ref required_pass) = state.room_creation_password {
-                                    if !rooms_lock.contains_key(&room_id) {
-                                         let pass_match = if let Some(ref data) = parsed.data {
-                                             data.get("password")
-                                                 .and_then(|v| v.as_str())
-                                                 .map(|p| p == required_pass)
-                                                 .unwrap_or(false)
-                                         } else {
-                                             false
-                                         };
-
-                                         if !pass_match {
-                                             let error_msg = serde_json::to_string(&SignalMessage {
-                                                 msg_type: "error".into(),
-                                                 user_id: None,
-                                                 target: None,
-                                                 data: Some(serde_json::json!({
-                                                     "code": "PASSWORD_REQUIRED",
-                                                     "message": "Room creation requires a password."
-                                                 })),
-                                             }).unwrap();
-                                             let _ = tx.send(Ok(Message::Text(error_msg.into()))).await;
-
-                                             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                                             return;
-                                         }
+                                let room_needs_password = if let Some(ref required_pass) = state.room_creation_password {
+                                    let exists_locally = rooms.lock().await.contains_key(&room_id);
+                                    if exists_locally {
+                                        false
+                                    } else {
+                                        let exists_remotely = remote_users.lock().await.contains_key(&room_id);
+                                        if exists_remotely {
+                                            false
+                                        } else {
+                                            let pass_match = if let Some(ref data) = parsed.data {
+                                                data.get("password")
+                                                    .and_then(|v| v.as_str())
+                                                    .map(|p| p == required_pass)
+                                                    .unwrap_or(false)
+                                            } else {
+                                                false
+                                            };
+                                            !pass_match
+                                        }
                                     }
+                                } else {
+                                    false
+                                };
+
+                                if room_needs_password {
+                                    let error_msg = serde_json::to_string(&SignalMessage {
+                                        msg_type: "error".into(),
+                                        user_id: None,
+                                        target: None,
+                                        data: Some(serde_json::json!({
+                                            "code": "PASSWORD_REQUIRED",
+                                            "message": "Room creation requires a password."
+                                        })),
+                                    }).unwrap();
+                                    let _ = tx.send(Ok(Message::Text(error_msg.into()))).await;
+                                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                                    return;
                                 }
+
+                                let mut rooms_lock = rooms.lock().await;
 
                                 let room = rooms_lock.entry(room_id.clone()).or_insert_with(HashMap::new);
                                 room.entry("General".to_string()).or_insert_with(HashMap::new);
@@ -9042,24 +9063,51 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                             let _ = tx.try_send(Ok(Message::Text(joined_msg.into())));
 
                             {
-                                let rooms_lock = rooms.lock().await;
                                 let mut existing_users: Vec<serde_json::Value> = Vec::new();
-                                if let Some(room) = rooms_lock.get(&room_id) {
-                                    if let Some(channel) = room.get(&channel_id) {
-                                        for (uid, (_, status)) in channel.iter() {
-                                            if *uid != user_id {
-                                                existing_users.push(serde_json::json!({
-                                                    "id": uid,
-                                                    "status": {
-                                                        "nickname": status.nickname,
-                                                        "avatar": status.avatar,
-                                                        "isGif": status.is_gif,
-                                                        "staticFrame": status.static_frame,
-                                                        "isMuted": status.is_muted,
-                                                        "isDeafened": status.is_deafened,
-                                                        "isScreenSharing": status.is_screen_sharing,
-                                                    }
-                                                }));
+                                let mut seen_ids = HashSet::new();
+                                seen_ids.insert(user_id.clone());
+                                {
+                                    let rooms_lock = rooms.lock().await;
+                                    if let Some(room) = rooms_lock.get(&room_id) {
+                                        if let Some(channel) = room.get(&channel_id) {
+                                            for (uid, (_, status)) in channel.iter() {
+                                                if seen_ids.insert(uid.clone()) {
+                                                    existing_users.push(serde_json::json!({
+                                                        "id": uid,
+                                                        "status": {
+                                                            "nickname": status.nickname,
+                                                            "avatar": status.avatar,
+                                                            "isGif": status.is_gif,
+                                                            "staticFrame": status.static_frame,
+                                                            "isMuted": status.is_muted,
+                                                            "isDeafened": status.is_deafened,
+                                                            "isScreenSharing": status.is_screen_sharing,
+                                                        }
+                                                    }));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                {
+                                    let remote_lock = remote_users.lock().await;
+                                    if let Some(remote_room) = remote_lock.get(&room_id) {
+                                        if let Some(remote_channel) = remote_room.get(&channel_id) {
+                                            for (uid, status) in remote_channel.iter() {
+                                                if seen_ids.insert(uid.clone()) {
+                                                    existing_users.push(serde_json::json!({
+                                                        "id": uid,
+                                                        "status": {
+                                                            "nickname": status.nickname,
+                                                            "avatar": status.avatar,
+                                                            "isGif": status.is_gif,
+                                                            "staticFrame": status.static_frame,
+                                                            "isMuted": status.is_muted,
+                                                            "isDeafened": status.is_deafened,
+                                                            "isScreenSharing": status.is_screen_sharing,
+                                                        }
+                                                    }));
+                                                }
                                             }
                                         }
                                     }
@@ -9560,11 +9608,18 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
 
                 if removed {
                     actually_removed = true;
-                    if room.values().all(|c| c.is_empty()) {
-                        schedule_room_cleanup = true;
-                    }
+                    schedule_room_cleanup = room.values().all(|c| c.is_empty());
                 }
             }
+        }
+    }
+
+    if schedule_room_cleanup {
+        let has_remote = remote_users.lock().await.get(&room_id)
+            .map(|r| r.values().any(|c| !c.is_empty()))
+            .unwrap_or(false);
+        if has_remote {
+            schedule_room_cleanup = false;
         }
     }
 
@@ -9595,6 +9650,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
 
         let rooms_clone = rooms.clone();
         let cleanup_clone = room_cleanup_generations.clone();
+        let remote_users_clone = remote_users.clone();
         let room_id_clone = room_id.clone();
         tokio::spawn(async move {
             tokio::time::sleep(std::time::Duration::from_secs(ROOM_EMPTY_GRACE_SECS)).await;
@@ -9611,16 +9667,23 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
             }
 
             let removed_room = {
-                let mut rooms_lock = rooms_clone.lock().await;
-                let should_remove_room = rooms_lock
-                    .get(&room_id_clone)
-                    .map(|room| room.values().all(|c| c.is_empty()))
+                let has_remote = remote_users_clone.lock().await.get(&room_id_clone)
+                    .map(|r| r.values().any(|c| !c.is_empty()))
                     .unwrap_or(false);
-                if should_remove_room {
-                    rooms_lock.remove(&room_id_clone);
-                    true
-                } else {
+                if has_remote {
                     false
+                } else {
+                    let mut rooms_lock = rooms_clone.lock().await;
+                    let should_remove_room = rooms_lock
+                        .get(&room_id_clone)
+                        .map(|room| room.values().all(|c| c.is_empty()))
+                        .unwrap_or(false);
+                    if should_remove_room {
+                        rooms_lock.remove(&room_id_clone);
+                        true
+                    } else {
+                        false
+                    }
                 }
             };
 
@@ -9630,6 +9693,41 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                     cleanup_lock.remove(&room_id_clone);
                 }
                 println!("CLEANUP: Removed empty room '{}' after {}s empty", room_id_clone, ROOM_EMPTY_GRACE_SECS);
+            } else {
+                // Room still has remote users or became non-empty; reschedule cleanup.
+                let mut cleanup_lock = cleanup_clone.lock().await;
+                if cleanup_lock.get(&room_id_clone).copied() == Some(next_generation) {
+                    let next_gen = next_generation + 1;
+                    cleanup_lock.insert(room_id_clone.clone(), next_gen);
+                    let rooms_retry = rooms_clone.clone();
+                    let cleanup_retry = cleanup_clone.clone();
+                    let remote_retry = remote_users_clone.clone();
+                    let rid_retry = room_id_clone.clone();
+                    tokio::spawn(async move {
+                        tokio::time::sleep(std::time::Duration::from_secs(ROOM_EMPTY_GRACE_SECS)).await;
+                        let gen_current = cleanup_retry.lock().await.get(&rid_retry).copied() == Some(next_gen);
+                        if !gen_current { return; }
+                        let has_remote = remote_retry.lock().await.get(&rid_retry)
+                            .map(|r| r.values().any(|c| !c.is_empty()))
+                            .unwrap_or(false);
+                        if has_remote {
+                            // Still has remote users, clear generation so future activity can re-trigger.
+                            let mut cl = cleanup_retry.lock().await;
+                            if cl.get(&rid_retry).copied() == Some(next_gen) { cl.remove(&rid_retry); }
+                            return;
+                        }
+                        let removed = {
+                            let mut rl = rooms_retry.lock().await;
+                            let should = rl.get(&rid_retry).map(|rm| rm.values().all(|c| c.is_empty())).unwrap_or(false);
+                            if should { rl.remove(&rid_retry); true } else { false }
+                        };
+                        if removed {
+                            let mut cl = cleanup_retry.lock().await;
+                            if cl.get(&rid_retry).copied() == Some(next_gen) { cl.remove(&rid_retry); }
+                            println!("CLEANUP: Removed empty room '{}' after rescheduled check", rid_retry);
+                        }
+                    });
+                }
             }
         });
     }
