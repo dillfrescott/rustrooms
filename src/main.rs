@@ -7517,7 +7517,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }));
             }
 
-            closeSettings();
         }
 
         function updateLocalAvatar() {
