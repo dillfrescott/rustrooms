@@ -1751,8 +1751,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             </div>
 
             <div class="pt-2 mt-2">
-                <button onclick="saveSettings()" class="btn-primary w-full py-3.5 text-white rounded-lg font-semibold transition-all">
-                    Save Avatar
+                <button onclick="closeSettings()" class="btn-primary w-full py-3.5 text-white rounded-lg font-semibold transition-all">
+                    Close Settings
                 </button>
             </div>
         </div>
@@ -7830,6 +7830,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     settingsAvatarPlaceholder.classList.add('hidden');
                     const removeBtn = document.getElementById('btnRemoveSettingsAvatar');
                     if (removeBtn) removeBtn.classList.remove('hidden');
+                    closeCropModal();
+                    saveSettings();
+                    return;
                 }
                 closeCropModal();
             });
@@ -7842,7 +7845,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             <div id="cropWrapper" class="w-full relative"></div>
             <div class="flex gap-4 w-full mt-2">
                 <button onclick="closeCropModal()" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
-                <button onclick="applyCrop()" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all">Crop & Save</button>
+                <button onclick="applyCrop()" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all">Save Avatar</button>
             </div>
         </div>
     </div>
