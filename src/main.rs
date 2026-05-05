@@ -1719,7 +1719,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     </div>
                     <div>
                         <label class="label-text block mb-2">Nickname</label>
-                        <input type="text" id="settingsNicknameInput" placeholder="Enter your name" class="w-full rounded-lg px-4 py-3 text-white transition-all" style="font-size: 0.875rem;" maxlength="32">
+                        <input type="text" id="settingsNicknameInput" placeholder="Enter your name" class="w-full rounded-lg px-4 py-3 text-white transition-all" style="font-size: 0.875rem;" maxlength="32" oninput="handleSettingsNicknameInput()">
                     </div>
                 </div>
 
@@ -1727,7 +1727,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     <div class="grid grid-cols-1 gap-4">
                          <div>
                             <label class="label-text block mb-2">Microphone</label>
-                            <select id="settingsAudioSource" onchange="currentAudioInputId=this.value" class="w-full rounded-lg px-3 py-2.5 text-sm text-white transition-all">
+                            <select id="settingsAudioSource" onchange="handleSettingsMicChange(this.value)" class="w-full rounded-lg px-3 py-2.5 text-sm text-white transition-all">
                             </select>
                             <div class="mic-meter"><div id="settingsMicBar" class="mic-bar"></div></div>
                         </div>
@@ -1743,7 +1743,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         </div>
                         <div>
                             <label class="label-text block mb-2">Camera</label>
-                            <select id="settingsVideoSource" onchange="currentVideoInputId=this.value" class="w-full rounded-lg px-3 py-2.5 text-sm text-white transition-all">
+                            <select id="settingsVideoSource" onchange="handleSettingsCamChange(this.value)" class="w-full rounded-lg px-3 py-2.5 text-sm text-white transition-all">
                             </select>
                         </div>
                     </div>
@@ -1752,7 +1752,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             <div class="pt-2 mt-2">
                 <button onclick="saveSettings()" class="btn-primary w-full py-3.5 text-white rounded-lg font-semibold transition-all">
-                    Save Changes
+                    Save Avatar
                 </button>
             </div>
         </div>
@@ -3152,8 +3152,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (localStream) {
                 const audioTrack = localStream.getAudioTracks()[0];
                 const videoTrack = localStream.getVideoTracks()[0];
-                if (audioTrack) isMuted = !audioTrack.enabled;
-                if (videoTrack) isCamOff = !videoTrack.enabled;
+                if (audioTrack) {
+                    isMuted = !audioTrack.enabled;
+                } else {
+                    isMuted = true;
+                }
+                if (videoTrack) {
+                    isCamOff = !videoTrack.enabled;
+                } else {
+                    isCamOff = true;
+                }
             }
 
             try {
@@ -3696,6 +3704,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             videoTrack.enabled = false;
                             needsUpdate = true;
                         }
+                        pendingCamToggle = false;
                     }
                     if (pendingMicToggle) {
                         const audioTrack = localStream.getAudioTracks()[0];
@@ -3703,6 +3712,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             audioTrack.enabled = false;
                             needsUpdate = true;
                         }
+                        pendingMicToggle = false;
                     }
                     if (needsUpdate) {
                         updatePreviewButtons();
@@ -7373,6 +7383,38 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let settingsInitialAudioId = '';
         let settingsInitialVideoId = '';
         let settingsInitialAudioOutputId = '';
+        let settingsNicknameDebounce = null;
+
+        function handleSettingsNicknameInput() {
+            userNickname = settingsNicknameInput.value.trim() || "Guest";
+            savePreferences();
+            updateLocalLabel();
+            if (settingsNicknameDebounce) clearTimeout(settingsNicknameDebounce);
+            settingsNicknameDebounce = setTimeout(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: "update-user",
+                        data: { nickname: userNickname }
+                    }));
+                }
+            }, 500);
+        }
+
+        async function handleSettingsMicChange(value) {
+            currentAudioInputId = value;
+            const currentVideoTrack = localStream ? localStream.getVideoTracks()[0] : null;
+            const currentVideoId = currentVideoTrack ? currentVideoTrack.getSettings().deviceId : null;
+            await switchMediaStream(value, currentVideoId);
+            savePreferences();
+        }
+
+        async function handleSettingsCamChange(value) {
+            currentVideoInputId = value;
+            const currentAudioTrack = localStream ? localStream.getAudioTracks()[0] : null;
+            const currentAudioId = currentAudioTrack ? currentAudioTrack.getSettings().deviceId : null;
+            await switchMediaStream(currentAudioId, value);
+            savePreferences();
+        }
 
         async function openSettings() {
             settingsNicknameInput.value = userNickname;
@@ -7445,25 +7487,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         async function saveSettings() {
-            const newAudio = document.getElementById('settingsAudioSource').value;
-            const newAudioOutput = document.getElementById('settingsAudioOutputSource').value;
-            const newVideo = document.getElementById('settingsVideoSource').value;
-
-            if (newAudio !== settingsInitialAudioId || newVideo !== settingsInitialVideoId) {
-                await switchMediaStream(newAudio, newVideo);
-            }
-
-            if (newAudioOutput !== settingsInitialAudioOutputId) {
-                await changeAudioOutput(newAudioOutput);
-            }
-
-            userNickname = settingsNicknameInput.value.trim() || "Guest";
             userAvatar = newAvatarCandidate;
             userAvatarIsGif = newAvatarCandidateIsGif;
             userAvatarStaticFrame = newAvatarCandidateStaticFrame;
             savePreferences();
 
-            updateLocalLabel();
             updateLocalAvatar();
 
             if (ws && ws.readyState === WebSocket.OPEN) {
