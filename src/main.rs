@@ -3945,7 +3945,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         async function proceedJoinRoom() {
             userNickname = nicknameInput.value.trim() || "Guest";
-            isDeafened = false;
+            const setupDone = sessionStorage.getItem('rustrooms_setup_done') === 'true';
+            if (!setupDone) {
+                isDeafened = false;
+            }
             savePreferences();
 
             setActiveTabSession();
@@ -4023,6 +4026,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 if (btnDeafen) {
                     btnDeafen.classList.add('active-red');
                     btnDeafen.innerHTML = deafenOffSvg;
+                }
+
+                if (btnMic) {
+                    btnMic.disabled = true;
                 }
 
                 document.querySelectorAll('video, audio').forEach(el => {
