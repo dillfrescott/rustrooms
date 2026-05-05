@@ -2791,7 +2791,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         audio: {
                             deviceId: { exact: audioId },
                             echoCancellation: true,
-                            noiseSuppression: isIOS ? true : false,
+                            noiseSuppression: false,
                             autoGainControl: true,
                             sampleRate: 48000
                         }
@@ -2799,7 +2799,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      let stream = await navigator.mediaDevices.getUserMedia(constraints);
 
                      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                     const workletLoaded = !isIOS ? await initAudioWorklet() : false;
+                     const workletLoaded = await initAudioWorklet();
                      if (audioContext.state === 'suspended') audioContext.resume().catch(e => {});
 
                      let newTrack;
@@ -2921,7 +2921,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         async function setupAudioMonitor(stream, targetId) {
-            if (isIOS) return;
             if (!audioContext) return;
             if (!stream.getAudioTracks().length) return;
 
@@ -3487,7 +3486,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     audio: {
                         deviceId: audioSource ? { exact: audioSource } : undefined,
                         echoCancellation: true,
-                        noiseSuppression: isIOS ? true : false,
+                        noiseSuppression: false,
                         autoGainControl: true,
                         sampleRate: 48000
                     },
@@ -3508,12 +3507,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                 }
 
-                await setupVolumeMeter(rawStream, 'setupMicBar');
-
                  if (rawStream.getAudioTracks().length > 0) {
                      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                      const audioReady = await tryResumeAudioContext();
-                     const workletLoaded = (audioReady && !isIOS) ? await initAudioWorklet() : false;
+                     const workletLoaded = audioReady ? await initAudioWorklet() : false;
 
                      if (workletLoaded) {
                          const source = audioContext.createMediaStreamSource(rawStream);
@@ -3536,6 +3533,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 } else {
                     localStream = rawStream;
                 }
+
+                await setupVolumeMeter(localStream, 'setupMicBar');
 
                 previewVideo.srcObject = localStream;
                 updatePreviewButtons();
@@ -3621,7 +3620,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     let rawStream = await navigator.mediaDevices.getUserMedia({ 
                         audio: {
                             echoCancellation: true,
-                            noiseSuppression: isIOS ? true : false,
+                            noiseSuppression: false,
                             autoGainControl: true,
                         }, 
                         video: false 
@@ -3633,7 +3632,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     if (rawStream.getAudioTracks().length > 0) {
                          if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                          const audioReady = await tryResumeAudioContext();
-                         const workletLoaded = (audioReady && !isIOS) ? await initAudioWorklet() : false;
+                         const workletLoaded = audioReady ? await initAudioWorklet() : false;
 
                          if (workletLoaded) {
                              const source = audioContext.createMediaStreamSource(rawStream);
