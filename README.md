@@ -38,4 +38,4 @@ RustRooms supports running multiple instances in a cluster using DHT-based peer 
 
 ### Issues & Bug Reports
 
-If you find a bug or issue, please [open an issue on GitHub](https://github.com/nickk024/RustRooms/issues).
+If you find a bug or issue, please [open an issue on GitHub](https://github.com/dillfrescott/RustRooms/issues).
