@@ -27,3 +27,15 @@ For self-hosted TURN servers, you can use [coturn](https://github.com/coturn/cot
 For a production deployment, it is **highly recommended** to set the following environment variable:
 
 *   `ROOM_CREATION_PASSWORD`: Set this to a strong password to prevent unauthorized room creation. If this is not set, anyone can create rooms.
+*   `URL`: When set, restricts access to only requests whose `Host` header matches this value. Useful for preventing access via raw IP or alternative domain names. The value is automatically normalized (scheme and path are stripped).
+
+### Cluster / Distributed Mode:
+
+RustRooms supports running multiple instances in a cluster using DHT-based peer discovery. This is enabled by setting the `KEY` environment variable. **Note: distributed mode is relatively untested and may contain bugs — use with caution in production.**
+
+*   `KEY`: A shared secret that enables cluster mode. All instances sharing the same key will discover and connect to each other automatically.
+*   `CLUSTER_SCHEME`: The WebSocket scheme used for inter-instance communication. Set to `wss` for encrypted connections (recommended for production behind a TLS-terminating proxy). Defaults to `ws` (unencrypted).
+
+### Issues & Bug Reports
+
+If you find a bug or issue, please [open an issue on GitHub](https://github.com/nickk024/RustRooms/issues).
