@@ -1644,7 +1644,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold" style="background: rgba(0, 0, 0, 0.7); color: var(--text-primary);">Edit</div>
                                 </div>
                                 <button id="btnRemoveSetupAvatar" onclick="removeSetupAvatar()" class="hidden mt-1 text-xs font-medium px-2 py-0.5 rounded-lg transition-all" style="color: var(--text-muted); background: var(--bg-tertiary); border: 1px solid var(--border-subtle);" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">Remove</button>
-                                <div class="mt-1 text-center" style="font-size: 0.6rem; color: var(--text-muted); opacity: 0.7;">Max 2MB · Images & GIFs</div>
+                                <div class="mt-1 text-center" style="font-size: 0.6rem; color: var(--text-muted); opacity: 0.7;">Images & GIFs</div>
                                 <input type="file" id="avatarInput" hidden accept="image/*" onchange="handleAvatarUpload(this)">
                             </div>
                         </div>
@@ -1713,7 +1713,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold bg-black/80" style="color: var(--text-primary);">Change</div>
                             </div>
                             <button id="btnRemoveSettingsAvatar" onclick="removeSettingsAvatar()" class="hidden text-xs font-medium px-3 py-1.5 rounded-lg transition-all bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-[var(--danger)]" style="color: var(--text-muted);" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">Remove Avatar</button>
-                            <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7;">Max 2MB · Images & GIFs</div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7;">Images & GIFs</div>
                             <input type="file" id="settingsAvatarInput" hidden accept="image/*" onchange="handleSettingsAvatarUpload(this)">
                         </div>
                     </div>
@@ -3295,19 +3295,40 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             draw();
         }
 
+        function resizeImageForAvatar(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const MAX_DIM = 1200;
+                        let w = img.naturalWidth;
+                        let h = img.naturalHeight;
+                        if (w > MAX_DIM || h > MAX_DIM) {
+                            if (w > h) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; }
+                            else { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    };
+                    img.onerror = function() { resolve(e.target.result); };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         function handleAvatarUpload(input) {
             const file = input.files[0];
             if (!file) return;
 
-            if (file.size > 2 * 1024 * 1024) {
-                showCustomAlert('File Too Large', 'Avatar images must be under 2MB. Please choose a smaller file.');
-                input.value = '';
-                return;
-            }
-            const isGif = file.type === 'image/gif';
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                if (isGif) {
+            if (file.type === 'image/gif') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
                     const gifDataUrl = e.target.result;
                     userAvatar = gifDataUrl;
                     userAvatarIsGif = true;
@@ -3320,11 +3341,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         if (removeBtn) removeBtn.classList.remove('hidden');
                         savePreferences();
                     });
-                } else {
-                    openCropModal(e.target.result, 'setup');
-                }
-            };
-            reader.readAsDataURL(file);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                resizeImageForAvatar(file).then(dataUrl => {
+                    openCropModal(dataUrl, 'setup');
+                });
+            }
             input.value = '';
         }
 
@@ -7469,15 +7492,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const file = input.files[0];
             if (!file) return;
 
-            if (file.size > 2 * 1024 * 1024) {
-                showCustomAlert('File Too Large', 'Avatar images must be under 2MB. Please choose a smaller file.');
-                input.value = '';
-                return;
-            }
-            const isGif = file.type === 'image/gif';
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                if (isGif) {
+            if (file.type === 'image/gif') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
                     const gifDataUrl = e.target.result;
                     newAvatarCandidate = gifDataUrl;
                     newAvatarCandidateIsGif = true;
@@ -7489,11 +7506,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         const removeBtn = document.getElementById('btnRemoveSettingsAvatar');
                         if (removeBtn) removeBtn.classList.remove('hidden');
                     });
-                } else {
-                    openCropModal(e.target.result, 'settings');
-                }
-            };
-            reader.readAsDataURL(file);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                resizeImageForAvatar(file).then(dataUrl => {
+                    openCropModal(dataUrl, 'settings');
+                });
+            }
             input.value = '';
         }
 
