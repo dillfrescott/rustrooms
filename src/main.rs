@@ -2630,11 +2630,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             loadPreferences();
             try {
+                await startPreview();
+
                 await populateDeviceList();
                 await detectCameras();
                 navigator.mediaDevices.ondevicechange = populateDeviceList;
-
-                await startPreview();
 
             } catch (e) {
                 console.warn("Device access initialization failed", e);
