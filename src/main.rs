@@ -3462,6 +3462,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             settingsAvatarPlaceholder.classList.remove('hidden');
             const removeBtn = document.getElementById('btnRemoveSettingsAvatar');
             if (removeBtn) removeBtn.classList.add('hidden');
+            saveSettings();
         }
 
         function extractGifFirstFrame(gifDataUrl) {
@@ -7595,6 +7596,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         settingsAvatarPlaceholder.classList.add('hidden');
                         const removeBtn = document.getElementById('btnRemoveSettingsAvatar');
                         if (removeBtn) removeBtn.classList.remove('hidden');
+                        saveSettings();
                     });
                 };
                 reader.readAsDataURL(file);
