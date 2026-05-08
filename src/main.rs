@@ -172,45 +172,45 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     <link href="/assets/inter.css" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #000000;
-            --bg-secondary: #080808;
-            --bg-tertiary: #0f0f0f;
-            --bg-elevated: #141414;
-            --bg-elevated-strong: #1a1a1a;
+            --bg-primary: #09090b;
+            --bg-secondary: #0c0c0e;
+            --bg-tertiary: #111113;
+            --bg-elevated: #17171a;
+            --bg-elevated-strong: #1e1e22;
 
-            --border-subtle: #1f1f1f;
-            --border-medium: #2a2a2a;
-            --border-strong: #3a3a3a;
-            --border-accent: #3b82f640;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-medium: rgba(255, 255, 255, 0.1);
+            --border-strong: rgba(255, 255, 255, 0.15);
+            --border-accent: rgba(99, 102, 241, 0.25);
 
-            --text-primary: #ffffff;
-            --text-secondary: #a8a8a8;
-            --text-muted: #6b6b6b;
+            --text-primary: #f0f0f2;
+            --text-secondary: #8b8b94;
+            --text-muted: #52525b;
 
-            --accent: #3b82f6;
-            --accent-hover: #60a5fa;
-            --accent-glow: rgba(59, 130, 246, 0.3);
-            --accent-blue: #3b82f6;
-            --accent-dark-blue: #1d4ed8;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.2);
+            --accent-blue: #6366f1;
+            --accent-dark-blue: #4f46e5;
 
-            --accent-green: #10b981;
-            --accent-green-hover: #34d399;
+            --accent-green: #22c55e;
+            --accent-green-hover: #4ade80;
             --accent-red: #ef4444;
             --accent-red-hover: #f87171;
             --accent-dark-red: #dc2626;
-            --accent-yellow: #f59e0b;
+            --accent-yellow: #eab308;
 
-            --success: #10b981;
-            --success-glow: rgba(16, 185, 129, 0.25);
+            --success: #22c55e;
+            --success-glow: rgba(34, 197, 94, 0.2);
             --danger: #ef4444;
-            --danger-glow: rgba(239, 68, 68, 0.25);
-            --warning: #f59e0b;
-            --warning-glow: rgba(245, 158, 11, 0.25);
+            --danger-glow: rgba(239, 68, 68, 0.2);
+            --warning: #eab308;
+            --warning-glow: rgba(234, 179, 8, 0.2);
 
             --shadow-sm: 0 0 0 rgba(0, 0, 0, 0);
-            --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.18);
-            --shadow-lg: 0 2px 8px rgba(0, 0, 0, 0.22);
-            --shadow-xl: 0 4px 16px rgba(0, 0, 0, 0.26);
+            --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.12);
+            --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.15);
+            --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         html {
@@ -262,13 +262,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             background: var(--bg-elevated);
             border: 1px solid var(--border-subtle);
             box-shadow: var(--shadow-lg);
-            border-radius: 10px;
+            border-radius: 16px;
         }
 
         .video-container {
             position: relative;
             background: var(--bg-secondary);
-            border-radius: 6px;
+            border-radius: 12px;
             overflow: hidden;
             border: 1px solid var(--border-subtle);
             transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -312,8 +312,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             width: 100%;
             height: 100%;
             object-fit: cover;
-            filter: blur(32px);
-            opacity: 0.25;
+            filter: blur(40px) saturate(1.5);
+            opacity: 0.2;
             pointer-events: none;
             -webkit-user-drag: none;
             user-drag: none;
@@ -323,7 +323,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             position: relative;
             width: 120px;
             height: 120px;
-            border-radius: 6px;
+            border-radius: 12px;
             overflow: hidden;
             border: 2px solid var(--border-subtle);
             background: var(--bg-tertiary);
@@ -373,13 +373,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .control-btn {
             padding: 0;
-            border-radius: 4px;
+            border-radius: 14px;
             border: 1px solid var(--border-subtle);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             background: var(--bg-elevated);
             color: var(--text-primary);
             width: 52px;
@@ -392,8 +392,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .control-btn:hover {
             background: var(--bg-elevated-strong);
             border-color: var(--border-medium);
-            transform: none;
-            box-shadow: none;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
         }
 
         .control-btn:active {
@@ -407,21 +407,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .control-btn.active-red {
             background: var(--danger);
-            border-color: var(--danger);
-            box-shadow: none;
+            border-color: rgba(239, 68, 68, 0.3);
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
         }
 
         .control-btn.active-red:hover {
             background: var(--accent-red-hover);
-            border-color: var(--accent-red-hover);
-            box-shadow: none;
-            transform: none;
+            border-color: rgba(248, 113, 113, 0.3);
+            box-shadow: 0 0 16px rgba(239, 68, 68, 0.2);
+            transform: translateY(-1px);
         }
 
         .control-btn.active-green {
             background: var(--success);
-            border-color: var(--success);
-            box-shadow: none;
+            border-color: rgba(34, 197, 94, 0.3);
+            box-shadow: 0 0 12px rgba(34, 197, 94, 0.15);
         }
 
         .control-btn.active-green:active {
@@ -430,13 +430,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .control-btn.active-green:hover {
             background: var(--accent-green-hover);
-            border-color: var(--accent-green-hover);
-            box-shadow: none;
-            transform: none;
+            border-color: rgba(74, 222, 128, 0.3);
+            box-shadow: 0 0 16px rgba(34, 197, 94, 0.2);
+            transform: translateY(-1px);
         }
 
         .control-btn:disabled {
-            opacity: 0.4;
+            opacity: 0.35;
             cursor: not-allowed;
             pointer-events: none;
             -webkit-pointer-events: none;
@@ -474,19 +474,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             touch-action: none;
             width: 160px;
             aspect-ratio: 16/9;
-            border-radius: 6px;
+            border-radius: 12px;
             border: 1px solid var(--border-subtle);
             overflow: hidden;
             z-index: 75;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             background: var(--bg-elevated);
-            box-shadow: var(--shadow-md);
+            box-shadow: var(--shadow-lg);
         }
 
         .pip-wrapper:hover {
             border-color: var(--border-medium);
-            box-shadow: var(--shadow-lg);
-            transform: none;
+            box-shadow: var(--shadow-xl);
+            transform: translateY(-2px);
         }
 
         @media (max-width: 400px) {
@@ -505,27 +505,27 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .connection-dot {
-            width: 9px;
-            height: 9px;
+            width: 8px;
+            height: 8px;
             background-color: var(--danger);
             border-radius: 50%;
             display: inline-block;
             transition: background-color 0.3s, box-shadow 0.3s;
-            box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
         }
         .connection-dot.connected {
             background-color: var(--success);
-            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
         }
         .connection-dot.connecting {
             background-color: var(--warning);
-            box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+            box-shadow: 0 0 8px rgba(234, 179, 8, 0.3);
             animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
+            50% { opacity: 0.7; }
         }
 
         .ping-container {
@@ -539,14 +539,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .ping-bars {
             display: flex;
             align-items: flex-end;
-            gap: 3px;
+            gap: 2px;
             height: 14px;
         }
 
         .ping-bar {
             width: 3px;
             background-color: var(--border-strong);
-            border-radius: 1px;
+            border-radius: 1.5px;
             transition: background-color 0.3s, height 0.3s;
         }
 
@@ -576,13 +576,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             max-height: calc(100vh - 32px);
             background: var(--bg-elevated-strong);
             border: 1px solid var(--border-medium);
-            border-radius: 6px;
+            border-radius: 14px;
             box-shadow: var(--shadow-xl);
             z-index: 9999;
             opacity: 0;
             visibility: hidden;
-            transform: translateY(-8px);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(-8px) scale(0.98);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             overflow: hidden;
             overflow-y: auto;
         }
@@ -590,31 +590,32 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .stats-window.visible {
             opacity: 1;
             visibility: visible;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
         }
 
         .stats-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 12px 16px;
+            padding: 14px 18px;
             border-bottom: 1px solid var(--border-subtle);
-            background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-elevated-strong) 100%);
+            background: var(--bg-elevated);
         }
 
         .stats-title {
-            font-size: 0.875rem;
+            font-size: 0.8rem;
             font-weight: 600;
             color: var(--text-primary);
             display: flex;
             align-items: center;
             gap: 8px;
+            letter-spacing: 0.01em;
         }
 
         .stats-close {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -624,18 +625,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .stats-close:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
             color: var(--text-primary);
         }
 
         .stats-content {
-            padding: 12px 16px;
+            padding: 14px 18px;
         }
 
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 12px;
         }
 
         .stat-item {
@@ -645,15 +646,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .stat-label {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.06em;
             font-weight: 600;
         }
 
         .stat-value {
-            font-size: 0.875rem;
+            font-size: 0.85rem;
             color: var(--text-primary);
             font-weight: 500;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -664,8 +665,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .stat-value.poor { color: var(--danger); }
 
         .stats-section {
-            margin-top: 12px;
-            padding-top: 12px;
+            margin-top: 14px;
+            padding-top: 14px;
             border-top: 1px solid var(--border-subtle);
         }
 
@@ -676,21 +677,22 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .stats-section-title {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
             color: var(--text-secondary);
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 6px;
+            letter-spacing: 0.02em;
         }
 
         .stats-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 6px 0;
-            font-size: 0.8rem;
+            padding: 5px 0;
+            font-size: 0.78rem;
         }
 
         .stats-row-label {
@@ -703,10 +705,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .stats-refresh {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: var(--text-muted);
             text-align: center;
-            padding: 8px;
+            padding: 10px;
             border-top: 1px solid var(--border-subtle);
         }
 
@@ -716,23 +718,23 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
+            height: 14px;
+            width: 14px;
             border-radius: 50%;
             background: var(--text-primary);
             cursor: pointer;
-            margin-top: -6px;
+            margin-top: -5px;
             transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
         }
         input[type=range]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
+            transform: scale(1.15);
         }
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
-            height: 5px;
+            height: 4px;
             cursor: pointer;
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 2px;
         }
 
@@ -740,19 +742,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             position: absolute;
             bottom: 12px;
             right: 12px;
-            background: linear-gradient(180deg, var(--bg-elevated-strong) 0%, var(--bg-elevated) 100%);
-            backdrop-filter: blur(32px) saturate(200%);
-            -webkit-backdrop-filter: blur(32px) saturate(200%);
+            background: rgba(17, 17, 19, 0.85);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
             padding: 10px 14px;
-            border-radius: 8px;
+            border-radius: 12px;
             display: flex;
             flex-direction: column;
             gap: 10px;
             opacity: 0;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             align-items: flex-end;
-            border: 1px solid var(--border-medium);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-xl);
         }
         .video-container:hover .volume-controls {
             opacity: 1;
@@ -771,20 +773,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .vol-row button:hover {
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.1);
             transform: scale(1.05);
         }
 
         .speaking-glow {
-            border: 3px solid #3b82f6 !important;
-            box-shadow: 0 0 24px rgba(59, 130, 246, 0.5) !important;
+            border: 2px solid var(--accent) !important;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.35), inset 0 0 20px rgba(99, 102, 241, 0.05) !important;
             transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             z-index: 50;
         }
 
         #localPipWrapper.speaking-glow {
-            border: 2px solid #3b82f6 !important;
-            box-shadow: 0 0 12px rgba(59, 130, 246, 0.5) !important;
+            border: 2px solid var(--accent) !important;
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.35) !important;
             z-index: 75;
         }
 
@@ -869,10 +871,81 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             gap: 10px;
         }
 
+        .video-container {
+            cursor: grab;
+            touch-action: none;
+        }
+
+        .video-container:active {
+            cursor: grabbing;
+        }
+
+        .video-container.is-dragging {
+            position: fixed;
+            z-index: 1000;
+            cursor: grabbing;
+            transform: scale(1.03) translate3d(0, 0, 0);
+            pointer-events: none;
+            opacity: 0.92;
+            will-change: transform;
+            transition: none;
+            user-select: none;
+            -webkit-user-select: none;
+            outline: none;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .video-container.is-dragging * {
+            user-select: none;
+            -webkit-user-select: none;
+            outline: none;
+        }
+
+        .video-container.drag-placeholder {
+            opacity: 0.15;
+            border: 2px dashed var(--accent);
+            background: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #remote-grid:has(.is-dragging) {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #remote-grid:has(.is-dragging) .video-container {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .video-container.is-shifting {
+            transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .video-container:fullscreen video, .video-container:-webkit-full-screen video {
+            max-height: 100vh;
+            max-width: 100vw;
+            height: 100%;
+            width: 100%;
+            object-fit: contain;
+        }
+
+        .video-container:fullscreen .volume-controls, .video-container:-webkit-full-screen .volume-controls {
+            bottom: 40px;
+            right: 40px;
+            transform: scale(1.1);
+            transform-origin: bottom right;
+            padding: 14px 18px;
+            gap: 10px;
+        }
+
         .mic-meter {
             width: 100%;
             height: 4px;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.06);
             border-radius: 2px;
             overflow: hidden;
             margin-top: 10px;
@@ -880,13 +953,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .mic-bar {
             height: 100%;
             width: 0%;
-            background: linear-gradient(90deg, var(--success) 0%, var(--accent-green-hover) 100%);
+            background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
             border-radius: 2px;
             transition: width 0.04s linear;
         }
 
         .taskbar {
-            background: var(--bg-secondary);
+            background: rgba(12, 12, 14, 0.8);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
             border-top: 1px solid var(--border-subtle);
             padding-bottom: env(safe-area-inset-bottom);
             box-shadow: none;
@@ -921,8 +996,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             background: var(--bg-tertiary);
             border: 1px solid var(--border-subtle);
             color: var(--text-primary);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 8px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 10px;
             box-shadow: none;
         }
 
@@ -932,7 +1007,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             outline: none;
             border-color: var(--accent);
             background: var(--bg-secondary);
-            box-shadow: 0 0 0 2px var(--accent-glow);
+            box-shadow: 0 0 0 3px var(--accent-glow);
         }
 
         select option {
@@ -943,19 +1018,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         input[type="text"]::placeholder,
         input[type="password"]::placeholder {
             color: var(--text-muted);
-            opacity: 0.8;
+            opacity: 0.7;
         }
 
         .btn-primary {
             background: var(--accent);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 6px;
-            box-shadow: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 10px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
         }
         .btn-primary:hover {
             background: var(--accent-hover);
-            transform: none;
-            box-shadow: none;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
         }
 
         .btn-primary:active {
@@ -966,8 +1041,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .btn-secondary {
             background: var(--bg-elevated);
             border: 1px solid var(--border-subtle);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 6px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 10px;
             box-shadow: none;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
@@ -979,36 +1054,36 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             .btn-secondary:hover {
                 background: var(--bg-elevated-strong);
                 border-color: var(--border-medium);
-                transform: none;
-                box-shadow: none;
+                transform: translateY(-1px);
+                box-shadow: var(--shadow-md);
             }
         }
         .btn-secondary:focus {
             outline: none;
         }
         .btn-secondary:active, .btn-secondary.is-pressed {
-            transform: scale(0.96) translateY(0);
+            transform: scale(0.97) translateY(0);
             transition: transform 0.1s ease;
         }
         @media (hover: none) {
             .btn-secondary:active, .btn-secondary.is-pressed {
                 background: var(--bg-elevated);
                 border-color: var(--border-subtle);
-                transform: scale(0.96);
+                transform: scale(0.97);
                 box-shadow: none;
             }
             .btn-secondary.active-red:active, .btn-secondary.active-red.is-pressed {
                 background: var(--danger);
                 border-color: var(--danger);
-                transform: scale(0.96);
+                transform: scale(0.97);
                 box-shadow: none;
             }
         }
 
         .btn-secondary.active-red {
             background: var(--danger);
-            border-color: var(--danger);
-            box-shadow: none;
+            border-color: rgba(239, 68, 68, 0.3);
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
         }
 
         .btn-icon-test:active, .btn-icon-test.is-pressed {
@@ -1019,17 +1094,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         @media (hover: hover) {
             .btn-secondary.active-red:hover {
                 background: var(--accent-red-hover);
-                border-color: var(--accent-red-hover);
-                box-shadow: none;
-                transform: none;
+                border-color: rgba(248, 113, 113, 0.3);
+                box-shadow: 0 0 16px rgba(239, 68, 68, 0.2);
+                transform: translateY(-1px);
             }
         }
 
         .status-pill {
             background: var(--bg-elevated);
             border: 1px solid var(--border-subtle);
-            border-radius: 16px !important;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 999px !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: none;
         }
 
@@ -1041,19 +1116,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .label-text {
             color: var(--text-secondary);
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.04em;
             text-transform: uppercase;
         }
 
         .empty-state-icon {
             color: var(--text-muted);
-            opacity: 0.5;
+            opacity: 0.4;
         }
 
         .fadeIn {
-            animation: fadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         @keyframes fadeOut {
@@ -1062,7 +1137,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         @keyframes fadeIn {
-            0% { opacity: 0; transform: translateY(8px); }
+            0% { opacity: 0; transform: translateY(12px); }
             100% { opacity: 1; transform: translateY(0); }
         }
 
@@ -1085,7 +1160,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             z-index: 100;
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             background: var(--bg-secondary);
-            border-right: 1px solid var(--border-medium);
+            border-right: 1px solid var(--border-subtle);
             display: flex;
             flex-direction: column;
             box-shadow: var(--shadow-xl);
@@ -1119,12 +1194,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         @media (min-width: 768px) {
             .app-topbar,
             .sidebar-header {
-                height: 88px;
+                height: 76px;
             }
         }
 
         .sidebar-header {
-            padding: 12px 24px;
+            padding: 12px 20px;
             border-bottom: 1px solid var(--border-subtle);
             display: flex;
             align-items: center;
@@ -1140,14 +1215,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .sidebar-header button {
             margin: 0;
             padding: 0;
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
             background: transparent;
             border: 0;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+        }
+
+        .sidebar-header button:hover {
+            background: rgba(255, 255, 255, 0.08);
         }
 
         @media (min-width: 640px) {
@@ -1167,36 +1248,36 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .sidebar-content {
             flex: 1;
             overflow-y: auto;
-            padding: 20px 16px;
+            padding: 16px 14px;
         }
 
         .room-item {
-            background: var(--bg-secondary);
+            background: var(--bg-tertiary);
             border: 1px solid var(--border-subtle);
-            border-radius: 6px;
-            padding: 16px;
-            margin-bottom: 12px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 8px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             box-shadow: none;
         }
 
         .room-item:hover {
-            border-color: var(--accent);
-            background: var(--bg-tertiary);
-            transform: none;
-            box-shadow: none;
+            border-color: var(--border-medium);
+            background: var(--bg-elevated);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
         }
 
         .room-item.active {
             border-color: var(--accent);
-            background: rgba(59, 130, 246, 0.08);
+            background: rgba(99, 102, 241, 0.06);
             box-shadow: 0 0 0 1px var(--border-accent);
         }
 
         .room-name {
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: var(--text-primary);
             margin-bottom: 8px;
             display: flex;
@@ -1205,10 +1286,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .user-count {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: var(--text-secondary);
             background: var(--bg-primary);
-            padding: 3px 10px;
+            padding: 2px 8px;
             border-radius: 99px;
             border: 1px solid var(--border-subtle);
             font-weight: 500;
@@ -1223,7 +1304,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .mini-avatar {
             width: 26px;
             height: 26px;
-            border-radius: 6px;
+            border-radius: 8px;
             background: var(--bg-primary);
             border: 1px solid var(--border-subtle);
             overflow: hidden;
@@ -1251,8 +1332,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .mini-avatar.speaking-glow {
-            border: 2px solid #3b82f6 !important;
-            box-shadow: 0 0 8px rgba(59, 130, 246, 0.5) !important;
+            border: 2px solid var(--accent) !important;
+            box-shadow: 0 0 8px rgba(99, 102, 241, 0.4) !important;
             transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         }
 
@@ -1270,8 +1351,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .sidebar-overlay.open {
             opacity: 1;
             pointer-events: auto;
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             will-change: auto;
         }
 
@@ -1284,14 +1365,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             z-index: 300;
             display: flex;
             align-items: center;
             justify-content: center;
             opacity: 0;
             pointer-events: none;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .modal-overlay.open {
@@ -1302,12 +1385,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .modal-content {
             background: var(--bg-elevated);
             border: 1px solid var(--border-medium);
-            border-radius: 10px;
+            border-radius: 16px;
             width: 90%;
             max-width: 420px;
-            padding: 40px 32px;
-            transform: scale(0.92) translateY(16px);
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 36px 28px;
+            transform: scale(0.95) translateY(12px);
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
             box-shadow: var(--shadow-xl);
         }
 
@@ -1318,18 +1401,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .room-user-row {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            border-radius: 6px;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 10px;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .room-user-row:hover {
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.04);
         }
 
         .room-user-name {
-            font-size: 0.875rem;
+            font-size: 0.82rem;
             color: var(--text-secondary);
             font-weight: 500;
         }
@@ -1343,7 +1426,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .status-icon {
             color: var(--text-muted);
-            opacity: 0.6;
+            opacity: 0.5;
             transition: all 0.2s ease;
         }
 
@@ -1359,11 +1442,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             max-width: 260px;
             background: var(--bg-elevated-strong);
             border: 1px solid var(--border-medium);
-            border-radius: 4px;
+            border-radius: 14px;
             padding: 14px 16px;
-            box-shadow: var(--shadow-lg);
+            box-shadow: var(--shadow-xl);
             opacity: 0;
-            transform: scale(0.92) translateY(-4px);
+            transform: scale(0.95) translateY(-4px);
             pointer-events: none;
             transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -1384,7 +1467,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .user-volume-menu .uvm-name {
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             font-weight: 600;
             color: var(--text-primary);
             white-space: nowrap;
@@ -1398,8 +1481,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             border: none;
             color: var(--text-muted);
             cursor: pointer;
-            padding: 2px;
-            border-radius: 4px;
+            padding: 4px;
+            border-radius: 6px;
             transition: all 0.15s ease;
             display: flex;
             align-items: center;
@@ -1408,7 +1491,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .user-volume-menu .uvm-close:hover {
             color: var(--text-primary);
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
         }
 
         .user-volume-menu .uvm-section {
@@ -1424,11 +1507,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .user-volume-menu .uvm-label {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             font-weight: 600;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.06em;
         }
 
         .user-volume-menu .uvm-slider-row {
@@ -1452,7 +1535,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .user-volume-menu .uvm-slider-row button:hover {
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.1);
             transform: scale(1.1);
         }
 
@@ -1466,7 +1549,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .user-volume-menu .uvm-vol-pct {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: var(--text-muted);
             min-width: 30px;
             text-align: right;
@@ -1523,8 +1606,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     <div id="userVolumeMenu" class="user-volume-menu"></div>
 
     <div id="nameModal" class="modal-overlay">
-        <div class="modal-content text-center space-y-6">
-            <h3 id="modalTitle" class="text-2xl font-bold text-white">Name Channel</h3>
+        <div class="modal-content text-center space-y-5">
+            <h3 id="modalTitle" class="text-xl font-bold text-white">Name Channel</h3>
             <div class="space-y-4">
                 <input type="text" id="modalInput" placeholder="Enter name..." class="w-full rounded-xl px-4 py-3 text-white transition-all bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none" maxlength="32">
                 <div class="flex gap-3">
@@ -1536,9 +1619,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     </div>
 
     <div id="passwordModal" class="modal-overlay">
-        <div class="modal-content text-center space-y-6">
-            <h3 id="passwordModalTitle" class="text-2xl font-bold text-white">Password Required</h3>
-            <p id="passwordModalMessage" class="text-zinc-300"></p>
+        <div class="modal-content text-center space-y-5">
+            <h3 id="passwordModalTitle" class="text-xl font-bold text-white">Password Required</h3>
+            <p id="passwordModalMessage" class="text-zinc-300 text-sm"></p>
             <div class="space-y-4">
                 <input type="password" id="passwordModalInput" placeholder="Enter password..." class="w-full rounded-xl px-4 py-3 text-white transition-all bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none" onkeydown="if(event.key==='Enter') document.getElementById('passwordModalSubmit').click()">
                 <div class="flex gap-3">
@@ -1550,17 +1633,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     </div>
 
     <div id="alertModal" class="modal-overlay">
-        <div class="modal-content text-center space-y-6">
-            <h3 id="alertTitle" class="text-2xl font-bold text-white">Alert</h3>
-            <p id="alertMessage" class="text-zinc-300"></p>
+        <div class="modal-content text-center space-y-5">
+            <h3 id="alertTitle" class="text-xl font-bold text-white">Alert</h3>
+            <p id="alertMessage" class="text-zinc-300 text-sm"></p>
             <button onclick="closeCustomAlert()" class="btn-primary w-full py-3 text-white rounded-xl font-medium transition-all">OK</button>
         </div>
     </div>
 
     <div id="confirmModal" class="modal-overlay">
-        <div class="modal-content text-center space-y-6">
-            <h3 id="confirmTitle" class="text-2xl font-bold text-white">Confirm</h3>
-            <p id="confirmMessage" class="text-zinc-300"></p>
+        <div class="modal-content text-center space-y-5">
+            <h3 id="confirmTitle" class="text-xl font-bold text-white">Confirm</h3>
+            <p id="confirmMessage" class="text-zinc-300 text-sm"></p>
             <div class="flex gap-3">
                 <button onclick="closeCustomConfirm()" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
                 <button id="confirmSubmit" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all">Confirm</button>
@@ -1569,9 +1652,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     </div>
 
     <div id="kickModal" class="modal-overlay">
-        <div class="modal-content text-center space-y-6">
-            <h3 id="kickTitle" class="text-2xl font-bold text-white">Kick User</h3>
-            <p id="kickMessage" class="text-zinc-300"></p>
+        <div class="modal-content text-center space-y-5">
+            <h3 id="kickTitle" class="text-xl font-bold text-white">Kick User</h3>
+            <p id="kickMessage" class="text-zinc-300 text-sm"></p>
             <div class="flex gap-3">
                 <button onclick="closeKickModal()" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
                 <button id="kickSubmit" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all" style="background: var(--danger);">Kick</button>
@@ -1581,20 +1664,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
     <div id="welcomeOverlay" class="fixed inset-0 z-[70] flex flex-col items-center justify-center p-4" style="display: none; background: var(--bg-primary);">
         <canvas id="particleCanvas"></canvas>
-        <div class="text-center space-y-10 max-w-md w-full relative z-10">
+        <div class="text-center space-y-8 max-w-md w-full relative z-10">
             <div class="space-y-4" id="welcomeTitleContainer">
-                <h1 class="text-5xl md:text-7xl font-bold tracking-tight" style="color: #ffffff; font-weight: 800; letter-spacing: -0.03em;">Rust Rooms</h1>
-                <p style="color: var(--text-secondary);" class="text-base md:text-lg font-normal opacity-80">Simple, secure, and fast video conferencing.</p>
+                <h1 class="text-5xl md:text-7xl font-bold tracking-tight" style="color: #ffffff; font-weight: 800; letter-spacing: -0.04em;">Rust Rooms</h1>
+                <p style="color: var(--text-secondary);" class="text-base md:text-lg font-normal opacity-70">Simple, secure, and fast video conferencing.</p>
             </div>
 
             <div id="startActionContainer" class="relative min-h-[72px] flex justify-center items-center">
-                 <button id="btnStartRoom" onclick="createRoom()" class="btn-primary absolute w-full md:w-auto px-12 py-4 text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl">
+                 <button id="btnStartRoom" onclick="createRoom()" class="btn-primary absolute w-full md:w-auto px-12 py-4 text-white rounded-2xl font-semibold text-lg transition-all">
                     Start Room
                 </button>
 
                 <div id="passwordInputContainer" class="absolute w-full max-w-xs transition-all duration-300 transform translate-y-4 opacity-0 pointer-events-none flex gap-2">
-                     <input type="password" id="roomPasswordInput" placeholder="Password required" class="flex-1 rounded-lg px-4 py-3 text-white bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none transition-all" onkeypress="if(event.key==='Enter') submitPassword()">
-                     <button onclick="submitPassword()" class="btn-primary px-5 py-3 text-white rounded-lg font-medium transition-all flex items-center justify-center">
+                     <input type="password" id="roomPasswordInput" placeholder="Password required" class="flex-1 rounded-xl px-4 py-3 text-white bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none transition-all" onkeypress="if(event.key==='Enter') submitPassword()">
+                     <button onclick="submitPassword()" class="btn-primary px-5 py-3 text-white rounded-xl font-medium transition-all flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                      </button>
                 </div>
@@ -1602,9 +1685,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="configOverlay" class="fixed inset-0 z-[60] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: rgba(0, 0, 0, 0.9);">
+    <div id="configOverlay" class="fixed inset-0 z-[60] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: rgba(9, 9, 11, 0.92); backdrop-filter: blur(12px);">
         <canvas id="particleCanvasConfig" class="absolute inset-0 pointer-events-none" style="z-index: 1;"></canvas>
-        <div id="configPanel" class="glass-panel p-8 md:p-10 rounded-[14px] max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
+        <div id="configPanel" class="glass-panel p-8 md:p-10 rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
             <div class="text-center space-y-2 mb-8">
                 <h1 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--text-primary);">Setup</h1>
                 <p style="color: var(--text-secondary);" class="text-sm font-normal opacity-80">Configure your camera and microphone.</p>
@@ -1690,15 +1773,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="settingsOverlay" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden" style="background: rgba(0, 0, 0, 0.85);" onclick="if(event.target === this) closeSettings()">
-        <div class="glass-panel p-8 md:p-10 rounded-[14px] max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
+    <div id="settingsOverlay" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden" style="background: rgba(9, 9, 11, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);" onclick="if(event.target === this) closeSettings()">
+        <div class="glass-panel p-8 md:p-10 rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
              <button onclick="closeSettings()" class="absolute top-6 right-6 transition-all p-2 rounded-lg hover:bg-white/10" style="color: var(--text-muted);" title="Close">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
 
             <div class="text-center space-y-2 mb-8">
                 <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--text-primary);">Settings</h2>
-                <p style="color: var(--text-secondary);" class="text-sm font-normal opacity-80">Update your profile and devices.</p>
+                <p style="color: var(--text-secondary);" class="text-sm font-normal opacity-70">Update your profile and devices.</p>
             </div>
 
             <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
@@ -1759,7 +1842,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     </div>
 
     <div id="appLayout" class="hidden flex-col h-full w-full">
-        <div class="app-topbar flex-none p-3 sm:p-4 md:p-5 z-40 flex justify-between items-center gap-2 md:gap-4 pl-3 md:pl-4" style="background: rgba(0,0,0,0.72); border-bottom: 1px solid var(--border-subtle);">
+        <div class="app-topbar flex-none p-3 sm:p-4 md:p-5 z-40 flex justify-between items-center gap-2 md:gap-4 pl-3 md:pl-4" style="background: rgba(9, 9, 11, 0.75); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border-bottom: 1px solid var(--border-subtle);">
             <div class="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                 <button id="sidebarToggle" onclick="toggleSidebar()" class="control-btn shadow-lg hidden !w-10 !h-10 md:!w-12 md:!h-12 flex-shrink-0" title="Channels">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
@@ -1795,7 +1878,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         <main class="flex-1 w-full relative min-h-0">
             <div class="absolute inset-0 pb-4 md:pb-5 px-4 pt-1 md:pt-2 overflow-hidden flex items-center justify-center">
-                 <div id="remoteGrid" class="grid gap-4 md:gap-5 w-full h-full max-w-[1600px] transition-all duration-500 grid-expand"></div>
+                 <div id="remoteGrid" class="grid gap-3 md:gap-4 w-full h-full max-w-[1600px] transition-all duration-500 grid-expand"></div>
             </div>
 
             <div id="emptyState" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
@@ -1804,8 +1887,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="0.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                 </div>
-                <p class="text-xl font-semibold" style="color: var(--text-secondary);">Waiting for others to join...</p>
-                <p class="text-sm mt-2" style="color: var(--text-muted); opacity: 0.8;">Share the invite link to get started.</p>
+                <p class="text-lg font-semibold" style="color: var(--text-secondary);">Waiting for others to join...</p>
+                <p class="text-sm mt-2" style="color: var(--text-muted); opacity: 0.7;">Share the invite link to get started.</p>
             </div>
 
             <div class="pip-wrapper" id="localPipWrapper">
@@ -1819,7 +1902,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     </div>
 
                     <video id="localVideo" autoplay playsinline muted class="w-full h-full object-cover z-10"></video>
-                    <div id="localLabel" class="name-tag absolute bottom-2 left-2 px-2.5 py-1 rounded-lg text-[10px] md:text-xs font-medium z-30" style="background: rgba(0, 0, 0, 0.6); color: var(--text-primary); border: 1px solid var(--border-subtle);">
+                    <div id="localLabel" class="name-tag absolute bottom-2 left-2 px-2.5 py-1 rounded-lg text-[10px] md:text-xs font-medium z-30" style="background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: var(--text-primary); border: 1px solid var(--border-subtle);">
                         You
                     </div>
                 </div>
@@ -1827,7 +1910,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </main>
 
         <footer class="flex-none taskbar w-full z-50">
-            <div class="flex justify-center items-center py-4 md:py-5 gap-2.5 md:gap-3 px-4">
+            <div class="flex justify-center items-center py-4 md:py-5 gap-2 md:gap-2.5 px-4">
                 <button class="control-btn" id="btnMic" onclick="toggleMic()" title="Toggle Microphone">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
                 </button>
@@ -6029,7 +6112,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             setAvatar(avatarLayer, avatarUrl, isGif, staticFrame);
 
             const label = document.createElement('div');
-            label.className = 'name-tag absolute bottom-3 left-3 bg-black/50 px-3 py-1 rounded-full text-sm text-white backdrop-blur-md z-30 flex items-center gap-1.5';
+            label.className = 'name-tag absolute bottom-3 left-3 bg-black/45 backdrop-blur-xl px-3 py-1.5 rounded-lg text-sm text-white z-30 flex items-center gap-1.5';
 
             const nameSpan = document.createElement('span');
             nameSpan.className = 'peer-name';
@@ -6067,7 +6150,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             volControls.appendChild(mainVolRow);
 
             const fsBtn = document.createElement('button');
-            fsBtn.className = 'absolute top-3 right-3 p-2 rounded-xl bg-black/40 hover:bg-blue-600 text-white backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 scale-90 hover:scale-100 z-30';
+            fsBtn.className = 'absolute top-3 right-3 p-2 rounded-lg bg-black/40 hover:bg-black/60 text-white backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 scale-95 hover:scale-100 z-30';
             fsBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
             fsBtn.onclick = () => toggleFullscreen(userId);
             fsBtn.title = "Toggle Fullscreen";
@@ -7864,8 +7947,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
     </script>
 
-    <div id="cropModal" class="fixed inset-0 z-[250] flex items-center justify-center p-4 hidden" style="background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(20px) saturate(140%);">
-        <div class="glass-panel p-6 md:p-8 rounded-[14px] w-full max-w-md max-h-[95vh] flex flex-col items-center relative z-10">
+    <div id="cropModal" class="fixed inset-0 z-[250] flex items-center justify-center p-4 hidden" style="background: rgba(9, 9, 11, 0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);">
+        <div class="glass-panel p-6 md:p-8 rounded-2xl w-full max-w-md max-h-[95vh] flex flex-col items-center relative z-10">
             <h3 class="text-xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">Crop Your Avatar</h3>
             <div id="cropWrapper" class="w-full relative"></div>
             <div class="flex gap-4 w-full mt-2">
