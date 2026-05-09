@@ -113,9 +113,9 @@ self.addEventListener('fetch', (event) => {
 async fn icon_svg() -> impl IntoResponse {
     let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
     <rect width="512" height="512" rx="128" ry="128" fill="#000000"/>
-    <circle cx="256" cy="256" r="180" fill="#6366f1" fill-opacity="0.15"/>
-    <circle cx="256" cy="256" r="140" fill="#6366f1" fill-opacity="0.3"/>
-    <circle cx="256" cy="256" r="100" fill="#6366f1"/>
+    <circle cx="256" cy="256" r="180" fill="#4f70f4" fill-opacity="0.15"/>
+    <circle cx="256" cy="256" r="140" fill="#4f70f4" fill-opacity="0.3"/>
+    <circle cx="256" cy="256" r="100" fill="#4f70f4"/>
     <path d="M256 196a60 60 0 1 0 0 120 60 60 0 0 0 0-120z" fill="#ffffff"/>
     <path d="M196 256a60 60 0 0 1 120 0" stroke="#ffffff" stroke-width="20" stroke-linecap="round"/>
 </svg>"##;
@@ -181,17 +181,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             --border-subtle: rgba(255, 255, 255, 0.06);
             --border-medium: rgba(255, 255, 255, 0.1);
             --border-strong: rgba(255, 255, 255, 0.15);
-            --border-accent: rgba(99, 102, 241, 0.25);
+            --border-accent: rgba(79, 112, 244, 0.25);
 
             --text-primary: #f0f0f2;
             --text-secondary: #8b8b94;
             --text-muted: #52525b;
 
-            --accent: #6366f1;
-            --accent-hover: #818cf8;
-            --accent-glow: rgba(99, 102, 241, 0.2);
-            --accent-blue: #6366f1;
-            --accent-dark-blue: #4f46e5;
+            --accent: #4f70f4;
+            --accent-hover: #6e8af6;
+            --accent-glow: rgba(79, 112, 244, 0.2);
+            --accent-blue: #4f70f4;
+            --accent-dark-blue: #3b59f1;
 
             --accent-green: #22c55e;
             --accent-green-hover: #4ade80;
@@ -779,14 +779,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .speaking-glow {
             border: 2px solid var(--accent) !important;
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.35), inset 0 0 20px rgba(99, 102, 241, 0.05) !important;
+            box-shadow: 0 0 20px rgba(79, 112, 244, 0.35), inset 0 0 20px rgba(79, 112, 244, 0.05) !important;
             transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             z-index: 50;
         }
 
         #localPipWrapper.speaking-glow {
             border: 2px solid var(--accent) !important;
-            box-shadow: 0 0 12px rgba(99, 102, 241, 0.35) !important;
+            box-shadow: 0 0 12px rgba(79, 112, 244, 0.35) !important;
             z-index: 75;
         }
 
@@ -1030,7 +1030,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .btn-primary:hover {
             background: var(--accent-hover);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+            box-shadow: 0 4px 12px rgba(79, 112, 244, 0.25);
         }
 
         .btn-primary:active {
@@ -1271,7 +1271,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .room-item.active {
             border-color: var(--accent);
-            background: rgba(99, 102, 241, 0.06);
+            background: rgba(79, 112, 244, 0.06);
             box-shadow: 0 0 0 1px var(--border-accent);
         }
 
@@ -1333,7 +1333,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .mini-avatar.speaking-glow {
             border: 2px solid var(--accent) !important;
-            box-shadow: 0 0 8px rgba(99, 102, 241, 0.4) !important;
+            box-shadow: 0 0 8px rgba(79, 112, 244, 0.4) !important;
             transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         }
 
