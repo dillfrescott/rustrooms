@@ -178,9 +178,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             --bg-elevated: #0f0f0f;
             --bg-elevated-strong: #141414;
 
-            --border-subtle: rgba(255, 255, 255, 0.06);
-            --border-medium: rgba(255, 255, 255, 0.1);
-            --border-strong: rgba(255, 255, 255, 0.15);
+            --border-subtle: rgba(255, 255, 255, 0.1);
+            --border-medium: rgba(255, 255, 255, 0.16);
+            --border-strong: rgba(255, 255, 255, 0.22);
             --border-accent: rgba(79, 112, 244, 0.25);
 
             --text-primary: #f0f0f2;
