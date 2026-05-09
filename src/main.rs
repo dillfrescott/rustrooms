@@ -1163,7 +1163,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             border-right: 1px solid var(--border-subtle);
             display: flex;
             flex-direction: column;
-            box-shadow: var(--shadow-xl);
+            box-shadow: none;
         }
 
         #roomSidebar.open {
