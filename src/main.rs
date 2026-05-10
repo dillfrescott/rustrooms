@@ -776,15 +776,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .speaking-glow {
-            border: 2px solid var(--accent) !important;
-            box-shadow: 0 0 20px rgba(79, 112, 244, 0.35), inset 0 0 20px rgba(79, 112, 244, 0.05) !important;
+            border: 3px solid var(--accent) !important;
+            box-shadow: 0 0 24px rgba(79, 112, 244, 0.45), inset 0 0 24px rgba(79, 112, 244, 0.1) !important;
             transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             z-index: 50;
         }
 
         #localPipWrapper.speaking-glow {
-            border: 2px solid var(--accent) !important;
-            box-shadow: 0 0 12px rgba(79, 112, 244, 0.35) !important;
+            border: 3px solid var(--accent) !important;
+            box-shadow: 0 0 16px rgba(79, 112, 244, 0.45) !important;
             z-index: 75;
         }
 
@@ -1328,8 +1328,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .mini-avatar.speaking-glow {
-            border: 2px solid var(--accent) !important;
-            box-shadow: 0 0 8px rgba(79, 112, 244, 0.4) !important;
+            border: 3px solid var(--accent) !important;
+            box-shadow: 0 0 10px rgba(79, 112, 244, 0.5) !important;
             transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         }
 
