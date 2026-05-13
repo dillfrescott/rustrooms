@@ -1681,6 +1681,36 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
+    <div id="inviteWelcomeOverlay" class="fixed inset-0 z-[80] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: #000000;">
+        <div class="glass-panel p-8 md:p-12 rounded-3xl max-w-lg w-full relative z-10 text-center space-y-8">
+            <div class="space-y-3">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                    </span>
+                    Live Call
+                </div>
+                <h1 id="inviteChannelName" class="text-3xl md:text-4xl font-bold tracking-tight text-white"># General</h1>
+                <p id="inviteCallDuration" class="text-zinc-400 text-sm font-medium">Running for 00:00:00</p>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-widest text-left">Currently in call</h3>
+                <div id="inviteUserList" class="flex flex-wrap justify-center gap-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                    <!-- Users will be injected here -->
+                </div>
+            </div>
+
+            <div class="pt-4">
+                <button onclick="proceedToSetup()" class="btn-primary w-full py-4 text-white rounded-2xl font-bold text-lg transition-all shadow-lg hover:shadow-blue-500/20 group">
+                    Join Conversation
+                    <svg class="inline-block ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="configOverlay" class="fixed inset-0 z-[60] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: #0a0a0a;">
         <canvas id="particleCanvasConfig" class="absolute inset-0 pointer-events-none" style="z-index: 1;"></canvas>
         <div id="configPanel" class="glass-panel p-8 md:p-10 rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
@@ -5073,6 +5103,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     <div class="room-name pointer-events-none">
                         <span class="truncate pr-2">${roomInfo.name}</span>
                         <div class="flex items-center gap-2">
+                             <span class="channel-timer text-[10px] text-zinc-500 font-medium" data-created-at="${roomInfo.created_at || 0}">
+                                ${formatDuration(roomInfo.created_at)}
+                             </span>
                              <div class="user-count">${userIds.length}</div>
                              ${rid.toLowerCase() !== 'general' ? `
                                 <div class="flex gap-1 pointer-events-auto">
@@ -5110,6 +5143,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                     setTimeout(() => input.focus(), 100);
                 } else if (res.ok) {
+                    sessionStorage.setItem('rustrooms_welcomed', 'true');
                     window.location.href = `/${crypto.randomUUID()}/General`;
                 } else {
                     alert("Error creating room");
@@ -5126,11 +5160,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (!password) return;
 
             try {
-
                 sessionStorage.setItem('rustrooms_room_password', password);
 
                 const res = await fetch('/new?password=' + encodeURIComponent(password));
                  if (res.ok) {
+                     sessionStorage.setItem('rustrooms_welcomed', 'true');
                      window.location.href = `/${crypto.randomUUID()}/General`;
                  } else if (res.status === 401) {
                      sessionStorage.removeItem('rustrooms_room_password');
@@ -5149,17 +5183,115 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
-        if (roomId) {
-            loadPreferences();
-            const setupDone = sessionStorage.getItem('rustrooms_setup_done') === 'true';
-            if (setupDone && roomId) {
-
-                loadDevices().then(() => joinRoom());
-            } else {
+        function proceedToSetup() {
+            sessionStorage.setItem('rustrooms_welcomed', 'true');
+            const inviteOverlay = document.getElementById('inviteWelcomeOverlay');
+            inviteOverlay.classList.add('opacity-0');
+            setTimeout(() => {
+                inviteOverlay.classList.add('hidden');
                 configOverlay.classList.remove('hidden');
                 configOverlay.classList.remove('opacity-0');
                 initSetupButtonTouchHandlers();
                 loadDevices();
+            }, 300);
+        }
+
+        async function updateInviteOverlay() {
+            if (!roomId || !channelId) return;
+            if (sessionStorage.getItem('rustrooms_welcomed') === 'true') return;
+            
+            try {
+                const res = await fetch(`/${roomId}/${encodeURIComponent(channelId)}/status`);
+                if (!res.ok) return;
+                
+                const data = await res.json();
+                
+                document.getElementById('inviteChannelName').innerText = `# ${data.name}`;
+                
+                const userList = document.getElementById('inviteUserList');
+                userList.innerHTML = '';
+                
+                const uids = Object.keys(data.users);
+                if (uids.length === 0) {
+                    userList.innerHTML = '<p class="text-zinc-500 italic text-sm">No one is here yet. Be the first!</p>';
+                } else {
+                    uids.forEach(uid => {
+                        const u = data.users[uid];
+                        const userDiv = document.createElement('div');
+                        userDiv.className = 'flex flex-col items-center gap-2 p-3 rounded-2xl bg-zinc-900/50 border border-zinc-800 min-w-[100px]';
+                        userDiv.innerHTML = `
+                            <div class="w-12 h-12 rounded-xl overflow-hidden bg-zinc-800 border border-zinc-700">
+                                ${u.avatar ? `<img src="${escapeHtml(u.staticFrame || u.avatar)}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-xl">👤</div>`}
+                            </div>
+                            <span class="text-xs font-semibold text-zinc-300 truncate max-w-[80px]">${escapeHtml(u.nickname)}</span>
+                        `;
+                        userList.appendChild(userDiv);
+                    });
+                }
+                
+                if (data.created_at > 0) {
+                    const updateDuration = () => {
+                        const now = Math.floor(Date.now() / 1000);
+                        const diff = now - data.created_at;
+                        const h = Math.floor(diff / 3600).toString().padStart(2, '0');
+                        const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
+                        const s = (diff % 60).toString().padStart(2, '0');
+                        const el = document.getElementById('inviteCallDuration');
+                        if (el) el.innerText = `Running for ${h}:${m}:${s}`;
+                    };
+                    updateDuration();
+                    setInterval(updateDuration, 1000);
+                }
+                
+                const inviteOverlay = document.getElementById('inviteWelcomeOverlay');
+                inviteOverlay.classList.remove('hidden');
+                setTimeout(() => inviteOverlay.classList.remove('opacity-0'), 10);
+                
+            } catch (e) {
+                console.error("Error fetching status", e);
+                // Fallback to setup screen
+                configOverlay.classList.remove('hidden');
+                configOverlay.classList.remove('opacity-0');
+            }
+        }
+
+        function formatDuration(createdAt) {
+            if (!createdAt) return "00:00";
+            const now = Math.floor(Date.now() / 1000);
+            const diff = Math.max(0, now - createdAt);
+            const h = Math.floor(diff / 3600);
+            const m = Math.floor((diff % 3600) / 60);
+            const s = diff % 60;
+            
+            if (h > 0) {
+                return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            }
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        setInterval(() => {
+            document.querySelectorAll('.channel-timer').forEach(el => {
+                const createdAt = parseInt(el.dataset.createdAt);
+                if (createdAt) {
+                    el.innerText = formatDuration(createdAt);
+                }
+            });
+        }, 1000);
+
+        if (roomId) {
+            loadPreferences();
+            const setupDone = sessionStorage.getItem('rustrooms_setup_done') === 'true';
+            const welcomed = sessionStorage.getItem('rustrooms_welcomed') === 'true';
+
+            if (setupDone && roomId) {
+                loadDevices().then(() => joinRoom());
+            } else if (welcomed) {
+                configOverlay.classList.remove('hidden');
+                configOverlay.classList.remove('opacity-0');
+                initSetupButtonTouchHandlers();
+                loadDevices();
+            } else {
+                updateInviteOverlay();
             }
         } else {
             welcomeOverlay.style.display = 'flex';
@@ -8067,6 +8199,8 @@ struct UserStatus {
 struct RoomStatus {
     name: String,
     users: HashMap<String, UserStatus>,
+    #[serde(default)]
+    pub created_at: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -8084,6 +8218,7 @@ type ChannelMap = HashMap<String, HashMap<String, (UserTx, UserStatus)>>;
 type RoomMap = Arc<Mutex<HashMap<String, ChannelMap>>>;
 type RoomCleanupMap = Arc<Mutex<HashMap<String, u64>>>;
 type RemoteUsersMap = Arc<Mutex<HashMap<String, HashMap<String, HashMap<String, UserStatus>>>>>;
+type ChannelCreationTimesMap = Arc<Mutex<HashMap<String, HashMap<String, u64>>>>;
 const ROOM_EMPTY_GRACE_SECS: u64 = 120;
 const MAX_ROOM_ID_LEN: usize = 64;
 const MAX_CHANNEL_ID_LEN: usize = 32;
@@ -8112,6 +8247,7 @@ struct AppState {
     room_creation_password: Option<String>,
     cluster_tx: tokio::sync::broadcast::Sender<String>,
     remote_users: RemoteUsersMap,
+    channel_creation_times: ChannelCreationTimesMap,
     cluster_key: Option<String>,
     cluster_scheme: String,
     allowed_url: Option<String>,
@@ -8124,6 +8260,7 @@ struct AppState {
 async fn main() {
     let rooms: RoomMap = Arc::new(Mutex::new(HashMap::new()));
     let room_cleanup_generations: RoomCleanupMap = Arc::new(Mutex::new(HashMap::new()));
+    let channel_creation_times: ChannelCreationTimesMap = Arc::new(Mutex::new(HashMap::new()));
 
     let room_creation_password = std::env::var("ROOM_CREATION_PASSWORD").ok().map(|p| p.trim().to_string()).filter(|s| !s.is_empty());
     let cluster_key = std::env::var("KEY").ok().map(|k| k.trim().to_string()).filter(|s| !s.is_empty());
@@ -8162,6 +8299,7 @@ async fn main() {
         room_creation_password,
         cluster_tx,
         remote_users,
+        channel_creation_times,
         cluster_key,
         cluster_scheme,
         allowed_url,
@@ -8178,6 +8316,7 @@ async fn main() {
         .route("/{room_id}/", get(redirect_room_trailing_slash))
         .route("/{room_id}/{channel_id}", get(index))
         .route("/{room_id}/{channel_id}/", get(redirect_channel_trailing_slash))
+        .route("/{room_id}/{channel_id}/status", get(channel_status))
         .route("/rnnoise.js", get(rnnoise_js))
         .route("/rnnoise_processor.js", get(rnnoise_processor_js))
         .route("/manifest.json", get(manifest_json))
@@ -8433,7 +8572,7 @@ async fn handle_inbound_cluster(socket: WebSocket, state: AppState) {
     forwarder.abort();
     writer.abort();
     let dead = peer_users_cleanup.lock().await.clone();
-    cleanup_dead_remote_users(&dead, &rooms, &remote_users, &state.cluster_tx).await;
+    cleanup_dead_remote_users(&dead, &rooms, &remote_users, &state.channel_creation_times, &state.cluster_tx).await;
 }
 
 fn spawn_dht_discovery(state: AppState, port: u16) {
@@ -8634,7 +8773,7 @@ async fn connect_to_peer(url: &str, state: &AppState) -> Result<(), Box<dyn std:
     forwarder.abort();
     writer.abort();
     let dead = peer_users_cleanup.lock().await.clone();
-    cleanup_dead_remote_users(&dead, &rooms, &remote_users, &state.cluster_tx).await;
+    cleanup_dead_remote_users(&dead, &rooms, &remote_users, &state.channel_creation_times, &state.cluster_tx).await;
     Ok(())
 }
 
@@ -8642,6 +8781,7 @@ async fn cleanup_dead_remote_users(
     dead: &HashSet<(String, String, String)>,
     rooms: &RoomMap,
     remote_users: &RemoteUsersMap,
+    times: &ChannelCreationTimesMap,
     _cluster_tx: &tokio::sync::broadcast::Sender<String>,
 ) {
     let mut affected_rooms = HashSet::new();
@@ -8673,7 +8813,7 @@ async fn cleanup_dead_remote_users(
         affected_rooms.insert(room_id.clone());
     }
     for room_id in &affected_rooms {
-        broadcast_channel_list(rooms, remote_users, room_id).await;
+        broadcast_channel_list(rooms, remote_users, times, room_id).await;
     }
 }
 
@@ -8719,7 +8859,7 @@ async fn handle_cluster_message(msg: &ClusterMessage, rooms: &RoomMap, remote_us
                         }
                     }
                 }
-                broadcast_channel_list(rooms, remote_users, &msg.room_id).await;
+                broadcast_channel_list(rooms, remote_users, &state.channel_creation_times, &msg.room_id).await;
             }
         }
         "user-left" | "user-kicked" => {
@@ -8748,7 +8888,7 @@ async fn handle_cluster_message(msg: &ClusterMessage, rooms: &RoomMap, remote_us
                     }
                 }
             }
-            broadcast_channel_list(rooms, remote_users, &msg.room_id).await;
+            broadcast_channel_list(rooms, remote_users, &state.channel_creation_times, &msg.room_id).await;
         }
         "user-update" => {
             if let Some(ref status) = msg.status {
@@ -8779,7 +8919,7 @@ async fn handle_cluster_message(msg: &ClusterMessage, rooms: &RoomMap, remote_us
                         }
                     }
                 }
-                broadcast_channel_list(rooms, remote_users, &msg.room_id).await;
+                broadcast_channel_list(rooms, remote_users, &state.channel_creation_times, &msg.room_id).await;
             }
         }
         "cam-toggle" | "screen-toggle" => {
@@ -8812,7 +8952,7 @@ async fn handle_cluster_message(msg: &ClusterMessage, rooms: &RoomMap, remote_us
                 }
             }
             if msg.msg_type == "screen-toggle" {
-                broadcast_channel_list(rooms, remote_users, &msg.room_id).await;
+                broadcast_channel_list(rooms, remote_users, &state.channel_creation_times, &msg.room_id).await;
             }
         }
         "rename-channel" => {
@@ -8850,7 +8990,7 @@ async fn handle_cluster_message(msg: &ClusterMessage, rooms: &RoomMap, remote_us
                     }
                     drop(rooms_lock);
 
-                    broadcast_channel_list(rooms, remote_users, &msg.room_id).await;
+                    broadcast_channel_list(rooms, remote_users, &state.channel_creation_times, &msg.room_id).await;
                 }
             }
         }
@@ -8860,7 +9000,7 @@ async fn handle_cluster_message(msg: &ClusterMessage, rooms: &RoomMap, remote_us
                 room.remove(&msg.channel_id);
             }
             drop(rl);
-            broadcast_channel_list(rooms, remote_users, &msg.room_id).await;
+            broadcast_channel_list(rooms, remote_users, &state.channel_creation_times, &msg.room_id).await;
         }
         "signal" => {
             if let Some(ref signal_json) = msg.signal_msg {
@@ -8894,9 +9034,10 @@ fn cluster_broadcast(cluster_tx: &tokio::sync::broadcast::Sender<String>, msg: &
     }
 }
 
-async fn broadcast_channel_list(rooms: &RoomMap, remote_users: &RemoteUsersMap, room_id: &str) {
+async fn broadcast_channel_list(rooms: &RoomMap, remote_users: &RemoteUsersMap, times: &ChannelCreationTimesMap, room_id: &str) {
     let rooms_lock = rooms.lock().await;
     let remote_lock = remote_users.lock().await;
+    let times_lock = times.lock().await;
 
     let local_room = rooms_lock.get(room_id);
     let remote_room = remote_lock.get(room_id);
@@ -8913,18 +9054,28 @@ async fn broadcast_channel_list(rooms: &RoomMap, remote_users: &RemoteUsersMap, 
             for (user_id, (_, status)) in users.iter() {
                 user_map.insert(user_id.clone(), status.clone());
             }
+            let created_at = times_lock.get(room_id)
+                .and_then(|t| t.get(cid))
+                .copied()
+                .unwrap_or(0);
             channel_list.insert(cid.clone(), RoomStatus {
                 name: cid.clone(),
                 users: user_map,
+                created_at,
             });
         }
     }
 
     if let Some(remote_room) = remote_room {
         for (cid, users) in remote_room.iter() {
+            let created_at = times_lock.get(room_id)
+                .and_then(|t| t.get(cid))
+                .copied()
+                .unwrap_or(0);
             let entry = channel_list.entry(cid.clone()).or_insert_with(|| RoomStatus {
                 name: cid.clone(),
                 users: HashMap::new(),
+                created_at,
             });
             for (user_id, status) in users.iter() {
                 entry.users.insert(user_id.clone(), status.clone());
@@ -9130,6 +9281,23 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 room.entry("General".to_string()).or_insert_with(HashMap::new);
                                 let channel = room.entry(channel_id.clone()).or_insert_with(HashMap::new);
 
+                                {
+                                    let mut times = state.channel_creation_times.lock().await;
+                                    let room_times = times.entry(room_id.clone()).or_insert_with(HashMap::new);
+                                    room_times.entry("General".to_string()).or_insert_with(|| {
+                                        std::time::SystemTime::now()
+                                            .duration_since(std::time::UNIX_EPOCH)
+                                            .unwrap()
+                                            .as_secs()
+                                    });
+                                    room_times.entry(channel_id.clone()).or_insert_with(|| {
+                                        std::time::SystemTime::now()
+                                            .duration_since(std::time::UNIX_EPOCH)
+                                            .unwrap()
+                                            .as_secs()
+                                    });
+                                }
+
                                 if channel.contains_key(&user_id) {
                                     let leave_msg = serde_json::to_string(&SignalMessage {
                                         msg_type: "user-left".into(),
@@ -9277,7 +9445,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 data: notify_data.clone(),
                                 signal_msg: None,
                             });
-                            broadcast_channel_list(&rooms, &remote_users, &room_id).await;
+                            broadcast_channel_list(&rooms, &remote_users, &state.channel_creation_times, &room_id).await;
                         }
                     } else {
                         if parsed.msg_type == "update-user" {
@@ -9359,7 +9527,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     }
                                 }
                             }
-                            broadcast_channel_list(&rooms, &remote_users, &room_id).await;
+                            broadcast_channel_list(&rooms, &remote_users, &state.channel_creation_times, &room_id).await;
                         }
  else if parsed.msg_type == "cam-toggle" {
                             let rooms_lock = rooms.lock().await;
@@ -9429,7 +9597,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 data: parsed.data.clone(),
                                 signal_msg: None,
                             });
-                            broadcast_channel_list(&rooms, &remote_users, &room_id).await;
+                            broadcast_channel_list(&rooms, &remote_users, &state.channel_creation_times, &room_id).await;
                         } else if parsed.msg_type == "kick-user" {
                             let target_user_id = parsed.data.as_ref()
                                 .and_then(|d| d.get("userId"))
@@ -9484,7 +9652,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                         data: None,
                                         signal_msg: None,
                                     });
-                                    broadcast_channel_list(&rooms, &remote_users, &room_id).await;
+                                    broadcast_channel_list(&rooms, &remote_users, &state.channel_creation_times, &room_id).await;
                                 }
                             }
                         } else if parsed.msg_type == "rename-channel" {
@@ -9561,7 +9729,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                          data: Some(serde_json::json!({ "roomId": room_id, "oldName": target_channel_id, "newName": new_name_str })),
                                          signal_msg: None,
                                      });
-                                     broadcast_channel_list(&rooms, &remote_users, &room_id).await;
+                                     broadcast_channel_list(&rooms, &remote_users, &state.channel_creation_times, &room_id).await;
                                 }
                             }
                         } else if parsed.msg_type == "delete-channel" {
@@ -9600,7 +9768,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                           data: None,
                                           signal_msg: None,
                                       });
-                                      broadcast_channel_list(&rooms, &remote_users, &room_id).await;
+                                      broadcast_channel_list(&rooms, &remote_users, &state.channel_creation_times, &room_id).await;
                                   }
                             }
                         } else if let Some(ref target_id) = parsed.target {
@@ -9840,6 +10008,44 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
             }
         });
     }
-    broadcast_channel_list(&rooms, &remote_users, &room_id).await;
+    broadcast_channel_list(&rooms, &remote_users, &state.channel_creation_times, &room_id).await;
+}
+
+async fn channel_status(
+    Path((room_id, channel_id)): Path<(String, String)>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let rooms_lock = state.rooms.lock().await;
+    let remote_lock = state.remote_users.lock().await;
+    let times_lock = state.channel_creation_times.lock().await;
+
+    let mut users_map = HashMap::new();
+
+    if let Some(room) = rooms_lock.get(&room_id) {
+        if let Some(channel) = room.get(&channel_id) {
+            for (uid, (_, status)) in channel.iter() {
+                users_map.insert(uid.clone(), status.clone());
+            }
+        }
+    }
+
+    if let Some(remote_room) = remote_lock.get(&room_id) {
+        if let Some(remote_channel) = remote_room.get(&channel_id) {
+            for (uid, status) in remote_channel.iter() {
+                users_map.insert(uid.clone(), status.clone());
+            }
+        }
+    }
+
+    let created_at = times_lock.get(&room_id)
+        .and_then(|t| t.get(&channel_id))
+        .copied()
+        .unwrap_or(0);
+
+    axum::Json(RoomStatus {
+        name: channel_id,
+        users: users_map,
+        created_at,
+    })
 }
 
