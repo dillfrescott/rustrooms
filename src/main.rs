@@ -1411,6 +1411,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             font-size: 0.82rem;
             color: var(--text-secondary);
             font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .status-indicators {
@@ -1616,8 +1619,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
     <div id="passwordModal" class="modal-overlay">
         <div class="modal-content text-center space-y-5">
-            <h3 id="passwordModalTitle" class="text-xl font-bold text-white">Password Required</h3>
-            <p id="passwordModalMessage" class="text-zinc-300 text-sm"></p>
+            <h3 id="passwordModalTitle" class="text-xl font-bold text-white break-words">Password Required</h3>
+            <p id="passwordModalMessage" class="text-zinc-300 text-sm break-words"></p>
             <div class="space-y-4">
                 <input type="password" id="passwordModalInput" placeholder="Enter password..." class="w-full rounded-xl px-4 py-3 text-white transition-all bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none" onkeydown="if(event.key==='Enter') document.getElementById('passwordModalSubmit').click()">
                 <div class="flex gap-3">
@@ -1630,16 +1633,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
     <div id="alertModal" class="modal-overlay">
         <div class="modal-content text-center space-y-5">
-            <h3 id="alertTitle" class="text-xl font-bold text-white">Alert</h3>
-            <p id="alertMessage" class="text-zinc-300 text-sm"></p>
+            <h3 id="alertTitle" class="text-xl font-bold text-white break-words">Alert</h3>
+            <p id="alertMessage" class="text-zinc-300 text-sm break-words"></p>
             <button onclick="closeCustomAlert()" class="btn-primary w-full py-3 text-white rounded-xl font-medium transition-all">OK</button>
         </div>
     </div>
 
     <div id="confirmModal" class="modal-overlay">
         <div class="modal-content text-center space-y-5">
-            <h3 id="confirmTitle" class="text-xl font-bold text-white">Confirm</h3>
-            <p id="confirmMessage" class="text-zinc-300 text-sm"></p>
+            <h3 id="confirmTitle" class="text-xl font-bold text-white break-words">Confirm</h3>
+            <p id="confirmMessage" class="text-zinc-300 text-sm break-words"></p>
             <div class="flex gap-3">
                 <button onclick="closeCustomConfirm()" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
                 <button id="confirmSubmit" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all">Confirm</button>
@@ -1649,8 +1652,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
     <div id="kickModal" class="modal-overlay">
         <div class="modal-content text-center space-y-5">
-            <h3 id="kickTitle" class="text-xl font-bold text-white">Kick User</h3>
-            <p id="kickMessage" class="text-zinc-300 text-sm"></p>
+            <h3 id="kickTitle" class="text-xl font-bold text-white break-words">Kick User</h3>
+            <p id="kickMessage" class="text-zinc-300 text-sm break-words"></p>
             <div class="flex gap-3">
                 <button onclick="closeKickModal()" class="btn-secondary flex-1 py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
                 <button id="kickSubmit" class="btn-primary flex-1 py-3 text-white rounded-xl font-medium transition-all" style="background: var(--danger);">Kick</button>
@@ -1682,7 +1685,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     </div>
 
     <div id="inviteWelcomeOverlay" class="fixed inset-0 z-[80] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: #000000;">
-        <div class="glass-panel p-8 md:p-12 rounded-3xl max-w-lg w-full relative z-10 text-center space-y-8">
+        <div class="glass-panel p-8 md:p-12 rounded-3xl max-w-lg w-full relative z-10 text-center space-y-8 overflow-hidden">
             <div class="space-y-3">
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
                     <span class="relative flex h-2 w-2">
@@ -1691,7 +1694,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     </span>
                     Live Call
                 </div>
-                <h1 id="inviteChannelName" class="text-3xl md:text-4xl font-bold tracking-tight text-white"># General</h1>
+                <h1 id="inviteChannelName" class="text-3xl md:text-4xl font-bold tracking-tight text-white break-words"># General</h1>
                 <p id="inviteCallDuration" class="text-zinc-400 text-sm font-medium">Running for 00:00:00</p>
             </div>
 
