@@ -1137,7 +1137,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             100% { opacity: 1; transform: translateY(0); }
         }
 
-        #particleCanvas {
+        #particleCanvas, #particleCanvasConfig, #particleCanvasInvite {
             position: absolute;
             top: 0;
             left: 0;
@@ -1684,7 +1684,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="inviteWelcomeOverlay" class="fixed inset-0 z-[80] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: #000000;">
+    <div id="inviteWelcomeOverlay" class="fixed inset-0 z-[80] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: var(--bg-primary);">
+        <canvas id="particleCanvasInvite"></canvas>
         <div class="glass-panel p-8 md:p-12 rounded-3xl max-w-lg w-full relative z-10 text-center space-y-8 overflow-hidden">
             <div class="space-y-3">
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
@@ -2096,6 +2097,80 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             function animate() {
                 animationId = requestAnimationFrame(animate);
                 const overlay = document.getElementById('configOverlay');
+                const isVisible = overlay && !overlay.classList.contains('hidden') && overlay.style.display !== 'none' && !document.hidden;
+
+                if (!isVisible) {
+                    if (particles.length > 0) {
+                        particles = [];
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
+                    return;
+                }
+
+                if (particles.length === 0) init();
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => {
+                    p.update();
+                    p.draw();
+                });
+            }
+
+            init();
+            animate();
+        })();
+
+        // Particle background for invite welcome overlay
+        (function() {
+            const canvas = document.getElementById('particleCanvasInvite');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            let animationId = null;
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.vx = (Math.random() - 0.5) * 0.5;
+                    this.vy = (Math.random() - 0.5) * 0.5;
+                    this.radius = Math.random() * 2 + 1;
+                    this.opacity = Math.random() * 0.5 + 0.2;
+                }
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    if (this.x < 0) this.x = canvas.width;
+                    if (this.x > canvas.width) this.x = 0;
+                    if (this.y < 0) this.y = canvas.height;
+                    if (this.y > canvas.height) this.y = 0;
+                }
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(147, 130, 255, ${this.opacity})`;
+                    ctx.fill();
+                }
+            }
+
+            function init() {
+                particles = [];
+                const particleCount = Math.floor((canvas.width * canvas.height) / 15000);
+                for (let i = 0; i < particleCount; i++) {
+                    particles.push(new Particle());
+                }
+            }
+
+            function animate() {
+                animationId = requestAnimationFrame(animate);
+                const overlay = document.getElementById('inviteWelcomeOverlay');
                 const isVisible = overlay && !overlay.classList.contains('hidden') && overlay.style.display !== 'none' && !document.hidden;
 
                 if (!isVisible) {
