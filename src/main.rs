@@ -1715,7 +1715,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="configOverlay" class="fixed inset-0 z-[60] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: #0a0a0a;">
+    <div id="configOverlay" class="fixed inset-0 z-[60] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: var(--bg-primary);">
         <canvas id="particleCanvasConfig" class="absolute inset-0 pointer-events-none" style="z-index: 1;"></canvas>
         <div id="configPanel" class="glass-panel p-8 md:p-10 rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
             <div class="text-center space-y-2 mb-8">
@@ -1803,7 +1803,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="settingsOverlay" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden" style="background: #0a0a0a;" onclick="if(event.target === this) closeSettings()">
+    <div id="settingsOverlay" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden" style="background: var(--bg-primary);" onclick="if(event.target === this) closeSettings()">
         <div class="glass-panel p-8 md:p-10 rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
              <button onclick="closeSettings()" class="absolute top-6 right-6 transition-all p-2 rounded-lg hover:bg-white/10" style="color: var(--text-muted);" title="Close">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -8155,7 +8155,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
     </script>
 
-    <div id="cropModal" class="fixed inset-0 z-[250] flex items-center justify-center p-4 hidden" style="background: #0a0a0a;">
+    <div id="cropModal" class="fixed inset-0 z-[250] flex items-center justify-center p-4 hidden" style="background: var(--bg-primary);">
         <div class="glass-panel p-6 md:p-8 rounded-2xl w-full max-w-md max-h-[95vh] flex flex-col items-center relative z-10">
             <h3 class="text-xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">Crop Your Avatar</h3>
             <div id="cropWrapper" class="w-full relative"></div>
