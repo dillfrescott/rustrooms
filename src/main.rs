@@ -5309,13 +5309,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 
                 if (data.created_at > 0) {
                     const updateDuration = () => {
-                        const now = Math.floor(Date.now() / 1000);
-                        const diff = now - data.created_at;
-                        const h = Math.floor(diff / 3600).toString().padStart(2, '0');
-                        const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
-                        const s = (diff % 60).toString().padStart(2, '0');
                         const el = document.getElementById('inviteCallDuration');
-                        if (el) el.innerText = `Running for ${h}:${m}:${s}`;
+                        if (el) el.innerText = `Running for ${formatDuration(data.created_at)}`;
                     };
                     updateDuration();
                     setInterval(updateDuration, 1000);
@@ -5334,7 +5329,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function formatDuration(createdAt) {
-            if (!createdAt) return "00:00";
+            if (!createdAt) return "0:00";
             const now = Math.floor(Date.now() / 1000);
             const diff = Math.max(0, now - createdAt);
             const h = Math.floor(diff / 3600);
@@ -5344,7 +5339,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (h > 0) {
                 return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
             }
-            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            return `${m}:${s.toString().padStart(2, '0')}`;
         }
 
         setInterval(() => {
