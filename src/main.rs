@@ -2799,6 +2799,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         async function initAudioWorklet() {
+            if (isIOS) return false;
             if (workletLoadingPromise) return workletLoadingPromise;
 
             if (!audioContext) {
@@ -3080,9 +3081,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         audio: {
                             deviceId: { exact: audioId },
                             echoCancellation: true,
-                            noiseSuppression: false,
-                            autoGainControl: true,
-                            sampleRate: 48000
+                            noiseSuppression: isIOS,
+                            autoGainControl: true,                            sampleRate: 48000
                         }
                     };
                      let stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -3815,9 +3815,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     audio: {
                         deviceId: audioSource ? { exact: audioSource } : undefined,
                         echoCancellation: true,
-                        noiseSuppression: false,
-                        autoGainControl: true,
-                        sampleRate: 48000
+                        noiseSuppression: isIOS,
+                        autoGainControl: true,                        sampleRate: 48000
                     },
                     video: videoConstraints
                 };
@@ -3953,9 +3952,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     let rawStream = await navigator.mediaDevices.getUserMedia({ 
                         audio: {
                             echoCancellation: true,
-                            noiseSuppression: false,
-                            autoGainControl: true,
-                        }, 
+                            noiseSuppression: isIOS,
+                            autoGainControl: true,                        }, 
                         video: false
                     });
                     if (isUnloading) {
