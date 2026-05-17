@@ -2260,6 +2260,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const tabId = crypto.randomUUID();
         let tabHeartbeatInterval = null;
         let activeTabSessionKey = null;
+        let isUnloading = false;
 
         function setActiveTabSession() {
             try {
@@ -2269,28 +2270,52 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function stopAllMedia() {
+            if (isUnloading) return; // Prevent multiple calls
+            isUnloading = true;
+
+            // Stop local stream
             if (localStream) {
                 localStream.getTracks().forEach(track => {
-                    try { track.stop(); } catch(e) {}
+                    try { 
+                        track.enabled = false;
+                        track.stop(); 
+                    } catch(e) {}
                 });
                 if (localStream._originalStream) {
                     localStream._originalStream.getTracks().forEach(track => {
-                        try { track.stop(); } catch(e) {}
+                        try { 
+                            track.enabled = false;
+                            track.stop(); 
+                        } catch(e) {}
                     });
                 }
                 localStream = null;
             }
+
+            // Stop screen stream
             if (screenStream) {
                 screenStream.getTracks().forEach(track => {
-                    try { track.stop(); } catch(e) {}
+                    try { 
+                        track.enabled = false;
+                        track.stop(); 
+                    } catch(e) {}
                 });
                 screenStream = null;
             }
 
+            // Close all peer connections
             if (typeof peers !== 'undefined' && peers) {
                 Object.keys(peers).forEach(userId => {
                     try {
                         if (peers[userId]) {
+                            peers[userId].getSenders().forEach(sender => {
+                                if (sender.track) {
+                                    try { 
+                                        sender.track.enabled = false;
+                                        sender.track.stop(); 
+                                    } catch(e) {}
+                                }
+                            });
                             peers[userId].close();
                         }
                     } catch(e) {}
@@ -2298,6 +2323,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 peers = {};
             }
 
+            // Close audio context
             if (audioContext) {
                 try {
                     audioContext.close().catch(() => {});
@@ -2305,12 +2331,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 audioContext = null;
             }
 
+            // Force clear all video elements
             try {
                 const videos = document.querySelectorAll('video');
                 videos.forEach(v => {
                     try {
                         v.pause();
                         v.srcObject = null;
+                        v.removeAttribute('src'); // Explicitly remove src
                         v.load();
                     } catch(e) {}
                 });
@@ -2350,6 +2378,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         window.addEventListener('beforeunload', clearActiveTabSession);
         window.addEventListener('pagehide', clearActiveTabSession);
         window.addEventListener('unload', clearActiveTabSession);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                // If we are in the setup screen and not joined yet, 
+                // we might want to stop media to be safe if the user switches away/closes
+                if (!isConfigured) {
+                    // But only if it's not a temporary switch. 
+                    // For tab closing, pagehide is usually enough, but visibilitychange 'hidden' is a strong signal.
+                }
+            }
+        });
 
         let reconnectStatusTimeout = null;
         let reconnectTimer = null;
@@ -2876,6 +2914,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                     const permStream = await navigator.mediaDevices.getUserMedia(constraints);
                     permStream.getTracks().forEach(t => t.stop());
+                    if (isUnloading) return;
                 } catch (e) {
                     console.warn("Permission request failed", e);
                 }
@@ -3047,6 +3086,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         }
                     };
                      let stream = await navigator.mediaDevices.getUserMedia(constraints);
+                     if (isUnloading) {
+                         stream.getTracks().forEach(t => t.stop());
+                         return;
+                     }
 
                      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                      const workletLoaded = await initAudioWorklet();
@@ -3103,6 +3146,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  try {
                      const constraints = { video: { deviceId: { exact: videoId } } };
                      const newVideoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                     if (isUnloading) {
+                         newVideoStream.getTracks().forEach(t => t.stop());
+                         return;
+                     }
                      const newTrack = newVideoStream.getVideoTracks()[0];
 
                       if (localStream) {
@@ -3776,6 +3823,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 };
 
                 let rawStream = await navigator.mediaDevices.getUserMedia(constraints);
+                if (isUnloading) {
+                    rawStream.getTracks().forEach(t => t.stop());
+                    return;
+                }
 
                 const newV = rawStream.getVideoTracks()[0];
                 const newA = rawStream.getAudioTracks()[0];
@@ -3905,8 +3956,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             noiseSuppression: false,
                             autoGainControl: true,
                         }, 
-                        video: false 
+                        video: false
                     });
+                    if (isUnloading) {
+                        rawStream.getTracks().forEach(t => t.stop());
+                        return;
+                    }
 
                     const newA = rawStream.getAudioTracks()[0];
                     if (newA) newA.enabled = previousAudioEnabled;
@@ -4156,6 +4211,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                              video: { deviceId: videoSource ? { exact: videoSource } : undefined }
                          };
                          const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+                         if (isUnloading) {
+                             newStream.getTracks().forEach(t => t.stop());
+                             return;
+                         }
                          const newTrack = newStream.getVideoTracks()[0];
 
                          if (!newTrack || newTrack.readyState !== 'live') {
@@ -4166,8 +4225,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                              }
                              await new Promise(r => setTimeout(r, 100));
                              const retryStream = await navigator.mediaDevices.getUserMedia(constraints);
-                             const retryTrack = retryStream.getVideoTracks()[0];
-                             if (retryTrack) {
+                             if (isUnloading) {
+                                 retryStream.getTracks().forEach(t => t.stop());
+                                 return;
+                             }
+                             const retryTrack = retryStream.getVideoTracks()[0];                             if (retryTrack) {
                                  retryTrack.enabled = true;
                                  localStream.addTrack(retryTrack);
                                  retryStream.getTracks().forEach(t => { if (t !== retryTrack) t.stop(); });
@@ -7299,6 +7361,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     try {
                         const camVideoConstraints = currentVideoInputId ? { deviceId: { exact: currentVideoInputId } } : { facingMode: currentFacingMode };
                         const newStream = await navigator.mediaDevices.getUserMedia({ video: camVideoConstraints });
+                        if (isUnloading) {
+                            newStream.getTracks().forEach(t => t.stop());
+                            return;
+                        }
                         const newTrack = newStream.getVideoTracks()[0];
 
                         if (!newTrack || newTrack.readyState !== 'live') {
@@ -7306,9 +7372,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             newTrack?.stop();
                             await new Promise(r => setTimeout(r, 100));
                             const retryStream = await navigator.mediaDevices.getUserMedia({ video: camVideoConstraints });
+                            if (isUnloading) {
+                                retryStream.getTracks().forEach(t => t.stop());
+                                return;
+                            }
                             const retryTrack = retryStream.getVideoTracks()[0];
-                            if (retryTrack) {
-                                retryTrack.enabled = true;
+                            if (retryTrack) {                                retryTrack.enabled = true;
                                 localStream.addTrack(retryTrack);
                                 retryStream.getTracks().forEach(t => { if (t !== retryTrack) t.stop(); });
                             }
@@ -7408,6 +7477,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                         const camVideoConstraints = currentVideoInputId ? { deviceId: { exact: currentVideoInputId } } : { facingMode: currentFacingMode };
                         const newStream = await navigator.mediaDevices.getUserMedia({ video: camVideoConstraints });
+                        if (isUnloading) {
+                            newStream.getTracks().forEach(t => t.stop());
+                            return;
+                        }
                         const newTrack = newStream.getVideoTracks()[0];
 
                         if (!newTrack || newTrack.readyState !== 'live') {
@@ -7415,9 +7488,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             newTrack?.stop();
                             await new Promise(r => setTimeout(r, 100));
                             const retryStream = await navigator.mediaDevices.getUserMedia({ video: camVideoConstraints });
+                            if (isUnloading) {
+                                retryStream.getTracks().forEach(t => t.stop());
+                                return;
+                            }
                             const retryTrack = retryStream.getVideoTracks()[0];
-                            if (retryTrack) {
-                                retryTrack.enabled = true;
+                            if (retryTrack) {                                retryTrack.enabled = true;
                                 localStream.addTrack(retryTrack);
                                 retryStream.getTracks().forEach(t => { if (t !== retryTrack) t.stop(); });
                             }
@@ -7494,6 +7570,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 const newStream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: { exact: newFacingMode } }
                 });
+
+                if (isUnloading) {
+                    newStream.getTracks().forEach(t => t.stop());
+                    return;
+                }
 
                 const newTrack = newStream.getVideoTracks()[0];
                 if (!newTrack || newTrack.readyState !== 'live') {
@@ -7649,6 +7730,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             sampleSize: 16
                         }
                     });
+                    if (isUnloading) {
+                        screenStream.getTracks().forEach(t => t.stop());
+                        return;
+                    }
                     const screenTrack = screenStream.getVideoTracks()[0];
                     const screenAudioTrack = screenStream.getAudioTracks()[0];
 
