@@ -2396,8 +2396,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const reconnectDelayMs = 5000;
 
         let heartbeatInterval = null;
-        const heartbeatIntervalMs = isIOS ? 5000 : 3000;
-        const heartbeatTimeoutMs = isIOS ? 25000 : 15000;
+        const heartbeatIntervalMs = isIOS ? 3000 : 2000;
+        const heartbeatTimeoutMs = 8000;
         let lastPingSentTime = 0;
         let lastPongTime = Date.now();
         let heartbeatTimeout = null;
@@ -9340,18 +9340,18 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
         }
     });
 
-    // Server-side ping task: sends a ping every 30s, closes connection after 120s of silence
+    // Server-side ping task: sends a ping every 5s, closes connection after 10s of silence
     let tx_for_ping = tx_ping.clone();
     let last_activity_for_ping = last_activity.clone();
     tokio::spawn(async move {
-        let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
         interval.tick().await; // skip first immediate tick
         loop {
             tokio::select! {
                 _ = interval.tick() => {
                     let elapsed = last_activity_for_ping.lock().await.elapsed();
-                    if elapsed > std::time::Duration::from_secs(120) {
-                        // No activity for 120s, client is likely dead (iOS Safari silent drop)
+                    if elapsed > std::time::Duration::from_secs(10) {
+                        // No activity for 10s, client is likely dead (iOS Safari silent drop)
                         let _ = tx_for_ping.try_send(Ok(Message::Close(Some(CloseFrame {
                             code: 4001,
                             reason: "Inactivity timeout".into(),
