@@ -2268,7 +2268,57 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             } catch(e) {}
         }
 
+        function stopAllMedia() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    try { track.stop(); } catch(e) {}
+                });
+                if (localStream._originalStream) {
+                    localStream._originalStream.getTracks().forEach(track => {
+                        try { track.stop(); } catch(e) {}
+                    });
+                }
+                localStream = null;
+            }
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => {
+                    try { track.stop(); } catch(e) {}
+                });
+                screenStream = null;
+            }
+
+            if (typeof peers !== 'undefined' && peers) {
+                Object.keys(peers).forEach(userId => {
+                    try {
+                        if (peers[userId]) {
+                            peers[userId].close();
+                        }
+                    } catch(e) {}
+                });
+                peers = {};
+            }
+
+            if (audioContext) {
+                try {
+                    audioContext.close().catch(() => {});
+                } catch(e) {}
+                audioContext = null;
+            }
+
+            try {
+                const videos = document.querySelectorAll('video');
+                videos.forEach(v => {
+                    try {
+                        v.pause();
+                        v.srcObject = null;
+                        v.load();
+                    } catch(e) {}
+                });
+            } catch(e) {}
+        }
+
         function clearActiveTabSession() {
+            stopAllMedia();
             try {
                 if (activeTabSessionKey) {
                     const data = localStorage.getItem(activeTabSessionKey);
@@ -2298,6 +2348,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         window.addEventListener('beforeunload', clearActiveTabSession);
+        window.addEventListener('pagehide', clearActiveTabSession);
+        window.addEventListener('unload', clearActiveTabSession);
 
         let reconnectStatusTimeout = null;
         let reconnectTimer = null;
@@ -2818,7 +2870,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             loadPreferences();
             try {
                 try {
-                    const permStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                    const constraints = { audio: true };
+                    if (!pendingCamToggle) {
+                        constraints.video = true;
+                    }
+                    const permStream = await navigator.mediaDevices.getUserMedia(constraints);
                     permStream.getTracks().forEach(t => t.stop());
                 } catch (e) {
                     console.warn("Permission request failed", e);
