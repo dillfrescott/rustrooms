@@ -2198,6 +2198,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let parts = window.location.pathname.split('/').filter(p => p !== '');
         let roomId = parts[0] || '';
         let channelId = decodeURIComponent(parts[1] || '') || (roomId ? 'General' : '');
+        if (channelId.toLowerCase() === 'general') {
+            channelId = 'General';
+        }
         if (channelId.length > 32) channelId = channelId.substring(0, 32);
 
         const initialChannelNameEl = document.getElementById('currentChannelName');
@@ -5109,6 +5112,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         async function performChannelSwitch(newRoomId, newChannelId) {
+            if (newChannelId && newChannelId.toLowerCase() === 'general') {
+                newChannelId = 'General';
+            }
             if (newChannelId && newChannelId.length > 32) newChannelId = newChannelId.substring(0, 32);
 
             if (ws) {
@@ -5192,10 +5198,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             showNameModal("Rename Channel", "Enter new name", (newName) => {
                 if (!newName) return;
+                const normalizedNewName = newName.toLowerCase() === 'general' ? 'General' : newName;
+                if (globalRoomList[normalizedNewName]) {
+                    showCustomAlert("Channel Exists", `A channel named "${normalizedNewName}" already exists.`);
+                    return;
+                }
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
                         type: 'rename-channel',
-                        data: { channelId: targetRoomId, newName: newName }
+                        data: { channelId: targetRoomId, newName: normalizedNewName }
                     }));
                 }
             });
@@ -8659,7 +8670,10 @@ async fn ws_handler(
     headers: axum::http::HeaderMap,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let channel_id = channel_id.chars().take(MAX_CHANNEL_ID_LEN).collect::<String>();
+    let mut channel_id = channel_id.chars().take(MAX_CHANNEL_ID_LEN).collect::<String>();
+    if channel_id.eq_ignore_ascii_case("general") {
+        channel_id = "General".to_string();
+    }
     if room_id.len() > MAX_ROOM_ID_LEN {
         return (axum::http::StatusCode::BAD_REQUEST, "Room ID too long").into_response();
     }
@@ -9868,90 +9882,104 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 }
                             }
                         } else if parsed.msg_type == "rename-channel" {
-                            let target_channel_id = parsed.data.as_ref()
+                            let mut target_channel_id = parsed.data.as_ref()
                                 .and_then(|d| d.get("channelId"))
                                 .and_then(|v| v.as_str())
                                 .unwrap_or(&channel_id)
                                 .to_string();
 
-                             let new_name = parsed.data.as_ref()
-                                .and_then(|d| d.get("newName"))
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string());
+                            if target_channel_id.eq_ignore_ascii_case("general") {
+                                target_channel_id = "General".to_string();
+                            }
 
-                            if let Some(new_name_str) = new_name {
-                                let mut rooms_lock = rooms.lock().await;
+                            if target_channel_id != "General" {
+                                let new_name = parsed.data.as_ref()
+                                    .and_then(|d| d.get("newName"))
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string());
 
-                                let can_rename = if let Some(room) = rooms_lock.get(&room_id) {
-                                    if let Some(target_channel) = room.get(&target_channel_id) {
-                                        target_channel.is_empty()
+                                if let Some(mut new_name_str) = new_name {
+                                    if new_name_str.eq_ignore_ascii_case("general") {
+                                        new_name_str = "General".to_string();
+                                    }
+
+                                    let mut rooms_lock = rooms.lock().await;
+
+                                    let can_rename = if let Some(room) = rooms_lock.get(&room_id) {
+                                        if let Some(target_channel) = room.get(&target_channel_id) {
+                                            target_channel.is_empty() && !room.contains_key(&new_name_str)
+                                        } else {
+                                            false
+                                        }
                                     } else {
                                         false
+                                    };
+
+                                    if can_rename {
+                                         if let Some(room) = rooms_lock.get_mut(&room_id) {
+                                             if let Some(channel) = room.remove(&target_channel_id) {
+                                                 room.insert(new_name_str.clone(), channel);
+                                             }
+                                         }
+
+                                         // Broadcast rename-channel to local users in this room
+                                         let rename_msg = serde_json::to_string(&SignalMessage {
+                                             msg_type: "rename-channel".into(),
+                                             user_id: Some(user_id.clone()),
+                                             target: None,
+                                             data: Some(serde_json::json!({
+                                                 "roomId": room_id,
+                                                 "oldName": target_channel_id,
+                                                 "newName": new_name_str,
+                                             })),
+                                         }).unwrap();
+
+                                         if let Some(room) = rooms_lock.get(&room_id) {
+                                             for (_ch_name, channel) in room.iter() {
+                                                 for (_uid, (tx, _)) in channel.iter() {
+                                                     let _ = tx.try_send(Ok(Message::Text(rename_msg.clone().into())));
+                                                 }
+                                             }
+                                         }
+
+                                         drop(rooms_lock);
+
+                                         // Also rename in remote_users so signal routing stays consistent
+                                         {
+                                             let mut rl = remote_users.lock().await;
+                                             if let Some(room) = rl.get_mut(&room_id) {
+                                                 if let Some(channel_data) = room.remove(&target_channel_id) {
+                                                     room.insert(new_name_str.clone(), channel_data);
+                                                 }
+                                             }
+                                         }
+
+                                         cluster_broadcast(&cluster_tx, & ClusterMessage {
+                                             msg_type: "rename-channel".into(),
+                                             room_id: room_id.clone(),
+                                             channel_id: target_channel_id.clone(),
+                                             user_id: user_id.clone(),
+                                             msg_id: Uuid::new_v4().to_string(),
+                                             status: None,
+                                             data: Some(serde_json::json!({ "roomId": room_id, "oldName": target_channel_id, "newName": new_name_str })),
+                                             signal_msg: None,
+                                         });
+                                         broadcast_channel_list(&rooms, &remote_users, &state.channel_creation_times, &room_id).await;
                                     }
-                                } else {
-                                    false
-                                };
-
-                                if can_rename {
-                                     if let Some(room) = rooms_lock.get_mut(&room_id) {
-                                         if let Some(channel) = room.remove(&target_channel_id) {
-                                             room.insert(new_name_str.clone(), channel);
-                                         }
-                                     }
-
-                                     // Broadcast rename-channel to local users in this room
-                                     let rename_msg = serde_json::to_string(&SignalMessage {
-                                         msg_type: "rename-channel".into(),
-                                         user_id: Some(user_id.clone()),
-                                         target: None,
-                                         data: Some(serde_json::json!({
-                                             "roomId": room_id,
-                                             "oldName": target_channel_id,
-                                             "newName": new_name_str,
-                                         })),
-                                     }).unwrap();
-
-                                     if let Some(room) = rooms_lock.get(&room_id) {
-                                         for (_ch_name, channel) in room.iter() {
-                                             for (_uid, (tx, _)) in channel.iter() {
-                                                 let _ = tx.try_send(Ok(Message::Text(rename_msg.clone().into())));
-                                             }
-                                         }
-                                     }
-
-                                     drop(rooms_lock);
-
-                                     // Also rename in remote_users so signal routing stays consistent
-                                     {
-                                         let mut rl = remote_users.lock().await;
-                                         if let Some(room) = rl.get_mut(&room_id) {
-                                             if let Some(channel_data) = room.remove(&target_channel_id) {
-                                                 room.insert(new_name_str.clone(), channel_data);
-                                             }
-                                         }
-                                     }
-
-                                     cluster_broadcast(&cluster_tx, & ClusterMessage {
-                                         msg_type: "rename-channel".into(),
-                                         room_id: room_id.clone(),
-                                         channel_id: target_channel_id.clone(),
-                                         user_id: user_id.clone(),
-                                         msg_id: Uuid::new_v4().to_string(),
-                                         status: None,
-                                         data: Some(serde_json::json!({ "roomId": room_id, "oldName": target_channel_id, "newName": new_name_str })),
-                                         signal_msg: None,
-                                     });
-                                     broadcast_channel_list(&rooms, &remote_users, &state.channel_creation_times, &room_id).await;
                                 }
                             }
                         } else if parsed.msg_type == "delete-channel" {
-                            let target_channel_id = parsed.data.as_ref()
+                            let mut target_channel_id = parsed.data.as_ref()
                                 .and_then(|d| d.get("channelId"))
                                 .and_then(|v| v.as_str())
                                 .unwrap_or("")
                                 .to_string();
 
-                            if !target_channel_id.is_empty() && !target_channel_id.eq_ignore_ascii_case("general") {
+                            if target_channel_id.eq_ignore_ascii_case("general") {
+                                target_channel_id = "General".to_string();
+                            }
+
+                            if !target_channel_id.is_empty() && target_channel_id != "General" {
                                 let mut rooms_lock = rooms.lock().await;
 
                                 let can_delete = if let Some(room) = rooms_lock.get(&room_id) {
@@ -10227,6 +10255,10 @@ async fn channel_status(
     Path((room_id, channel_id)): Path<(String, String)>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    let mut channel_id = channel_id;
+    if channel_id.eq_ignore_ascii_case("general") {
+        channel_id = "General".to_string();
+    }
     let rooms_lock = state.rooms.lock().await;
     let remote_lock = state.remote_users.lock().await;
     let times_lock = state.channel_creation_times.lock().await;
