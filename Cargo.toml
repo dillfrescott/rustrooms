@@ -2,6 +2,7 @@
 name = "rust_rooms"
 version = "1.0.0"
 edition = "2024"
+default-run = "rust_rooms"
 
 [dependencies]
 tokio = { version = "1.49.0", features = ["full"] }

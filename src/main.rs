@@ -293,7 +293,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .grid-expand {
-            grid-auto-rows: minmax(0, 1fr);
+            grid-auto-rows: minmax(150px, 1fr);
+        }
+        @media (min-width: 768px) {
+            .grid-expand {
+                grid-auto-rows: minmax(200px, 1fr);
+            }
         }
 
         .avatar-layer {
@@ -1907,8 +1912,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
 
         <main class="flex-1 w-full relative min-h-0">
-            <div class="absolute inset-0 pb-4 md:pb-5 px-4 pt-1 md:pt-2 overflow-hidden flex items-center justify-center">
-                 <div id="remoteGrid" class="grid gap-3 md:gap-4 w-full h-full max-w-[1600px] transition-all duration-500 grid-expand"></div>
+            <div class="absolute inset-0 pb-4 md:pb-5 px-4 pt-1 md:pt-2 overflow-y-auto flex justify-center">
+                 <div id="remoteGrid" class="grid gap-3 md:gap-4 w-full h-full max-w-[1600px] transition-all duration-500 grid-expand my-auto"></div>
             </div>
 
             <div id="emptyState" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
@@ -6106,90 +6111,62 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             initialRect: null,
             allTiles: [],
             currentIndex: 0,
-            tilePositions: null
+            tilePositions: null,
+            // Autoscroll fields
+            scrollSpeed: 0,
+            scrollInterval: null,
+            lastClientX: 0,
+            lastClientY: 0
         };
 
-        function setupSmoothDragAndDrop(container) {
-            container.addEventListener('mousedown', handleDragStart);
-            container.addEventListener('touchstart', handleDragStart, { passive: false });
-        }
-
-        function handleDragStart(e) {
-            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) {
-                return;
-            }
-
-            const isTouch = e.type === 'touchstart';
-            const clientX = isTouch ? e.touches[0].clientX : e.clientX;
-            const clientY = isTouch ? e.touches[0].clientY : e.clientY;
-
-            dragState.isDragging = false;
-            dragState.draggedEl = this;
-            dragState.startX = clientX;
-            dragState.startY = clientY;
-            dragState.initialRect = this.getBoundingClientRect();
-
-            if (isTouch) {
-                document.addEventListener('touchmove', handleDragMove, { passive: false });
-                document.addEventListener('touchend', handleDragEnd);
-                document.addEventListener('touchcancel', handleDragEnd);
-            } else {
-                document.addEventListener('mousemove', handleDragMove);
-                document.addEventListener('mouseup', handleDragEnd);
-            }
-        }
-
-        function handleDragMove(e) {
-            if (!dragState.draggedEl) return;
-
-            const isTouch = e.type === 'touchmove';
-            const clientX = isTouch ? e.touches[0].clientX : e.clientX;
-            const clientY = isTouch ? e.touches[0].clientY : e.clientY;
-
-            if (!dragState.isDragging) {
-                const deltaX = Math.abs(clientX - dragState.startX);
-                const deltaY = Math.abs(clientY - dragState.startY);
-                if (deltaX < 5 && deltaY < 5) return;
-
-                dragState.isDragging = true;
-                dragState.allTiles = [...remoteGrid.querySelectorAll('.video-container')];
-                dragState.currentIndex = dragState.allTiles.indexOf(dragState.draggedEl);
-
-                dragState.tilePositions = dragState.allTiles.map(tile => {
-                    if (tile === dragState.draggedEl) return null;
-                    const rect = tile.getBoundingClientRect();
-                    return {
-                        tile,
-                        rect,
-                        centerX: rect.left + rect.width / 2,
-                        centerY: rect.top + rect.height / 2,
-                        minDimension: Math.min(rect.width, rect.height)
-                    };
-                }).filter(p => p !== null);
-
-                dragState.placeholder = dragState.draggedEl.cloneNode(true);
-                dragState.placeholder.classList.add('drag-placeholder');
-                dragState.placeholder.classList.remove('is-dragging');
-                dragState.placeholder.style.pointerEvents = 'none';
-
-                dragState.draggedEl.classList.add('is-dragging');
-                dragState.draggedEl.style.transition = 'none';
-                dragState.draggedEl.style.width = dragState.initialRect.width + 'px';
-                dragState.draggedEl.style.height = dragState.initialRect.height + 'px';
-                dragState.draggedEl.style.left = dragState.initialRect.left + 'px';
-                dragState.draggedEl.style.top = dragState.initialRect.top + 'px';
-
-                dragState.draggedEl.parentNode.insertBefore(dragState.placeholder, dragState.draggedEl);
-
-                dragState.allTiles.forEach(tile => {
-                    if (tile !== dragState.draggedEl && tile !== dragState.placeholder) {
-                        tile.classList.add('is-shifting');
+        function startAutoScroll(speed) {
+            dragState.scrollSpeed = speed;
+            if (!dragState.scrollInterval) {
+                const scrollContainer = remoteGrid.parentElement;
+                const scrollLoop = () => {
+                    if (!dragState.isDragging || !dragState.scrollSpeed) {
+                        dragState.scrollInterval = null;
+                        return;
                     }
-                });
-
-                e.preventDefault();
+                    
+                    scrollContainer.scrollTop += dragState.scrollSpeed;
+                    
+                    // Update positions of remaining tiles relative to the scrolled viewport
+                    updateTilePositions();
+                    
+                    // Trigger intersection & reordering checks at the updated positions
+                    checkIntersectionAndReorder(dragState.lastClientX, dragState.lastClientY);
+                    
+                    dragState.scrollInterval = requestAnimationFrame(scrollLoop);
+                };
+                dragState.scrollInterval = requestAnimationFrame(scrollLoop);
             }
+        }
 
+        function stopAutoScroll() {
+            dragState.scrollSpeed = 0;
+            if (dragState.scrollInterval) {
+                cancelAnimationFrame(dragState.scrollInterval);
+                dragState.scrollInterval = null;
+            }
+        }
+
+        function updateTilePositions() {
+            if (!dragState.isDragging) return;
+            dragState.tilePositions = dragState.allTiles.map(tile => {
+                if (tile === dragState.draggedEl) return null;
+                const rect = tile.getBoundingClientRect();
+                return {
+                    tile,
+                    rect,
+                    centerX: rect.left + rect.width / 2,
+                    centerY: rect.top + rect.height / 2,
+                    minDimension: Math.min(rect.width, rect.height)
+                };
+            }).filter(p => p !== null);
+        }
+
+        function checkIntersectionAndReorder(clientX, clientY) {
             const offsetX = clientX - dragState.startX;
             const offsetY = clientY - dragState.startY;
 
@@ -6231,6 +6208,101 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                 dragState.currentIndex = newDropIndex;
             }
+        }
+
+        function setupSmoothDragAndDrop(container) {
+            container.addEventListener('mousedown', handleDragStart);
+            container.addEventListener('touchstart', handleDragStart, { passive: false });
+        }
+
+        function handleDragStart(e) {
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) {
+                return;
+            }
+
+            const isTouch = e.type === 'touchstart';
+            const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+            const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+
+            dragState.isDragging = false;
+            dragState.draggedEl = this;
+            dragState.startX = clientX;
+            dragState.startY = clientY;
+            dragState.initialRect = this.getBoundingClientRect();
+
+            if (isTouch) {
+                document.addEventListener('touchmove', handleDragMove, { passive: false });
+                document.addEventListener('touchend', handleDragEnd);
+                document.addEventListener('touchcancel', handleDragEnd);
+            } else {
+                document.addEventListener('mousemove', handleDragMove);
+                document.addEventListener('mouseup', handleDragEnd);
+            }
+        }
+
+        function handleDragMove(e) {
+            if (!dragState.draggedEl) return;
+
+            const isTouch = e.type === 'touchmove';
+            const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+            const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+
+            dragState.lastClientX = clientX;
+            dragState.lastClientY = clientY;
+
+            if (!dragState.isDragging) {
+                const deltaX = Math.abs(clientX - dragState.startX);
+                const deltaY = Math.abs(clientY - dragState.startY);
+                if (deltaX < 5 && deltaY < 5) return;
+
+                dragState.isDragging = true;
+                dragState.allTiles = [...remoteGrid.querySelectorAll('.video-container')];
+                dragState.currentIndex = dragState.allTiles.indexOf(dragState.draggedEl);
+
+                updateTilePositions();
+
+                dragState.placeholder = dragState.draggedEl.cloneNode(true);
+                dragState.placeholder.classList.add('drag-placeholder');
+                dragState.placeholder.classList.remove('is-dragging');
+                dragState.placeholder.style.pointerEvents = 'none';
+
+                dragState.draggedEl.classList.add('is-dragging');
+                dragState.draggedEl.style.transition = 'none';
+                dragState.draggedEl.style.width = dragState.initialRect.width + 'px';
+                dragState.draggedEl.style.height = dragState.initialRect.height + 'px';
+                dragState.draggedEl.style.left = dragState.initialRect.left + 'px';
+                dragState.draggedEl.style.top = dragState.initialRect.top + 'px';
+
+                dragState.draggedEl.parentNode.insertBefore(dragState.placeholder, dragState.draggedEl);
+
+                dragState.allTiles.forEach(tile => {
+                    if (tile !== dragState.draggedEl && tile !== dragState.placeholder) {
+                        tile.classList.add('is-shifting');
+                    }
+                });
+
+                e.preventDefault();
+            }
+
+            checkIntersectionAndReorder(clientX, clientY);
+
+            // AUTO-SCROLL LOGIC
+            const scrollContainer = remoteGrid.parentElement;
+            const containerRect = scrollContainer.getBoundingClientRect();
+            
+            const threshold = 60;
+            const distFromTop = clientY - containerRect.top;
+            const distFromBottom = containerRect.bottom - clientY;
+
+            if (distFromTop < threshold) {
+                const speed = -Math.max(2, (1 - distFromTop / threshold) * 15);
+                startAutoScroll(speed);
+            } else if (distFromBottom < threshold) {
+                const speed = Math.max(2, (1 - distFromBottom / threshold) * 15);
+                startAutoScroll(speed);
+            } else {
+                stopAutoScroll();
+            }
 
             if (isTouch) {
                 e.preventDefault();
@@ -6238,6 +6310,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function handleDragEnd(e) {
+            stopAutoScroll();
+
             if (!dragState.draggedEl) return;
 
             const wasDragging = dragState.isDragging;
@@ -6323,7 +6397,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function updateGridLayout(count) {
-            remoteGrid.className = 'grid gap-2 md:gap-4 w-full h-full max-w-[1600px] transition-all duration-500 grid-expand';
+            remoteGrid.className = 'grid gap-2 md:gap-4 w-full h-full max-w-[1600px] transition-all duration-500 grid-expand my-auto';
 
             if (count === 0) return;
 
