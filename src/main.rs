@@ -2206,7 +2206,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         const currentPath = window.location.pathname;
-        const newPath = `/${roomId}${channelId ? '/' + encodeURIComponent(channelId) : ''}`;
+        const newPath = `/${roomId}${channelId && channelId.toLowerCase() !== 'general' ? '/' + encodeURIComponent(channelId) : ''}`;
         if (currentPath !== newPath && roomId) {
             window.history.replaceState({ roomId, channelId }, "", newPath);
         }
@@ -5097,7 +5097,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         async function createNewRoom() {
             showNameModal("Start New Room", "Enter room name (optional)", (name) => {
-                window.location.href = `/${name ? encodeURIComponent(name) : crypto.randomUUID()}/General`;
+                window.location.href = `/${name ? encodeURIComponent(name) : crypto.randomUUID()}`;
             });
         }
 
@@ -5139,7 +5139,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 channelNameEl.innerText = `# ${channelId}`;
             }
 
-            const newUrl = `/${roomId}/${encodeURIComponent(channelId)}`;
+            const newUrl = `/${roomId}${channelId && channelId.toLowerCase() !== 'general' ? '/' + encodeURIComponent(channelId) : ''}`;
             if (window.location.pathname !== newUrl) {
                 history.pushState({ roomId, channelId }, "", newUrl);
             }
@@ -5167,7 +5167,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         window.onpopstate = function(event) {
             const parts = window.location.pathname.split('/').filter(p => p !== '');
             const newRoomId = parts[0] || '';
-            const newChannelId = decodeURIComponent(parts[1] || '') || (newRoomId ? 'general' : '');
+            const newChannelId = decodeURIComponent(parts[1] || '') || (newRoomId ? 'General' : '');
 
             if (newRoomId && (newRoomId !== roomId || newChannelId !== channelId)) {
                 performChannelSwitch(newRoomId, newChannelId);
@@ -5338,7 +5338,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     setTimeout(() => input.focus(), 100);
                 } else if (res.ok) {
                     sessionStorage.setItem('rustrooms_welcomed', 'true');
-                    window.location.href = `/${crypto.randomUUID()}/General`;
+                    window.location.href = `/${crypto.randomUUID()}`;
                 } else {
                     alert("Error creating room");
                 }
@@ -5359,7 +5359,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 const res = await fetch('/new?password=' + encodeURIComponent(password));
                  if (res.ok) {
                      sessionStorage.setItem('rustrooms_welcomed', 'true');
-                     window.location.href = `/${crypto.randomUUID()}/General`;
+                     window.location.href = `/${crypto.randomUUID()}`;
                  } else if (res.status === 401) {
                      sessionStorage.removeItem('rustrooms_room_password');
                      input.classList.add('ring-2', 'ring-red-500', 'border-red-500');
@@ -8608,7 +8608,7 @@ async fn new_room(
         Uuid::new_v4().to_string()
     };
 
-    Ok(Redirect::to(&format!("/{}/General", room_id)))
+    Ok(Redirect::to(&format!("/{}", room_id)))
 }
 
 async fn redirect_room_trailing_slash(Path(room_id): Path<String>) -> Redirect {
