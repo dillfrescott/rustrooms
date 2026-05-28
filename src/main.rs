@@ -2245,6 +2245,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let currentAudioOutputId = 'default';
         let currentAudioInputId = null;
         let currentVideoInputId = null;
+        let currentFacingMode = 'user';
         let isDeafened = false;
         let roomCreationPassword = sessionStorage.getItem('rustrooms_room_password');
         let workletLoadingPromise = null;
@@ -7631,7 +7632,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
-        let currentFacingMode = 'user';
         let switchCamInProgress = false;
 
         async function switchCamera() {
