@@ -7805,9 +7805,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         video: { cursor: true },
                         systemAudio: "include",
                         audio: {
-                            echoCancellation: true,
+                            echoCancellation: false,
                             noiseSuppression: false,
                             autoGainControl: false,
+                            restrictOwnAudio: true,
                             channelCount: 2,
                             sampleRate: 48000,
                             sampleSize: 16
