@@ -2584,7 +2584,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             toggleOnTheGoMode(checked);
         }
 
-        function toggleOnTheGoMode(enable) {
+        function toggleOnTheGoMode(enable, forceShow) {
             isOnTheGoMode = enable;
             const setupOtg = document.getElementById('setupOnTheGo');
             const settingsOtg = document.getElementById('settingsOnTheGo');
@@ -2594,55 +2594,62 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const otgOverlay = document.getElementById('onTheGoOverlay');
             if (otgOverlay) {
                 if (enable) {
-                    otgOverlay.classList.remove('hidden');
-                    
-                    // Auto-disable camera if active when enabling On-the-go mode
-                    const videoTracks = localStream ? localStream.getVideoTracks() : [];
-                    if (videoTracks.length > 0) {
-                        const track = videoTracks[0];
-                        track.stop();
-                        localStream.removeTrack(track);
+                    const configOverlay = document.getElementById('configOverlay');
+                    const settingsOverlay = document.getElementById('settingsOverlay');
+                    const configOpen = configOverlay && !configOverlay.classList.contains('hidden') && configOverlay.style.display !== 'none';
+                    const settingsOpen = settingsOverlay && !settingsOverlay.classList.contains('hidden');
 
-                        if (localStream._originalStream) {
-                            localStream._originalStream.getVideoTracks().forEach(t => t.stop());
-                        }
+                    if (forceShow || (!configOpen && !settingsOpen)) {
+                        otgOverlay.classList.remove('hidden');
+                        
+                        // Auto-disable camera if active when enabling On-the-go mode
+                        const videoTracks = localStream ? localStream.getVideoTracks() : [];
+                        if (videoTracks.length > 0) {
+                            const track = videoTracks[0];
+                            track.stop();
+                            localStream.removeTrack(track);
 
-                        const btnPreviewCam = document.getElementById('btnPreviewCam');
-                        if (btnPreviewCam) {
-                            btnPreviewCam.classList.add('active-red');
-                            btnPreviewCam.innerText = "Start Cam";
-                            const placeholder = document.getElementById('previewPlaceholder');
-                            if (placeholder) placeholder.style.display = 'flex';
-                        }
-
-                        const btnCam = document.getElementById('btnCam');
-                        if (btnCam) {
-                            btnCam.classList.add('active-red');
-                            btnCam.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
-                        }
-
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({
-                                type: 'cam-toggle',
-                                data: { enabled: false }
-                            }));
-                        }
-
-                        for (const userId in peers) {
-                            const pc = peers[userId];
-                            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                            if (sender) {
-                                pc.removeTrack(sender);
+                            if (localStream._originalStream) {
+                                localStream._originalStream.getVideoTracks().forEach(t => t.stop());
                             }
+
+                            const btnPreviewCam = document.getElementById('btnPreviewCam');
+                            if (btnPreviewCam) {
+                                btnPreviewCam.classList.add('active-red');
+                                btnPreviewCam.innerText = "Start Cam";
+                                const placeholder = document.getElementById('previewPlaceholder');
+                                if (placeholder) placeholder.style.display = 'flex';
+                            }
+
+                            const btnCam = document.getElementById('btnCam');
+                            if (btnCam) {
+                                btnCam.classList.add('active-red');
+                                btnCam.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
+                            }
+
+                            if (ws && ws.readyState === WebSocket.OPEN) {
+                                ws.send(JSON.stringify({
+                                    type: 'cam-toggle',
+                                    data: { enabled: false }
+                                }));
+                            }
+
+                            for (const userId in peers) {
+                                const pc = peers[userId];
+                                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                                if (sender) {
+                                    pc.removeTrack(sender);
+                                }
+                            }
+
+                            const previewVideo = document.getElementById('previewVideo');
+                            if (previewVideo) previewVideo.srcObject = null;
+                            const localVideo = document.getElementById('localVideo');
+                            if (localVideo) localVideo.srcObject = null;
+
+                            pendingCamToggle = true;
+                            updateLocalAvatar();
                         }
-
-                        const previewVideo = document.getElementById('previewVideo');
-                        if (previewVideo) previewVideo.srcObject = null;
-                        const localVideo = document.getElementById('localVideo');
-                        if (localVideo) localVideo.srcObject = null;
-
-                        pendingCamToggle = true;
-                        updateLocalAvatar();
                     }
                 } else {
                     otgOverlay.classList.add('hidden');
@@ -4947,7 +4954,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             sessionStorage.setItem('rustrooms_setup_done', 'true');
 
             if (isOnTheGoMode) {
-                toggleOnTheGoMode(true);
+                toggleOnTheGoMode(true, true);
             }
 
             window.addEventListener('offline', () => {
@@ -8752,6 +8759,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         function closeSettings() {
             settingsOverlay.classList.add('hidden');
             if (settingsMeterFrameId) cancelAnimationFrame(settingsMeterFrameId);
+            if (isOnTheGoMode) {
+                toggleOnTheGoMode(true, true);
+            }
         }
 
         function handleSettingsAvatarUpload(input) {
