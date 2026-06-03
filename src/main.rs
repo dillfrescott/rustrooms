@@ -1577,6 +1577,25 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .video-container:-webkit-full-screen .name-tag {
             transition: opacity 0.2s ease-in;
         }
+
+        @keyframes otg-pulse {
+            0% {
+                transform: scale(1.02);
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+            }
+            70% {
+                transform: scale(1.08);
+                box-shadow: 0 0 0 15px rgba(59, 130, 246, 0);
+            }
+            100% {
+                transform: scale(1.02);
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+            }
+        }
+        .otg-speaking-pulse {
+            animation: otg-pulse 1.8s infinite cubic-bezier(0.4, 0, 0.6, 1);
+            border-color: #3b82f6 !important;
+        }
     </style>
 
     <link rel="stylesheet" href="/assets/croppie.min.css" />
@@ -1800,6 +1819,30 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         </div>
                     </div>
 
+                    <!-- Connection & Quality Settings -->
+                    <div class="border-t border-[var(--border-subtle)] pt-4 mt-4 space-y-3 text-left">
+                        <div class="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-white">Low Bandwidth Mode</span>
+                                <span class="text-xs text-zinc-400">Greatly lowers audio & video quality to save data</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="setupLowBandwidth" onchange="handleLowBandwidthChange(this.checked)" class="sr-only peer">
+                                <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div id="setupOnTheGoRow" class="hidden flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-white">On the Go Mode</span>
+                                <span class="text-xs text-zinc-400">Simplify UI with big buttons and hide video</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="setupOnTheGo" onchange="handleOnTheGoChange(this.checked)" class="sr-only peer">
+                                <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+
                     <button id="btnJoin" onclick="joinRoom()" disabled class="btn-primary w-full py-3.5 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                         Loading...
                     </button>
@@ -1864,6 +1907,28 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             <select id="settingsVideoSource" onchange="handleSettingsCamChange(this.value)" class="w-full rounded-lg px-3 py-2.5 text-sm text-white transition-all">
                             </select>
                         </div>
+                        <div class="border-t border-[var(--border-subtle)] pt-4 mt-4 space-y-3 text-left">
+                            <div class="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-semibold text-white">Low Bandwidth Mode</span>
+                                    <span class="text-xs text-zinc-400">Greatly lowers audio & video quality to save data</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="settingsLowBandwidth" onchange="handleLowBandwidthChange(this.checked)" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            <div id="settingsOnTheGoRow" class="hidden flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-semibold text-white">On the Go Mode</span>
+                                    <span class="text-xs text-zinc-400">Simplify UI with big buttons and hide video</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="settingsOnTheGo" onchange="handleOnTheGoChange(this.checked)" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1871,6 +1936,84 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             <div class="pt-2 mt-2">
                 <button onclick="closeSettings()" class="btn-primary w-full py-3.5 text-white rounded-lg font-semibold transition-all">
                     Close Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- On-the-go Mode Overlay -->
+    <div id="onTheGoOverlay" class="fixed inset-0 z-[150] flex flex-col justify-between p-6 hidden" style="background: #0d0e12;">
+        <!-- Top section: Status / Speaking Info -->
+        <div class="flex flex-col items-center text-center mt-8 space-y-4">
+            <div class="status-pill-wrapper" id="onTheGoStatusPillWrapper">
+                <div class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center justify-center gap-2 md:gap-2.5 flex-shrink-0 h-8 md:h-10">
+                    <div id="onTheGoConnectionDot" class="connection-dot"></div>
+                    <!-- Orange lightning icon -->
+                    <svg id="onTheGoLowBandwidthLightning" class="w-4 h-4 text-amber-500 hidden animate-pulse" fill="currentColor" viewBox="0 0 24 24" style="color: #f59e0b;" title="Low Bandwidth Mode Active">
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span id="onTheGoStatusText" class="text-xs md:text-sm font-medium" style="color: var(--text-primary);">Connected</span>
+                    <button id="onTheGoBtnReconnect" onclick="event.stopPropagation(); retryConnection()" class="hidden ml-1 p-1 rounded-lg transition-all hover:bg-white/10" style="color: var(--text-muted);" title="Retry Connection">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                    </button>
+                    <div id="onTheGoPingContainer" class="ping-container hidden !ml-0 !pl-1.5 md:!ml-0 md:!pl-2 border-l !border-[var(--border-subtle)]">
+                        <span id="onTheGoPingText" class="tabular-nums shrink-0 mr-1 md:mr-1.5">0ms</span>
+                        <div id="onTheGoPingBars" class="ping-bars">
+                            <div class="ping-bar ping-bar-1"></div>
+                            <div class="ping-bar ping-bar-2"></div>
+                            <div class="ping-bar ping-bar-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col items-center space-y-3 pt-6">
+                <!-- Large voice activity / speaking avatar container -->
+                <div id="onTheGoAvatarWrapper" class="w-32 h-32 rounded-full flex items-center justify-center relative bg-zinc-800 border-2 border-zinc-700 shadow-2xl transition-all duration-300">
+                    <img id="onTheGoAvatar" src="" class="w-full h-full object-cover rounded-full hidden" draggable="false">
+                    <span id="onTheGoAvatarPlaceholder" class="text-6xl text-zinc-400">👤</span>
+                    <!-- Speaking indicator wave/glow -->
+                    <div id="onTheGoSpeakingGlow" class="absolute inset-0 rounded-full border-4 border-blue-500 scale-100 opacity-0 transition-all duration-300"></div>
+                </div>
+                <div class="space-y-1">
+                    <h3 id="onTheGoSpeakingName" class="text-xl font-bold text-white">No one speaking</h3>
+                    <p class="text-zinc-500 text-sm">Tap buttons below to control</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom section: Big buttons taking up the whole lower portion of the screen -->
+        <div class="grid grid-cols-1 gap-4 mb-8 w-full max-w-md mx-auto">
+            <!-- Huge Mic Toggle Button -->
+            <button id="btnOnTheGoMic" onclick="toggleMic()" class="flex items-center justify-center gap-4 py-6 rounded-2xl font-bold text-lg text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+                <div id="onTheGoMicIconWrapper">
+                    <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                </div>
+                <span id="onTheGoMicText">Mute</span>
+            </button>
+
+            <!-- Huge Deafen/Speaker Toggle Button -->
+            <button id="btnOnTheGoDeafen" onclick="toggleDeafen()" class="flex items-center justify-center gap-4 py-6 rounded-2xl font-bold text-lg text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+                <div id="onTheGoDeafenIconWrapper">
+                    <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
+                </div>
+                <span id="onTheGoDeafenText">Deafen</span>
+            </button>
+
+            <!-- Huge Copy Invite Link Button -->
+            <button id="btnOnTheGoCopy" onclick="copyLink()" class="flex items-center justify-center gap-4 py-6 rounded-2xl font-bold text-lg text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+                <div id="onTheGoCopyIconWrapper">
+                    <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                </div>
+                <span id="onTheGoCopyText">Copy Invite Link</span>
+            </button>
+
+            <!-- Large Leave Button -->
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="toggleOnTheGoMode(false)" class="flex flex-col items-center justify-center py-5 rounded-2xl font-bold text-sm text-zinc-300 transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+                    <span>Exit On-the-go</span>
+                </button>
+                <button onclick="leaveRoom()" class="flex flex-col items-center justify-center py-5 rounded-2xl font-bold text-sm text-white transition-all bg-red-600 hover:bg-red-700 active:scale-[0.98] shadow-lg shadow-red-600/20">
+                    <span>Leave Call</span>
                 </button>
             </div>
         </div>
@@ -1889,6 +2032,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 <div class="status-pill-wrapper" id="statusPillWrapper">
                     <div class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center justify-center gap-2 md:gap-2.5 flex-shrink-0 h-8 md:h-10" onclick="toggleStatsWindow()">
                         <div id="connectionDot" class="connection-dot"></div>
+                        <!-- Orange lightning icon -->
+                        <svg id="lowBandwidthLightning" class="w-4 h-4 text-amber-500 hidden animate-pulse" fill="currentColor" viewBox="0 0 24 24" style="color: #f59e0b;" title="Low Bandwidth Mode Active">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
                         <span id="statusText" class="text-xs md:text-sm font-medium hidden sm:inline-block" style="color: var(--text-primary);">Waiting...</span>
                         <button id="btnReconnect" onclick="event.stopPropagation(); retryConnection()" class="hidden ml-1 p-1 rounded-lg transition-all hover:bg-white/10" style="color: var(--text-muted);" title="Retry Connection">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
@@ -1960,6 +2107,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 </button>
                 <button class="control-btn" id="btnShare" onclick="toggleScreen()" title="Share Screen">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+                </button>
+                <button class="control-btn hidden" id="btnOnTheGo" onclick="toggleOnTheGoMode(true)" title="On the Go">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
                 </button>
                 <button class="control-btn" onclick="openSettings()" title="Settings">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
@@ -2249,6 +2399,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let isDeafened = false;
         let roomCreationPassword = sessionStorage.getItem('rustrooms_room_password');
         let workletLoadingPromise = null;
+        let isLowBandwidthMode = false;
+        let isOnTheGoMode = false;
+        let activeSpeakers = {};
+        let peerLowBandwidthStatus = {};
+        let peerOnTheGoStatus = {};
 
         let persistentUserId = localStorage.getItem('rustrooms_user_id');
         if (!persistentUserId) {
@@ -2270,6 +2425,364 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let tabHeartbeatInterval = null;
         let activeTabSessionKey = null;
         let isUnloading = false;
+
+        // Intercept getUserMedia to apply low-bandwidth constraints if active
+        (function() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+                navigator.mediaDevices.getUserMedia = function(constraints) {
+                    if (isLowBandwidthMode && constraints) {
+                        if (constraints.video) {
+                            if (typeof constraints.video === 'boolean') {
+                                constraints.video = {
+                                    width: { max: 320 },
+                                    height: { max: 240 },
+                                    frameRate: { max: 15 }
+                                };
+                            } else if (typeof constraints.video === 'object') {
+                                constraints.video.width = { max: 320 };
+                                constraints.video.height = { max: 240 },
+                                constraints.video.frameRate = { max: 15 };
+                            }
+                        }
+                    }
+                    return originalGetUserMedia(constraints);
+                };
+            }
+
+            // Intercept RTCPeerConnection.prototype.addTrack to enforce low-bandwidth bitrates
+            const originalAddTrack = RTCPeerConnection.prototype.addTrack;
+            RTCPeerConnection.prototype.addTrack = function(track, ...streams) {
+                const sender = originalAddTrack.apply(this, [track, ...streams]);
+                if (isLowBandwidthMode) {
+                    setTimeout(() => {
+                        try {
+                            const params = sender.getParameters();
+                            if (!params.encodings) params.encodings = [{}];
+                            if (track.kind === 'video') {
+                                const isScreen = screenStream && screenStream.getVideoTracks().includes(track);
+                                params.encodings[0].maxBitrate = isScreen ? 150000 : 80000;
+                                params.encodings[0].scaleResolutionDownBy = isScreen ? 1.5 : 2.0;
+                            } else if (track.kind === 'audio') {
+                                params.encodings[0].maxBitrate = 16000;
+                            }
+                            sender.setParameters(params).catch(e => console.warn("Failed to set low-bandwidth params on addTrack:", e));
+                        } catch (e) {
+                            console.warn("Failed to apply track parameters in wrapper:", e);
+                        }
+                    }, 100);
+                }
+                return sender;
+            };
+        })();
+
+        function updateAllSenderBitrates() {
+            for (const userId in peers) {
+                const pc = peers[userId];
+                if (!pc) continue;
+                pc.getSenders().forEach(sender => {
+                    if (sender.track) {
+                        try {
+                            const params = sender.getParameters();
+                            if (!params.encodings) params.encodings = [{}];
+                            if (sender.track.kind === 'video') {
+                                const isScreen = screenStream && screenStream.getVideoTracks().includes(sender.track);
+                                if (isLowBandwidthMode) {
+                                    params.encodings[0].maxBitrate = isScreen ? 150000 : 80000;
+                                    params.encodings[0].scaleResolutionDownBy = isScreen ? 1.5 : 2.0;
+                                } else {
+                                    delete params.encodings[0].maxBitrate;
+                                    delete params.encodings[0].scaleResolutionDownBy;
+                                }
+                            } else if (sender.track.kind === 'audio') {
+                                if (isLowBandwidthMode) {
+                                    params.encodings[0].maxBitrate = 16000;
+                                } else {
+                                    delete params.encodings[0].maxBitrate;
+                                }
+                            }
+                            sender.setParameters(params).catch(e => console.warn("Failed to dynamically update sender params:", e));
+                        } catch (e) {
+                            console.warn("Failed to update sender params:", e);
+                        }
+                    }
+                });
+            }
+        }
+
+        async function updateLocalVideoConstraints() {
+            if (localStream) {
+                const videoTrack = localStream.getVideoTracks()[0];
+                if (videoTrack) {
+                    try {
+                        if (isLowBandwidthMode) {
+                            await videoTrack.applyConstraints({
+                                width: { max: 320 },
+                                height: { max: 240 },
+                                frameRate: { max: 15 }
+                            });
+                        } else {
+                            await videoTrack.applyConstraints({
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 },
+                                frameRate: { ideal: 30 }
+                            });
+                        }
+                    } catch (e) {
+                        console.warn("Failed to apply dynamic video constraints:", e);
+                    }
+                }
+            }
+        }
+
+        function updateLowBandwidthBadgeVisibility() {
+            const lightning = document.getElementById('lowBandwidthLightning');
+            if (lightning) {
+                if (isLowBandwidthMode) {
+                    lightning.classList.remove('hidden');
+                } else {
+                    lightning.classList.add('hidden');
+                }
+            }
+            const otgLightning = document.getElementById('onTheGoLowBandwidthLightning');
+            if (otgLightning) {
+                if (isLowBandwidthMode) {
+                    otgLightning.classList.remove('hidden');
+                } else {
+                    otgLightning.classList.add('hidden');
+                }
+            }
+        }
+
+        async function handleLowBandwidthChange(checked) {
+            isLowBandwidthMode = checked;
+            const setupLBM = document.getElementById('setupLowBandwidth');
+            const settingsLBM = document.getElementById('settingsLowBandwidth');
+            if (setupLBM) setupLBM.checked = checked;
+            if (settingsLBM) settingsLBM.checked = checked;
+            savePreferences();
+            updateLowBandwidthBadgeVisibility();
+            updateAllSenderBitrates();
+            await updateLocalVideoConstraints();
+            updateLocalLabel();
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'update-user',
+                    data: { isLowBandwidthMode: checked }
+                }));
+            }
+        }
+
+        function handleOnTheGoChange(checked) {
+            isOnTheGoMode = checked;
+            const setupOtg = document.getElementById('setupOnTheGo');
+            const settingsOtg = document.getElementById('settingsOnTheGo');
+            if (setupOtg) setupOtg.checked = checked;
+            if (settingsOtg) settingsOtg.checked = checked;
+            savePreferences();
+            toggleOnTheGoMode(checked);
+        }
+
+        function toggleOnTheGoMode(enable) {
+            isOnTheGoMode = enable;
+            const setupOtg = document.getElementById('setupOnTheGo');
+            const settingsOtg = document.getElementById('settingsOnTheGo');
+            if (setupOtg) setupOtg.checked = enable;
+            if (settingsOtg) settingsOtg.checked = enable;
+
+            const otgOverlay = document.getElementById('onTheGoOverlay');
+            if (otgOverlay) {
+                if (enable) {
+                    otgOverlay.classList.remove('hidden');
+                    
+                    // Auto-disable camera if active when enabling On-the-go mode
+                    const videoTracks = localStream ? localStream.getVideoTracks() : [];
+                    if (videoTracks.length > 0) {
+                        const track = videoTracks[0];
+                        track.stop();
+                        localStream.removeTrack(track);
+
+                        if (localStream._originalStream) {
+                            localStream._originalStream.getVideoTracks().forEach(t => t.stop());
+                        }
+
+                        const btnPreviewCam = document.getElementById('btnPreviewCam');
+                        if (btnPreviewCam) {
+                            btnPreviewCam.classList.add('active-red');
+                            btnPreviewCam.innerText = "Start Cam";
+                            const placeholder = document.getElementById('previewPlaceholder');
+                            if (placeholder) placeholder.style.display = 'flex';
+                        }
+
+                        const btnCam = document.getElementById('btnCam');
+                        if (btnCam) {
+                            btnCam.classList.add('active-red');
+                            btnCam.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21l-3.5-3.5m-2-2l-2-2m-2-2l-2-2m-2-2l-3.5-3.5"></path><path d="M15 7h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-5"></path><path d="M4 8v8a2 2 0 0 0 2 2h4.5"></path></svg>`;
+                        }
+
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({
+                                type: 'cam-toggle',
+                                data: { enabled: false }
+                            }));
+                        }
+
+                        for (const userId in peers) {
+                            const pc = peers[userId];
+                            const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                            if (sender) {
+                                pc.removeTrack(sender);
+                            }
+                        }
+
+                        const previewVideo = document.getElementById('previewVideo');
+                        if (previewVideo) previewVideo.srcObject = null;
+                        const localVideo = document.getElementById('localVideo');
+                        if (localVideo) localVideo.srcObject = null;
+
+                        pendingCamToggle = true;
+                        updateLocalAvatar();
+                    }
+                } else {
+                    otgOverlay.classList.add('hidden');
+                }
+            }
+            updateOnTheGoButtons();
+            savePreferences();
+            updateLocalLabel();
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'update-user',
+                    data: { isOnTheGoMode: enable }
+                }));
+            }
+        }
+
+        function updateOnTheGoButtons() {
+            const otgMicBtn = document.getElementById('btnOnTheGoMic');
+            const otgDeafenBtn = document.getElementById('btnOnTheGoDeafen');
+            const otgMicWrapper = document.getElementById('onTheGoMicIconWrapper');
+            const otgDeafenWrapper = document.getElementById('onTheGoDeafenIconWrapper');
+            const otgMicText = document.getElementById('onTheGoMicText');
+            const otgDeafenText = document.getElementById('onTheGoDeafenText');
+
+            const isMicMuted = localStream && localStream.getAudioTracks().length > 0 ? !localStream.getAudioTracks()[0].enabled : true;
+
+            if (otgMicBtn) {
+                if (isDeafened) {
+                    otgMicBtn.classList.add('bg-red-950', 'border-red-900', 'opacity-50', 'cursor-not-allowed');
+                    otgMicBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'border-red-500', 'bg-zinc-800', 'hover:bg-zinc-700', 'border-zinc-700');
+                    if (otgMicText) otgMicText.innerText = "Unmute";
+                    if (otgMicWrapper) {
+                        otgMicWrapper.innerHTML = `<svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>`;
+                    }
+                } else if (isMicMuted) {
+                    otgMicBtn.classList.add('bg-red-600', 'hover:bg-red-700', 'border-red-500');
+                    otgMicBtn.classList.remove('bg-red-950', 'border-red-900', 'opacity-50', 'cursor-not-allowed', 'bg-zinc-800', 'hover:bg-zinc-700', 'border-zinc-700');
+                    if (otgMicText) otgMicText.innerText = "Unmute";
+                    if (otgMicWrapper) {
+                        otgMicWrapper.innerHTML = `<svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>`;
+                    }
+                } else {
+                    otgMicBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'border-red-500', 'bg-red-950', 'border-red-900', 'opacity-50', 'cursor-not-allowed');
+                    otgMicBtn.classList.add('bg-zinc-800', 'hover:bg-zinc-700', 'border-zinc-700');
+                    if (otgMicText) otgMicText.innerText = "Mute";
+                    if (otgMicWrapper) {
+                        otgMicWrapper.innerHTML = `<svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
+                    }
+                }
+            }
+
+            if (otgDeafenBtn) {
+                if (isDeafened) {
+                    otgDeafenBtn.classList.add('bg-red-600', 'hover:bg-red-700', 'border-red-500');
+                    otgDeafenBtn.classList.remove('bg-zinc-800', 'hover:bg-zinc-700', 'border-zinc-700');
+                    if (otgDeafenText) otgDeafenText.innerText = "Undeafen";
+                    if (otgDeafenWrapper) {
+                        otgDeafenWrapper.innerHTML = `<svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg>`;
+                    }
+                } else {
+                    otgDeafenBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'border-red-500');
+                    otgDeafenBtn.classList.add('bg-zinc-800', 'hover:bg-zinc-700', 'border-zinc-700');
+                    if (otgDeafenText) otgDeafenText.innerText = "Deafen";
+                    if (otgDeafenWrapper) {
+                        otgDeafenWrapper.innerHTML = `<svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>`;
+                    }
+                }
+            }
+        }
+
+        function updateOnTheGoSpeakingIndicator() {
+            if (!isOnTheGoMode) return;
+            
+            let maxVol = 0;
+            let speakerId = null;
+            for (const id in activeSpeakers) {
+                if (activeSpeakers[id] > maxVol) {
+                    maxVol = activeSpeakers[id];
+                    speakerId = id;
+                }
+            }
+
+            const otgName = document.getElementById('onTheGoSpeakingName');
+            const otgAvatar = document.getElementById('onTheGoAvatar');
+            const otgPlaceholder = document.getElementById('onTheGoAvatarPlaceholder');
+            const otgGlow = document.getElementById('onTheGoSpeakingGlow');
+            const otgAvatarWrapper = document.getElementById('onTheGoAvatarWrapper');
+
+            if (!speakerId) {
+                if (otgName) otgName.innerText = "No one speaking";
+                if (otgAvatar) otgAvatar.classList.add('hidden');
+                if (otgPlaceholder) otgPlaceholder.classList.remove('hidden');
+                if (otgGlow) {
+                    otgGlow.classList.remove('scale-105', 'opacity-100');
+                    otgGlow.classList.add('scale-100', 'opacity-0');
+                }
+                if (otgAvatarWrapper) otgAvatarWrapper.classList.remove('otg-speaking-pulse');
+                return;
+            }
+
+            let name = "Guest";
+            let avatarUrl = null;
+
+            if (speakerId === 'local') {
+                name = userNickname || "You";
+                avatarUrl = userAvatar;
+            } else {
+                const rawUserId = speakerId.startsWith('wrapper-') ? speakerId.replace('wrapper-', '') : speakerId;
+                const wrapper = document.getElementById(`wrapper-${rawUserId}`);
+                if (wrapper) {
+                    const labelEl = wrapper.querySelector('.name-tag');
+                    if (labelEl) {
+                        name = labelEl.textContent.trim();
+                    }
+                    const imgEl = wrapper.querySelector('.avatar-center img');
+                    if (imgEl && !imgEl.classList.contains('hidden')) {
+                        avatarUrl = imgEl.src;
+                    }
+                }
+            }
+
+            if (otgName) otgName.innerText = name;
+            if (avatarUrl) {
+                if (otgAvatar) {
+                    otgAvatar.src = avatarUrl;
+                    otgAvatar.classList.remove('hidden');
+                }
+                if (otgPlaceholder) otgPlaceholder.classList.add('hidden');
+            } else {
+                if (otgAvatar) otgAvatar.classList.add('hidden');
+                if (otgPlaceholder) otgPlaceholder.classList.remove('hidden');
+            }
+
+            if (otgGlow) {
+                otgGlow.classList.remove('scale-100', 'opacity-0');
+                otgGlow.classList.add('scale-105', 'opacity-100');
+            }
+            if (otgAvatarWrapper) otgAvatarWrapper.classList.add('otg-speaking-pulse');
+        }
 
         function setActiveTabSession() {
             try {
@@ -2490,6 +3003,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     pingContainer.classList.add('ping-poor');
                 }
             }
+
+            const otgPingContainer = document.getElementById('onTheGoPingContainer');
+            const otgPingText = document.getElementById('onTheGoPingText');
+            if (otgPingContainer && otgPingText) {
+                otgPingContainer.classList.remove('hidden');
+                otgPingText.innerText = `${pingMs}ms`;
+                otgPingContainer.classList.remove('ping-good', 'ping-fair', 'ping-poor');
+                if (pingMs < 100) {
+                    otgPingContainer.classList.add('ping-good');
+                } else if (pingMs < 250) {
+                    otgPingContainer.classList.add('ping-fair');
+                } else {
+                    otgPingContainer.classList.add('ping-poor');
+                }
+            }
         }
 
         let statsWindowVisible = false;
@@ -2568,6 +3096,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const statPacketsSent = document.getElementById('statPacketsSent');
             const statPacketsReceived = document.getElementById('statPacketsReceived');
             const statPacketsLost = document.getElementById('statPacketsLost');
+            const statLowBandwidth = document.getElementById('statLowBandwidth');
+
+            if (statLowBandwidth) {
+                if (isLowBandwidthMode) {
+                    statLowBandwidth.textContent = 'Enabled';
+                    statLowBandwidth.className = 'stats-row-value text-amber-500 font-semibold';
+                } else {
+                    statLowBandwidth.textContent = 'Disabled';
+                    statLowBandwidth.className = 'stats-row-value text-zinc-400 font-normal';
+                }
+            }
 
             const pingText = document.getElementById('pingText');
             if (pingText && statPing) {
@@ -3303,6 +3842,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 if (targetEl) {
                     if (average > 10) {
                         targetEl.classList.add('speaking-glow');
+                        activeSpeakers[targetId] = average;
 
                         if (!gifSpeakingState[targetId]) {
                             gifSpeakingState[targetId] = true;
@@ -3329,6 +3869,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         }
                     } else {
                         targetEl.classList.remove('speaking-glow');
+                        delete activeSpeakers[targetId];
 
                         if (gifSpeakingState[targetId]) {
                             gifSpeakingState[targetId] = false;
@@ -3351,6 +3892,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         }
                     }
                 } else {
+                    delete activeSpeakers[targetId];
 
                     if (targetId !== 'local') {
                         const rawUserId = targetId.startsWith('wrapper-') ? targetId.replace('wrapper-', '') : targetId;
@@ -3359,6 +3901,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                 }
 
+                updateOnTheGoSpeakingIndicator();
                 requestAnimationFrame(checkAudio);
             }
             checkAudio();
@@ -3423,6 +3966,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     if (data.facingMode) {
                         currentFacingMode = data.facingMode;
                     }
+                    if (data.isLowBandwidthMode !== undefined) {
+                        isLowBandwidthMode = data.isLowBandwidthMode;
+                        const setupLBM = document.getElementById('setupLowBandwidth');
+                        const settingsLBM = document.getElementById('settingsLowBandwidth');
+                        if (setupLBM) setupLBM.checked = isLowBandwidthMode;
+                        if (settingsLBM) settingsLBM.checked = isLowBandwidthMode;
+                        updateLowBandwidthBadgeVisibility();
+                    }
+                    if (data.isOnTheGoMode !== undefined) {
+                        isOnTheGoMode = data.isOnTheGoMode;
+                        const setupOtg = document.getElementById('setupOnTheGo');
+                        const settingsOtg = document.getElementById('settingsOnTheGo');
+                        if (setupOtg) setupOtg.checked = isOnTheGoMode;
+                        if (settingsOtg) settingsOtg.checked = isOnTheGoMode;
+                    }
                 } catch (e) { console.error("Load pref error", e); }
             }
         }
@@ -3481,7 +4039,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     isMuted: isMuted,
                     isCamOff: isCamOff,
                     isDeafened: isDeafened,
-                    facingMode: currentFacingMode
+                    facingMode: currentFacingMode,
+                    isLowBandwidthMode: isLowBandwidthMode,
+                    isOnTheGoMode: isOnTheGoMode
                 }));
             } catch(e) {
                 console.warn('Could not save preferences to localStorage:', e.message);
@@ -4386,6 +4946,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             sessionStorage.setItem('rustrooms_setup_done', 'true');
 
+            if (isOnTheGoMode) {
+                toggleOnTheGoMode(true);
+            }
+
             window.addEventListener('offline', () => {
                 console.warn('Network connection lost (offline)');
                 updateStatus('disconnected', 'Network Offline');
@@ -4557,6 +5121,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         function updateStatus(state, message) {
             statusText.innerText = message;
             connectionDot.className = 'connection-dot ' + state;
+
+            const otgDot = document.getElementById('onTheGoConnectionDot');
+            const otgText = document.getElementById('onTheGoStatusText');
+            if (otgText) otgText.innerText = message;
+            if (otgDot) {
+                otgDot.className = 'connection-dot ' + state;
+            }
+        }
+
+        function showReconnectButtons() {
+            ['btnReconnect', 'onTheGoBtnReconnect'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.classList.remove('hidden');
+            });
         }
 
         function updateConnectionStatus() {
@@ -5305,6 +5883,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         `}
                                     </div>
                                 ` : ''}
+                                ${u.isLowBandwidthMode ? `
+                                    <div class="status-icon active animate-pulse" style="color: #f59e0b;" title="Low Bandwidth Mode Active">
+                                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                    </div>
+                                ` : ''}
+                                ${u.isOnTheGoMode ? `
+                                    <div class="status-icon active" style="color: #60a5fa;" title="On-the-go Mode Active">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" x2="12.01" y1="18" y2="18"></line></svg>
+                                    </div>
+                                ` : ''}
                             </div>
                         </div>
                     `;
@@ -5486,6 +6074,22 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         if (roomId) {
             loadPreferences();
+
+            // Enable On the Go mode options only for mobile and tablet devices
+            if (isMobileDevice()) {
+                const btnOnTheGo = document.getElementById('btnOnTheGo');
+                if (btnOnTheGo) btnOnTheGo.classList.remove('hidden');
+
+                const setupOtgRow = document.getElementById('setupOnTheGoRow');
+                if (setupOtgRow) setupOtgRow.classList.remove('hidden');
+
+                const settingsOtgRow = document.getElementById('settingsOnTheGoRow');
+                if (settingsOtgRow) settingsOtgRow.classList.remove('hidden');
+            } else {
+                // Ensure On-the-go mode setting is inactive on desktop
+                isOnTheGoMode = false;
+            }
+
             const setupDone = sessionStorage.getItem('rustrooms_setup_done') === 'true';
             const welcomed = sessionStorage.getItem('rustrooms_welcomed') === 'true';
 
@@ -5628,6 +6232,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     screenAudioTrackId: screenStream ? (screenStream.getAudioTracks()[0]?.id || null) : null,
                                     isMuted: isMuted,
                                     isDeafened: isDeafened,
+                                    isLowBandwidthMode: isLowBandwidthMode,
+                                    isOnTheGoMode: isOnTheGoMode,
                                     password: roomCreationPassword
                                 }
                             }));
@@ -5694,6 +6300,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                                 if (user.status.isScreenSharing !== undefined) {
                                                     peerScreenStatus[user.id] = user.status.isScreenSharing;
                                                 }
+                                                if (user.status.isLowBandwidthMode !== undefined) {
+                                                    peerLowBandwidthStatus[user.id] = user.status.isLowBandwidthMode;
+                                                }
+                                                if (user.status.isOnTheGoMode !== undefined) {
+                                                    peerOnTheGoStatus[user.id] = user.status.isOnTheGoMode;
+                                                }
                                                 if (peers[user.id]) {
                                                     updatePeerInfo(user.id, user.status.nickname, user.status.avatar, user.status.isMuted, user.status.isDeafened, user.status.isGif, user.status.staticFrame);
                                                 } else {
@@ -5714,6 +6326,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         }
                                         if (msg.data.screenEnabled !== undefined) {
                                             peerScreenStatus[msg.userId] = msg.data.screenEnabled;
+                                        }
+                                        if (msg.data.isLowBandwidthMode !== undefined) {
+                                            peerLowBandwidthStatus[msg.userId] = msg.data.isLowBandwidthMode;
+                                        }
+                                        if (msg.data.isOnTheGoMode !== undefined) {
+                                            peerOnTheGoStatus[msg.userId] = msg.data.isOnTheGoMode;
                                         }
 
                                         if (peers[msg.userId]) {
@@ -5752,7 +6370,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                                 micTrackId: myAudioTrack ? myAudioTrack.id : null,
                                                 screenAudioTrackId: screenStream ? (screenStream.getAudioTracks()[0]?.id || null) : null,
                                                 isMuted: myMuted,
-                                                isDeafened: isDeafened
+                                                isDeafened: isDeafened,
+                                                isLowBandwidthMode: isLowBandwidthMode,
+                                                isOnTheGoMode: isOnTheGoMode
                                             }
                                         }));
                                     } catch (e) { console.error("Error processing user-joined:", e); }
@@ -5787,7 +6407,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     }
                                     break;
                                 case 'user-update':
-                                    updatePeerTrackHints(msg.userId, msg.data);
+                                     updatePeerTrackHints(msg.userId, msg.data);
+                                     if (msg.data.isLowBandwidthMode !== undefined) {
+                                         peerLowBandwidthStatus[msg.userId] = msg.data.isLowBandwidthMode;
+                                     }
+                                     if (msg.data.isOnTheGoMode !== undefined) {
+                                         peerOnTheGoStatus[msg.userId] = msg.data.isOnTheGoMode;
+                                     }
                                      updatePeerInfo(msg.userId, msg.data.nickname, msg.data.avatar, msg.data.isMuted, msg.data.isDeafened, msg.data.isGif, msg.data.staticFrame);
                                     break;
                                 case 'cam-toggle':
@@ -5834,6 +6460,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         if (msg.data.screenEnabled !== undefined) {
                                             peerScreenStatus[msg.userId] = msg.data.screenEnabled;
                                         }
+                                        if (msg.data.isLowBandwidthMode !== undefined) {
+                                            peerLowBandwidthStatus[msg.userId] = msg.data.isLowBandwidthMode;
+                                        }
+                                        if (msg.data.isOnTheGoMode !== undefined) {
+                                            peerOnTheGoStatus[msg.userId] = msg.data.isOnTheGoMode;
+                                        }
                                         if (identifiedScreenAudio !== undefined) {
                                             peerScreenHasAudio[msg.userId] = identifiedScreenAudio;
                                         }
@@ -5871,8 +6503,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             if (event.code === 4001) {
                                 stopHeartbeat();
                                 updateStatus('disconnected', 'Disconnected (inactive)');
-                                const btn = document.getElementById('btnReconnect');
-                                if (btn) btn.classList.remove('hidden');
+                                showReconnectButtons();
                                 isReconnecting = false;
                                 return;
                             }
@@ -5902,8 +6533,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     // On iOS, never fully give up — fall back to slow periodic retries
                                     console.warn(`iOS: exhausted ${maxReconnectionAttempts} fast retries, switching to slow retry every 30s`);
                                     updateStatus('connecting', 'Connection lost — retrying...');
-                                    const btn = document.getElementById('btnReconnect');
-                                    if (btn) btn.classList.remove('hidden');
+                                    showReconnectButtons();
                                     isReconnecting = false;
                                     iosSlowRetryTimer = setTimeout(() => {
                                         iosSlowRetryTimer = null;
@@ -5918,8 +6548,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     // before giving up entirely, so transient outages don't require manual action
                                     console.warn(`Desktop: exhausted ${maxReconnectionAttempts} fast retries, switching to slow retry every 60s`);
                                     updateStatus('connecting', 'Connection lost — retrying...');
-                                    const btn = document.getElementById('btnReconnect');
-                                    if (btn) btn.classList.remove('hidden');
+                                    showReconnectButtons();
                                     isReconnecting = false;
                                     desktopSlowRetryCount = (desktopSlowRetryCount || 0) + 1;
                                     if (desktopSlowRetryCount <= 5) {
@@ -6006,23 +6635,32 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 reconnectStatusTimeout = null;
             }
 
-            const btn = document.getElementById('btnReconnect');
-            if (btn) {
-                btn.classList.add('text-green-500', 'bg-green-500/10');
-                btn.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-700');
+            const btns = [
+                document.getElementById('btnReconnect'),
+                document.getElementById('onTheGoBtnReconnect')
+            ];
+            btns.forEach(btn => {
+                if (btn) {
+                    btn.classList.add('text-green-500', 'bg-green-500/10');
+                    btn.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-700');
+                }
+            });
 
-                setTimeout(() => {
-                    btn.classList.add('hidden');
-                    btn.classList.remove('text-green-500', 'bg-green-500/10');
-                    btn.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-700');
+            setTimeout(() => {
+                btns.forEach(btn => {
+                    if (btn) {
+                        btn.classList.add('hidden');
+                        btn.classList.remove('text-green-500', 'bg-green-500/10');
+                        btn.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-700');
+                    }
+                });
 
-                    hasLeftRoom = false;
-                    isReconnecting = false;
-                    reconnectionAttempts = 0;
-                    desktopSlowRetryCount = 0;
-                    connectWs();
-                }, 300);
-            }
+                hasLeftRoom = false;
+                isReconnecting = false;
+                reconnectionAttempts = 0;
+                desktopSlowRetryCount = 0;
+                connectWs();
+            }, 300);
         }
 
         function setAvatar(layer, avatar, isGif, staticFrame) {
@@ -6082,17 +6720,44 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 const statusContainer = wrapper.querySelector('.peer-status-icons');
                 if (statusContainer) {
                     statusContainer.innerHTML = '';
+                    let hasIcons = false;
+                    let iconsHTML = '';
+
                     if (isDeafened) {
-                        statusContainer.classList.remove('hidden');
-                        statusContainer.classList.add('flex');
-                        statusContainer.innerHTML = `<span class="text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg></span>`;
+                        hasIcons = true;
+                        iconsHTML += `<span class="text-red-500" title="Deafened"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg></span>`;
                     } else if (isMuted) {
+                        hasIcons = true;
+                        iconsHTML += `<span class="text-red-500" title="Muted"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path></svg></span>`;
+                    }
+
+                    const isPeerLBM = (userId === 'local') ? isLowBandwidthMode : (peerLowBandwidthStatus[userId] === true);
+                    if (isPeerLBM) {
+                        hasIcons = true;
+                        iconsHTML += `
+                            <span class="text-amber-500 animate-pulse" title="Low Bandwidth Mode Active">
+                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                            </span>
+                        `;
+                    }
+
+                    const isPeerOTG = (userId === 'local') ? isOnTheGoMode : (peerOnTheGoStatus[userId] === true);
+                    if (isPeerOTG) {
+                        hasIcons = true;
+                        iconsHTML += `
+                            <span class="text-blue-400" title="On-the-go Mode Active">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" x2="12.01" y1="18" y2="18"></line></svg>
+                            </span>
+                        `;
+                    }
+
+                    if (hasIcons) {
                         statusContainer.classList.remove('hidden');
-                        statusContainer.classList.add('flex');
-                        statusContainer.innerHTML = `<span class="text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path></svg></span>`;
+                        statusContainer.classList.add('flex', 'items-center', 'gap-1.5');
+                        statusContainer.innerHTML = iconsHTML;
                     } else {
                         statusContainer.classList.add('hidden');
-                        statusContainer.classList.remove('flex');
+                        statusContainer.classList.remove('flex', 'items-center', 'gap-1.5');
                     }
                 }
 
@@ -6631,6 +7296,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             createPeerUI(userId, displayName, avatarUrl, remoteIsDeafened, isMuted, isGif, staticFrame);
+            updatePeerInfo(userId, displayName, avatarUrl, isMuted, remoteIsDeafened, isGif, staticFrame);
 
             pc.ontrack = (event) => {
 
@@ -7198,6 +7864,47 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (mainApp) mainApp.style.display = 'none';
             if (taskbar) taskbar.style.display = 'none';
 
+            // Hide the On-the-go overlay visually, but preserve the setting
+            const otgOverlay = document.getElementById('onTheGoOverlay');
+            if (otgOverlay) {
+                otgOverlay.classList.add('hidden');
+            }
+
+            // Reset AudioWorklet cached promise to support new AudioContext
+            workletLoadingPromise = null;
+
+            // Reset reconnection counters
+            reconnectionAttempts = 0;
+            desktopSlowRetryCount = 0;
+
+            // Reset speaker tracking
+            activeSpeakers = {};
+            peerLowBandwidthStatus = {};
+            peerOnTheGoStatus = {};
+
+            // Hide/reset status pill elements to pristine states
+            const reconnectBtn = document.getElementById('btnReconnect');
+            if (reconnectBtn) reconnectBtn.classList.add('hidden');
+            const otgReconnectBtn = document.getElementById('onTheGoBtnReconnect');
+            if (otgReconnectBtn) otgReconnectBtn.classList.add('hidden');
+
+            const pingContainer = document.getElementById('pingContainer');
+            if (pingContainer) pingContainer.classList.add('hidden');
+            const otgPingContainer = document.getElementById('onTheGoPingContainer');
+            if (otgPingContainer) otgPingContainer.classList.add('hidden');
+
+            const lightning = document.getElementById('lowBandwidthLightning');
+            if (lightning) lightning.classList.add('hidden');
+            const otgLightning = document.getElementById('onTheGoLowBandwidthLightning');
+            if (otgLightning) otgLightning.classList.add('hidden');
+
+            statusText.innerText = 'Waiting...';
+            connectionDot.className = 'connection-dot';
+            const otgStatusText = document.getElementById('onTheGoStatusText');
+            if (otgStatusText) otgStatusText.innerText = 'Connected';
+            const otgDot = document.getElementById('onTheGoConnectionDot');
+            if (otgDot) otgDot.className = 'connection-dot';
+
             sessionStorage.removeItem('rustrooms_setup_done');
             history.replaceState(null, '', '/');
         }
@@ -7225,6 +7932,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`;
                 }
                 updateLocalLabel();
+                updateOnTheGoButtons();
 
                 if (track.enabled) {
                     const screenAudioTrack = screenStream?.getAudioTracks()[0];
@@ -7409,6 +8117,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }));
             }
             savePreferences();
+            updateOnTheGoButtons();
         }
 
         let camToggleInProgress = false;
@@ -7891,12 +8600,28 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             let statusIcons = '';
             if (isDeafened) {
-                statusIcons = `<span class="ml-1.5 inline-flex items-center text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg></span>`;
+                statusIcons = `<span class="ml-1.5 inline-flex items-center text-red-500" title="Deafened"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 14a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V14z"></path><path d="M3 14a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V14z"></path><path d="M20.4 10.4C20.2 6.5 17 3.5 13 3.1"></path><path d="M6.5 5.5A9 9 0 0 0 3 12"></path></svg></span>`;
             } else {
                 const audioTrack = localStream ? localStream.getAudioTracks()[0] : null;
                 if (!audioTrack || !audioTrack.enabled) {
-                    statusIcons = `<span class="ml-1.5 inline-flex items-center text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path></svg></span>`;
+                    statusIcons = `<span class="ml-1.5 inline-flex items-center text-red-500" title="Muted"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path></svg></span>`;
                 }
+            }
+
+            if (isLowBandwidthMode) {
+                statusIcons += `
+                    <span class="ml-1.5 inline-flex items-center text-amber-500 animate-pulse" title="Low Bandwidth Mode Active">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    </span>
+                `;
+            }
+
+            if (isOnTheGoMode) {
+                statusIcons += `
+                    <span class="ml-1.5 inline-flex items-center text-blue-400" title="On-the-go Mode Active">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" x2="12.01" y1="18" y2="18"></line></svg>
+                    </span>
+                `;
             }
 
             label.innerHTML = `<span class="flex items-center">${escapeHtml(userNickname)} (You)${statusIcons}</span>`;
@@ -7906,21 +8631,40 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             navigator.clipboard.writeText(window.location.href);
 
             const btn = document.getElementById('btnCopy');
-            if (btn.classList.contains('bg-green-600')) return;
+            const otgBtn = document.getElementById('btnOnTheGoCopy');
 
-            const icon = document.getElementById('iconCopy');
+            if (btn && !btn.classList.contains('bg-green-600')) {
+                const originalHTML = btn.innerHTML;
+                const originalClass = btn.className;
 
-            const originalHTML = btn.innerHTML;
-            const originalClass = btn.className;
+                btn.innerHTML = `<span class="text-xs md:text-sm font-medium text-white">Copied!</span><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+                btn.classList.add('bg-green-600', 'hover:bg-green-700');
+                btn.classList.remove('hover:bg-slate-700/50');
 
-            btn.innerHTML = `<span class="text-xs md:text-sm font-medium text-white">Copied!</span><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-            btn.classList.add('bg-green-600', 'hover:bg-green-700');
-            btn.classList.remove('hover:bg-slate-700/50');
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.className = originalClass;
+                }, 2000);
+            }
 
-            setTimeout(() => {
-                btn.innerHTML = originalHTML;
-                btn.className = originalClass;
-            }, 2000);
+            if (otgBtn && !otgBtn.classList.contains('bg-emerald-600')) {
+                const originalHTML = otgBtn.innerHTML;
+                const originalClass = otgBtn.className;
+
+                otgBtn.innerHTML = `
+                    <div id="onTheGoCopyIconWrapper">
+                        <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <span id="onTheGoCopyText">Copied!</span>
+                `;
+                otgBtn.classList.add('bg-emerald-600', 'border-emerald-600');
+                otgBtn.classList.remove('bg-zinc-800', 'hover:bg-zinc-700', 'border-zinc-700');
+
+                setTimeout(() => {
+                    otgBtn.innerHTML = originalHTML;
+                    otgBtn.className = originalClass;
+                }, 2000);
+            }
         }
 
         const settingsOverlay = document.getElementById('settingsOverlay');
@@ -7972,6 +8716,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             newAvatarCandidate = userAvatar;
             newAvatarCandidateIsGif = userAvatarIsGif;
             newAvatarCandidateStaticFrame = userAvatarStaticFrame;
+
+            const settingsLBM = document.getElementById('settingsLowBandwidth');
+            if (settingsLBM) settingsLBM.checked = isLowBandwidthMode;
+            const settingsOtg = document.getElementById('settingsOnTheGo');
+            if (settingsOtg) settingsOtg.checked = isOnTheGoMode;
 
             const removeBtn = document.getElementById('btnRemoveSettingsAvatar');
             if (userAvatar) {
@@ -8412,6 +9161,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         <span id="statJitter" class="stat-value">--</span>
                     </div>
                 </div>
+                <div class="stats-row mt-3">
+                    <span class="stats-row-label">Low Bandwidth Mode</span>
+                    <span id="statLowBandwidth" class="stats-row-value text-zinc-400 font-normal">Disabled</span>
+                </div>
             </div>
 
             <div class="stats-section">
@@ -8491,6 +9244,10 @@ struct UserStatus {
     pub is_muted: bool,
     pub is_deafened: bool,
     pub is_screen_sharing: bool,
+    #[serde(default)]
+    pub is_low_bandwidth_mode: bool,
+    #[serde(default)]
+    pub is_on_the_go_mode: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -8834,6 +9591,8 @@ async fn handle_inbound_cluster(socket: WebSocket, state: AppState) {
                             "isMuted": status.is_muted,
                             "isDeafened": status.is_deafened,
                             "screenEnabled": status.is_screen_sharing,
+                            "isLowBandwidthMode": status.is_low_bandwidth_mode,
+                            "isOnTheGoMode": status.is_on_the_go_mode
                         })),
                         signal_msg: None,
                     };
@@ -9034,6 +9793,8 @@ async fn connect_to_peer(url: &str, state: &AppState) -> Result<(), Box<dyn std:
                             "isMuted": status.is_muted,
                             "isDeafened": status.is_deafened,
                             "screenEnabled": status.is_screen_sharing,
+                            "isLowBandwidthMode": status.is_low_bandwidth_mode,
+                            "isOnTheGoMode": status.is_on_the_go_mode
                         })),
                         signal_msg: None,
                     };
@@ -9519,6 +10280,16 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 .and_then(|v| v.as_bool())
                                 .unwrap_or(false);
 
+                            let is_low_bandwidth_mode = parsed.data.as_ref()
+                                .and_then(|d| d.get("isLowBandwidthMode"))
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+
+                            let is_on_the_go_mode = parsed.data.as_ref()
+                                .and_then(|d| d.get("isOnTheGoMode"))
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+
                             if let Some(ref a) = avatar {
                                 if a.len() > 7_000_000 {
                                     avatar = None;
@@ -9623,6 +10394,8 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     is_muted,
                                     is_deafened,
                                     is_screen_sharing,
+                                    is_low_bandwidth_mode,
+                                    is_on_the_go_mode,
                                 }));
                              }
 
@@ -9660,6 +10433,8 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                                             "isMuted": status.is_muted,
                                                             "isDeafened": status.is_deafened,
                                                             "isScreenSharing": status.is_screen_sharing,
+                                                            "isLowBandwidthMode": status.is_low_bandwidth_mode,
+                                                            "isOnTheGoMode": status.is_on_the_go_mode
                                                         }
                                                     }));
                                                 }
@@ -9683,6 +10458,8 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                                             "isMuted": status.is_muted,
                                                             "isDeafened": status.is_deafened,
                                                             "isScreenSharing": status.is_screen_sharing,
+                                                            "isLowBandwidthMode": status.is_low_bandwidth_mode,
+                                                            "isOnTheGoMode": status.is_on_the_go_mode
                                                         }
                                                     }));
                                                 }
@@ -9742,6 +10519,8 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                     is_screen_sharing,
                                     is_gif,
                                     static_frame: static_frame.clone(),
+                                    is_low_bandwidth_mode,
+                                    is_on_the_go_mode,
                                 }),
                                 data: notify_data.clone(),
                                 signal_msg: None,
@@ -9791,6 +10570,12 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                                 }
                                                 if let Some(d) = d.get("isDeafened").and_then(|v| v.as_bool()) {
                                                     status.is_deafened = d;
+                                                }
+                                                if let Some(lbm) = d.get("isLowBandwidthMode").and_then(|v| v.as_bool()) {
+                                                    status.is_low_bandwidth_mode = lbm;
+                                                }
+                                                if let Some(otg) = d.get("isOnTheGoMode").and_then(|v| v.as_bool()) {
+                                                    status.is_on_the_go_mode = otg;
                                                 }
                                             }
                                             full_status = Some(status.clone());
