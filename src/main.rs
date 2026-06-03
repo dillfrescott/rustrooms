@@ -1942,7 +1942,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     </div>
 
     <!-- On-the-go Mode Overlay -->
-    <div id="onTheGoOverlay" class="fixed inset-0 z-[150] flex flex-col justify-between p-6 hidden" style="background: #0d0e12;">
+    <div id="onTheGoOverlay" class="fixed inset-0 z-[150] flex flex-col justify-between p-6 hidden" style="background: #000000;">
         <!-- Top section: Status / Speaking Info -->
         <div class="flex flex-col items-center text-center mt-8 space-y-4">
             <div class="status-pill-wrapper" id="onTheGoStatusPillWrapper">
