@@ -1596,6 +1596,25 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             animation: otg-pulse 1.8s infinite cubic-bezier(0.4, 0, 0.6, 1);
             border-color: #3b82f6 !important;
         }
+
+        @keyframes otgRotateDevice {
+            0% {
+                transform: rotate(0deg);
+            }
+            30%, 100% {
+                transform: rotate(-90deg);
+            }
+        }
+        .otg-rotate-anim {
+            animation: otgRotateDevice 2.5s ease-in-out infinite;
+            transform-origin: center;
+        }
+
+        @media (orientation: landscape) and (max-width: 1024px) {
+            #otgOrientationWarning {
+                display: flex !important;
+            }
+        }
     </style>
 
     <link rel="stylesheet" href="/assets/croppie.min.css" />
@@ -1942,9 +1961,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     </div>
 
     <!-- On-the-go Mode Overlay -->
-    <div id="onTheGoOverlay" class="fixed inset-0 z-[150] flex flex-col justify-between p-6 hidden" style="background: #000000;">
+    <div id="onTheGoOverlay" class="fixed inset-0 z-[150] flex flex-col justify-between p-4 sm:p-6 gap-y-8 overflow-y-auto hidden" style="background: #000000;">
+        <!-- Orientation Warning Overlay (only visible in landscape mode on mobile/tablet) -->
+        <div id="otgOrientationWarning" class="fixed inset-0 z-[200] flex-col items-center justify-center p-6 bg-black text-center hidden">
+            <div class="mb-6 otg-rotate-anim">
+                <svg class="w-20 h-20 text-zinc-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-6 15h9" />
+                </svg>
+            </div>
+            <h2 class="text-xl font-bold text-white mb-2">Rotate to Portrait</h2>
+            <p class="text-zinc-500 text-sm max-w-xs mx-auto">On-the-go mode is optimized exclusively for portrait orientation. Please rotate your device.</p>
+        </div>
+
         <!-- Top section: Status / Speaking Info -->
-        <div class="flex flex-col items-center text-center mt-8 space-y-4">
+        <div class="flex flex-col items-center text-center mt-4 sm:mt-8 space-y-4 flex-shrink-0">
             <div class="status-pill-wrapper" id="onTheGoStatusPillWrapper">
                 <div class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center justify-center gap-2 md:gap-2.5 flex-shrink-0 h-8 md:h-10">
                     <div id="onTheGoConnectionDot" class="connection-dot"></div>
@@ -1966,11 +1996,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     </div>
                 </div>
             </div>
-            <div class="flex flex-col items-center space-y-3 pt-6">
+            <div class="flex flex-col items-center space-y-3 pt-4 sm:pt-6">
                 <!-- Large voice activity / speaking avatar container -->
-                <div id="onTheGoAvatarWrapper" class="w-32 h-32 rounded-full flex items-center justify-center relative bg-zinc-800 border-2 border-zinc-700 shadow-2xl transition-all duration-300">
+                <div id="onTheGoAvatarWrapper" class="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center relative bg-zinc-800 border-2 border-zinc-700 shadow-2xl transition-all duration-300">
                     <img id="onTheGoAvatar" src="" class="w-full h-full object-cover rounded-full hidden" draggable="false">
-                    <span id="onTheGoAvatarPlaceholder" class="text-6xl text-zinc-400">👤</span>
+                    <span id="onTheGoAvatarPlaceholder" class="text-5xl sm:text-6xl text-zinc-400">👤</span>
                     <!-- Speaking indicator wave/glow -->
                     <div id="onTheGoSpeakingGlow" class="absolute inset-0 rounded-full border-4 border-blue-500 scale-100 opacity-0 transition-all duration-300"></div>
                 </div>
@@ -1982,7 +2012,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
 
         <!-- Bottom section: Big buttons taking up the whole lower portion of the screen -->
-        <div class="grid grid-cols-1 gap-4 mb-8 w-full max-w-md mx-auto">
+        <div class="grid grid-cols-1 gap-4 mb-4 sm:mb-8 w-full max-w-md mx-auto flex-shrink-0">
             <!-- Huge Mic Toggle Button -->
             <button id="btnOnTheGoMic" onclick="toggleMic()" class="flex items-center justify-center gap-4 py-6 rounded-2xl font-bold text-lg text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
                 <div id="onTheGoMicIconWrapper">
@@ -2615,6 +2645,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     if (forceShow || (!configOpen && !settingsOpen)) {
                         otgOverlay.classList.remove('hidden');
                         
+                        // Try locking screen orientation to portrait
+                        if (screen.orientation && screen.orientation.lock) {
+                            screen.orientation.lock('portrait').catch(err => {
+                                console.log('Screen orientation lock failed or not supported:', err);
+                            });
+                        }
+                        
                         // Auto-disable camera if active when enabling On-the-go mode
                         const videoTracks = localStream ? localStream.getVideoTracks() : [];
                         if (videoTracks.length > 0) {
@@ -2666,6 +2703,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                 } else {
                     otgOverlay.classList.add('hidden');
+                    // Unlock screen orientation
+                    if (screen.orientation && screen.orientation.unlock) {
+                        try {
+                            screen.orientation.unlock();
+                        } catch(e) {}
+                    }
                 }
             }
             updateOnTheGoButtons();
@@ -7909,6 +7952,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const otgOverlay = document.getElementById('onTheGoOverlay');
             if (otgOverlay) {
                 otgOverlay.classList.add('hidden');
+                // Unlock screen orientation
+                if (screen.orientation && screen.orientation.unlock) {
+                    try {
+                        screen.orientation.unlock();
+                    } catch(e) {}
+                }
             }
 
             // Reset AudioWorklet cached promise to support new AudioContext
