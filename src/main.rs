@@ -2633,6 +2633,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         async function toggleOnTheGoLowBandwidth() {
             await handleLowBandwidthChange(!isLowBandwidthMode);
+            if (isLowBandwidthMode) {
+                playNotificationSound('bandwidth_on');
+            } else {
+                playNotificationSound('bandwidth_off');
+            }
         }
 
         function handleOnTheGoChange(checked) {
@@ -5162,8 +5167,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const welcomeOverlay = document.getElementById('welcomeOverlay');
 
         function playNotificationSound(type) {
-            if (!audioContext) return;
-            if (audioContext.state === 'suspended') audioContext.resume();
+            if (!audioContext || audioContext.state === 'closed') {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.warn("Failed to create AudioContext:", e);
+                    return;
+                }
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume().catch(e => console.warn("Failed to resume AudioContext:", e));
+            }
 
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
@@ -5217,6 +5231,52 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
                  osc.start(now);
                  osc.stop(now + 0.1);
+            } else if (type === 'bandwidth_on') {
+                 osc.type = 'sine';
+                 osc.frequency.setValueAtTime(400, now);
+                 osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+
+                 gain.gain.setValueAtTime(0.08, now);
+                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+                 const osc2 = audioContext.createOscillator();
+                 const gain2 = audioContext.createGain();
+                 osc2.connect(gain2);
+                 gain2.connect(audioContext.destination);
+                 osc2.type = 'sine';
+                 osc2.frequency.setValueAtTime(600, now + 0.1);
+                 osc2.frequency.exponentialRampToValueAtTime(800, now + 0.18);
+
+                 gain2.gain.setValueAtTime(0.08, now + 0.1);
+                 gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+                 osc.start(now);
+                 osc.stop(now + 0.08);
+                 osc2.start(now + 0.1);
+                 osc2.stop(now + 0.18);
+            } else if (type === 'bandwidth_off') {
+                 osc.type = 'sine';
+                 osc.frequency.setValueAtTime(800, now);
+                 osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+
+                 gain.gain.setValueAtTime(0.08, now);
+                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+                 const osc2 = audioContext.createOscillator();
+                 const gain2 = audioContext.createGain();
+                 osc2.connect(gain2);
+                 gain2.connect(audioContext.destination);
+                 osc2.type = 'sine';
+                 osc2.frequency.setValueAtTime(600, now + 0.1);
+                 osc2.frequency.exponentialRampToValueAtTime(400, now + 0.18);
+
+                 gain2.gain.setValueAtTime(0.08, now + 0.1);
+                 gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+                 osc.start(now);
+                 osc.stop(now + 0.08);
+                 osc2.start(now + 0.1);
+                 osc2.stop(now + 0.18);
             }
         }
 
@@ -7877,7 +7937,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 toggleStatsWindow();
             }
 
-            playNotificationSound('disconnect');
+            playNotificationSound('leave');
 
             if (localStream) {
 
