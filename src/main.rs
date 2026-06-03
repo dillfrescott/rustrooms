@@ -1999,6 +1999,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 <span id="onTheGoDeafenText">Deafen</span>
             </button>
 
+            <!-- Huge Low Bandwidth Toggle Button -->
+            <button id="btnOnTheGoLowBandwidth" onclick="toggleOnTheGoLowBandwidth()" class="flex items-center justify-center gap-4 py-6 rounded-2xl font-bold text-lg text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+                <div id="onTheGoLowBandwidthIconWrapper">
+                    <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </div>
+                <span id="onTheGoLowBandwidthText">Low Bandwidth Mode</span>
+            </button>
+
             <!-- Huge Copy Invite Link Button -->
             <button id="btnOnTheGoCopy" onclick="copyLink()" class="flex items-center justify-center gap-4 py-6 rounded-2xl font-bold text-lg text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
                 <div id="onTheGoCopyIconWrapper">
@@ -2552,6 +2560,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     otgLightning.classList.add('hidden');
                 }
             }
+            updateOnTheGoButtons();
         }
 
         async function handleLowBandwidthChange(checked) {
@@ -2572,6 +2581,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     data: { isLowBandwidthMode: checked }
                 }));
             }
+        }
+
+        async function toggleOnTheGoLowBandwidth() {
+            await handleLowBandwidthChange(!isLowBandwidthMode);
         }
 
         function handleOnTheGoChange(checked) {
@@ -2670,10 +2683,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         function updateOnTheGoButtons() {
             const otgMicBtn = document.getElementById('btnOnTheGoMic');
             const otgDeafenBtn = document.getElementById('btnOnTheGoDeafen');
+            const otgLbmBtn = document.getElementById('btnOnTheGoLowBandwidth');
             const otgMicWrapper = document.getElementById('onTheGoMicIconWrapper');
             const otgDeafenWrapper = document.getElementById('onTheGoDeafenIconWrapper');
+            const otgLbmWrapper = document.getElementById('onTheGoLowBandwidthIconWrapper');
             const otgMicText = document.getElementById('onTheGoMicText');
             const otgDeafenText = document.getElementById('onTheGoDeafenText');
+            const otgLbmText = document.getElementById('onTheGoLowBandwidthText');
 
             const isMicMuted = localStream && localStream.getAudioTracks().length > 0 ? !localStream.getAudioTracks()[0].enabled : true;
 
@@ -2716,6 +2732,24 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     if (otgDeafenText) otgDeafenText.innerText = "Deafen";
                     if (otgDeafenWrapper) {
                         otgDeafenWrapper.innerHTML = `<svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>`;
+                    }
+                }
+            }
+
+            if (otgLbmBtn) {
+                if (isLowBandwidthMode) {
+                    otgLbmBtn.classList.add('bg-amber-600', 'hover:bg-amber-700', 'border-amber-500');
+                    otgLbmBtn.classList.remove('bg-zinc-800', 'hover:bg-zinc-700', 'border-zinc-700');
+                    if (otgLbmText) otgLbmText.innerText = "Low Bandwidth Active";
+                    if (otgLbmWrapper) {
+                        otgLbmWrapper.innerHTML = `<svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>`;
+                    }
+                } else {
+                    otgLbmBtn.classList.remove('bg-amber-600', 'hover:bg-amber-700', 'border-amber-500');
+                    otgLbmBtn.classList.add('bg-zinc-800', 'hover:bg-zinc-700', 'border-zinc-700');
+                    if (otgLbmText) otgLbmText.innerText = "Low Bandwidth Mode";
+                    if (otgLbmWrapper) {
+                        otgLbmWrapper.innerHTML = `<svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>`;
                     }
                 }
             }
