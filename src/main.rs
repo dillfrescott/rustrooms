@@ -2464,13 +2464,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let activeTabSessionKey = null;
         let isUnloading = false;
 
-        // Intercept getUserMedia to apply low-bandwidth constraints if active
+        // Intercept getUserMedia to apply appropriate bandwidth constraints
         (function() {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
                 navigator.mediaDevices.getUserMedia = function(constraints) {
-                    if (isLowBandwidthMode && constraints) {
-                        if (constraints.video) {
+                    if (constraints && constraints.video) {
+                        if (isLowBandwidthMode) {
                             if (typeof constraints.video === 'boolean') {
                                 constraints.video = {
                                     width: { max: 320 },
@@ -2479,8 +2479,26 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 };
                             } else if (typeof constraints.video === 'object') {
                                 constraints.video.width = { max: 320 };
-                                constraints.video.height = { max: 240 },
+                                constraints.video.height = { max: 240 };
                                 constraints.video.frameRate = { max: 15 };
+                            }
+                        } else {
+                            if (typeof constraints.video === 'boolean') {
+                                constraints.video = {
+                                    width: { ideal: 1280 },
+                                    height: { ideal: 720 },
+                                    frameRate: { ideal: 30 }
+                                };
+                            } else if (typeof constraints.video === 'object') {
+                                if (constraints.video.width === undefined) {
+                                    constraints.video.width = { ideal: 1280 };
+                                }
+                                if (constraints.video.height === undefined) {
+                                    constraints.video.height = { ideal: 720 };
+                                }
+                                if (constraints.video.frameRate === undefined) {
+                                    constraints.video.frameRate = { ideal: 30 };
+                                }
                             }
                         }
                     }
