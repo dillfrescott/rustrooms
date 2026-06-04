@@ -1615,6 +1615,145 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 display: flex !important;
             }
         }
+
+        /* Height-based responsive scaling for On-the-go Mode to fit any phone screen without scrolling */
+        @media (max-height: 760px) {
+            #onTheGoOverlay {
+                padding: 1rem !important;
+                gap-y: 1rem !important;
+            }
+            #onTheGoOverlay .mt-4 {
+                margin-top: 0.5rem !important;
+            }
+            #onTheGoOverlay .pt-4 {
+                padding-top: 0.5rem !important;
+            }
+            #onTheGoOverlay .pt-6 {
+                padding-top: 0.5rem !important;
+            }
+            #onTheGoOverlay .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+                --tw-space-y-reverse: 0 !important;
+                margin-top: 0.75rem !important;
+                margin-bottom: 0px !important;
+            }
+            #onTheGoOverlay .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+                --tw-space-y-reverse: 0 !important;
+                margin-top: 0.5rem !important;
+                margin-bottom: 0px !important;
+            }
+            #onTheGoAvatarWrapper {
+                width: 6rem !important;
+                height: 6rem !important;
+            }
+            #onTheGoAvatarPlaceholder {
+                font-size: 3rem !important;
+            }
+            #onTheGoSpeakingName {
+                font-size: 1.125rem !important;
+            }
+            #onTheGoOverlay button {
+                padding-top: 0.875rem !important;
+                padding-bottom: 0.875rem !important;
+                border-radius: 1rem !important;
+            }
+            #onTheGoOverlay button svg {
+                width: 1.5rem !important;
+                height: 1.5rem !important;
+            }
+            #onTheGoOverlay button span {
+                font-size: 0.875rem !important;
+            }
+        }
+
+        @media (max-height: 640px) {
+            #onTheGoOverlay {
+                padding: 0.75rem !important;
+                gap-y: 0.75rem !important;
+            }
+            #onTheGoOverlay .mt-4, #onTheGoOverlay .mt-8 {
+                margin-top: 0.25rem !important;
+            }
+            #onTheGoOverlay .pt-4, #onTheGoOverlay .pt-6 {
+                padding-top: 0.25rem !important;
+            }
+            #onTheGoOverlay .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+                --tw-space-y-reverse: 0 !important;
+                margin-top: 0.5rem !important;
+                margin-bottom: 0px !important;
+            }
+            #onTheGoOverlay .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+                --tw-space-y-reverse: 0 !important;
+                margin-top: 0.25rem !important;
+                margin-bottom: 0px !important;
+            }
+            #onTheGoAvatarWrapper {
+                width: 4.5rem !important;
+                height: 4.5rem !important;
+            }
+            #onTheGoAvatarPlaceholder {
+                font-size: 2.25rem !important;
+            }
+            #onTheGoSpeakingName {
+                font-size: 1rem !important;
+            }
+            #onTheGoOverlay button {
+                padding-top: 0.625rem !important;
+                padding-bottom: 0.625rem !important;
+                border-radius: 0.75rem !important;
+            }
+            #onTheGoOverlay button svg {
+                width: 1.25rem !important;
+                height: 1.25rem !important;
+            }
+            #onTheGoOverlay button span {
+                font-size: 0.8rem !important;
+            }
+        }
+
+        @media (max-height: 540px) {
+            #onTheGoOverlay {
+                padding: 0.5rem !important;
+                gap-y: 0.5rem !important;
+            }
+            #onTheGoOverlay .mt-4, #onTheGoOverlay .mt-8 {
+                margin-top: 0px !important;
+            }
+            #onTheGoOverlay .pt-4, #onTheGoOverlay .pt-6 {
+                padding-top: 0px !important;
+            }
+            #onTheGoOverlay .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+                --tw-space-y-reverse: 0 !important;
+                margin-top: 0.25rem !important;
+                margin-bottom: 0px !important;
+            }
+            #onTheGoOverlay .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+                --tw-space-y-reverse: 0 !important;
+                margin-top: 0.125rem !important;
+                margin-bottom: 0px !important;
+            }
+            #onTheGoAvatarWrapper {
+                width: 3.5rem !important;
+                height: 3.5rem !important;
+            }
+            #onTheGoAvatarPlaceholder {
+                font-size: 1.75rem !important;
+            }
+            #onTheGoSpeakingName {
+                font-size: 0.875rem !important;
+            }
+            #onTheGoOverlay button {
+                padding-top: 0.5rem !important;
+                padding-bottom: 0.5rem !important;
+                border-radius: 0.5rem !important;
+            }
+            #onTheGoOverlay button svg {
+                width: 1.125rem !important;
+                height: 1.125rem !important;
+            }
+            #onTheGoOverlay button span {
+                font-size: 0.75rem !important;
+            }
+        }
     </style>
 
     <link rel="stylesheet" href="/assets/croppie.min.css" />
@@ -2012,48 +2151,48 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
 
         <!-- Bottom section: Big buttons taking up the whole lower portion of the screen -->
-        <div class="grid grid-cols-1 gap-4 mb-4 sm:mb-8 w-full max-w-md mx-auto flex-shrink-0">
+        <div class="grid grid-cols-2 gap-3 mb-4 sm:mb-8 w-full max-w-md mx-auto flex-shrink-0">
             <!-- Huge Mic Toggle Button -->
-            <button id="btnOnTheGoMic" onclick="toggleMic()" class="flex items-center justify-center gap-4 py-6 rounded-2xl font-bold text-lg text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+            <button id="btnOnTheGoMic" onclick="toggleMic()" class="flex flex-col items-center justify-center text-center gap-1.5 py-4 px-2 rounded-2xl font-bold text-sm sm:text-base text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
                 <div id="onTheGoMicIconWrapper">
                     <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
                 </div>
-                <span id="onTheGoMicText">Mute</span>
+                <span id="onTheGoMicText" class="truncate w-full px-1">Mute</span>
             </button>
 
             <!-- Huge Deafen/Speaker Toggle Button -->
-            <button id="btnOnTheGoDeafen" onclick="toggleDeafen()" class="flex items-center justify-center gap-4 py-6 rounded-2xl font-bold text-lg text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+            <button id="btnOnTheGoDeafen" onclick="toggleDeafen()" class="flex flex-col items-center justify-center text-center gap-1.5 py-4 px-2 rounded-2xl font-bold text-sm sm:text-base text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
                 <div id="onTheGoDeafenIconWrapper">
                     <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
                 </div>
-                <span id="onTheGoDeafenText">Deafen</span>
+                <span id="onTheGoDeafenText" class="truncate w-full px-1">Deafen</span>
             </button>
 
             <!-- Huge Low Bandwidth Toggle Button -->
-            <button id="btnOnTheGoLowBandwidth" onclick="toggleOnTheGoLowBandwidth()" class="flex items-center justify-center gap-4 py-6 rounded-2xl font-bold text-lg text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+            <button id="btnOnTheGoLowBandwidth" onclick="toggleOnTheGoLowBandwidth()" class="flex flex-col items-center justify-center text-center gap-1.5 py-4 px-2 rounded-2xl font-bold text-sm sm:text-base text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
                 <div id="onTheGoLowBandwidthIconWrapper">
                     <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 </div>
-                <span id="onTheGoLowBandwidthText">Low Bandwidth Mode</span>
+                <span id="onTheGoLowBandwidthText" class="truncate w-full px-1">Low Bandwidth Mode</span>
             </button>
 
             <!-- Huge Copy Invite Link Button -->
-            <button id="btnOnTheGoCopy" onclick="copyLink()" class="flex items-center justify-center gap-4 py-6 rounded-2xl font-bold text-lg text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+            <button id="btnOnTheGoCopy" onclick="copyLink()" class="flex flex-col items-center justify-center text-center gap-1.5 py-4 px-2 rounded-2xl font-bold text-sm sm:text-base text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
                 <div id="onTheGoCopyIconWrapper">
                     <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
                 </div>
-                <span id="onTheGoCopyText">Copy Invite Link</span>
+                <span id="onTheGoCopyText" class="truncate w-full px-1">Copy Invite Link</span>
             </button>
 
-            <!-- Large Leave Button -->
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="toggleOnTheGoMode(false)" class="flex flex-col items-center justify-center py-5 rounded-2xl font-bold text-sm text-zinc-300 transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
-                    <span>Exit On-the-go</span>
-                </button>
-                <button onclick="leaveRoom()" class="flex flex-col items-center justify-center py-5 rounded-2xl font-bold text-sm text-white transition-all bg-red-600 hover:bg-red-700 active:scale-[0.98] shadow-lg shadow-red-600/20">
-                    <span>Leave Call</span>
-                </button>
-            </div>
+            <!-- Exit On-the-go -->
+            <button onclick="toggleOnTheGoMode(false)" class="flex flex-col items-center justify-center py-4 rounded-2xl font-bold text-sm text-zinc-300 transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+                <span>Exit On-the-go</span>
+            </button>
+
+            <!-- Leave Call -->
+            <button onclick="leaveRoom()" class="flex flex-col items-center justify-center py-4 rounded-2xl font-bold text-sm text-white transition-all bg-red-600 hover:bg-red-700 active:scale-[0.98] shadow-lg shadow-red-600/20">
+                <span>Leave Call</span>
+            </button>
         </div>
     </div>
 
