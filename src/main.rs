@@ -2510,7 +2510,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const originalAddTrack = RTCPeerConnection.prototype.addTrack;
             RTCPeerConnection.prototype.addTrack = function(track, ...streams) {
                 const sender = originalAddTrack.apply(this, [track, ...streams]);
-                if (isLowBandwidthMode) {
+                
+                // Find the peer user ID associated with this connection
+                let targetUserId = null;
+                for (const uId in peers) {
+                    if (peers[uId] === this) {
+                        targetUserId = uId;
+                        break;
+                    }
+                }
+
+                const isRemoteLBM = targetUserId && (peerLowBandwidthStatus[targetUserId] === true);
+                if (isLowBandwidthMode || isRemoteLBM) {
                     setTimeout(() => {
                         try {
                             const params = sender.getParameters();
@@ -2536,6 +2547,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             for (const userId in peers) {
                 const pc = peers[userId];
                 if (!pc) continue;
+                const isRemoteLBM = peerLowBandwidthStatus[userId] === true;
+                const shouldLimit = isLowBandwidthMode || isRemoteLBM;
                 pc.getSenders().forEach(sender => {
                     if (sender.track) {
                         try {
@@ -2543,7 +2556,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             if (!params.encodings) params.encodings = [{}];
                             if (sender.track.kind === 'video') {
                                 const isScreen = screenStream && screenStream.getVideoTracks().includes(sender.track);
-                                if (isLowBandwidthMode) {
+                                if (shouldLimit) {
                                     params.encodings[0].maxBitrate = isScreen ? 150000 : 80000;
                                     params.encodings[0].scaleResolutionDownBy = isScreen ? 1.5 : 2.0;
                                 } else {
@@ -2551,7 +2564,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                     delete params.encodings[0].scaleResolutionDownBy;
                                 }
                             } else if (sender.track.kind === 'audio') {
-                                if (isLowBandwidthMode) {
+                                if (shouldLimit) {
                                     params.encodings[0].maxBitrate = 16000;
                                 } else {
                                     delete params.encodings[0].maxBitrate;
@@ -6474,6 +6487,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                                     initPeer(user.id, false, user.status.nickname, user.status.avatar, user.status.isMuted, user.status.isDeafened, user.status.isGif, user.status.staticFrame);
                                                 }
                                             });
+                                            updateAllSenderBitrates();
                                         }
                                     } catch (e) { console.error("Error processing existing-users:", e); }
                                     break;
@@ -6491,6 +6505,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         }
                                         if (msg.data.isLowBandwidthMode !== undefined) {
                                             peerLowBandwidthStatus[msg.userId] = msg.data.isLowBandwidthMode;
+                                            updateAllSenderBitrates();
                                         }
                                         if (msg.data.isOnTheGoMode !== undefined) {
                                             peerOnTheGoStatus[msg.userId] = msg.data.isOnTheGoMode;
@@ -6549,6 +6564,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         delete peerScreenHasAudio[msg.userId];
                                         delete peerMicTrackId[msg.userId];
                                         delete peerScreenAudioTrackId[msg.userId];
+                                        delete peerLowBandwidthStatus[msg.userId];
+                                        delete peerOnTheGoStatus[msg.userId];
                                     }
                                     break;
                                 case 'user-kicked':
@@ -6565,6 +6582,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         delete peerScreenHasAudio[msg.userId];
                                         delete peerMicTrackId[msg.userId];
                                         delete peerScreenAudioTrackId[msg.userId];
+                                        delete peerLowBandwidthStatus[msg.userId];
+                                        delete peerOnTheGoStatus[msg.userId];
                                         updateRoomListUI();
                                     }
                                     break;
@@ -6572,6 +6591,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                      updatePeerTrackHints(msg.userId, msg.data);
                                      if (msg.data.isLowBandwidthMode !== undefined) {
                                          peerLowBandwidthStatus[msg.userId] = msg.data.isLowBandwidthMode;
+                                         updateAllSenderBitrates();
                                      }
                                      if (msg.data.isOnTheGoMode !== undefined) {
                                          peerOnTheGoStatus[msg.userId] = msg.data.isOnTheGoMode;
@@ -6624,6 +6644,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         }
                                         if (msg.data.isLowBandwidthMode !== undefined) {
                                             peerLowBandwidthStatus[msg.userId] = msg.data.isLowBandwidthMode;
+                                            updateAllSenderBitrates();
                                         }
                                         if (msg.data.isOnTheGoMode !== undefined) {
                                             peerOnTheGoStatus[msg.userId] = msg.data.isOnTheGoMode;
