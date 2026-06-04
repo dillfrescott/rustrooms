@@ -169,6 +169,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
     <meta name="theme-color" content="#000000">
     <script src="/assets/tailwind.js"></script>
+    <script>
+        tailwind.config = {
+            future: {
+                hoverOnlyWhenSupported: true,
+            }
+        }
+    </script>
     <link href="/assets/inter.css" rel="stylesheet">
     <style>
         :root {
@@ -394,11 +401,34 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             box-shadow: none;
         }
 
-        .control-btn:hover {
-            background: var(--bg-elevated-strong);
-            border-color: var(--border-medium);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
+        @media (hover: hover) {
+            .control-btn:hover {
+                background: var(--bg-elevated-strong);
+                border-color: var(--border-medium);
+                transform: translateY(-1px);
+                box-shadow: var(--shadow-md);
+            }
+            .control-btn.active-red:hover {
+                background: var(--accent-red-hover);
+                border-color: rgba(248, 113, 113, 0.3);
+                box-shadow: 0 0 16px rgba(239, 68, 68, 0.2);
+                transform: translateY(-1px);
+            }
+            .control-btn.active-green:hover {
+                background: var(--accent-green-hover);
+                border-color: rgba(74, 222, 128, 0.3);
+                box-shadow: 0 0 16px rgba(34, 197, 94, 0.2);
+                transform: translateY(-1px);
+            }
+            .control-btn:disabled:hover {
+                background: var(--bg-elevated);
+                border-color: var(--border-subtle);
+                transform: none;
+                box-shadow: none;
+            }
+            .control-btn:disabled:hover::before {
+                opacity: 0;
+            }
         }
 
         .control-btn:active {
@@ -416,13 +446,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
         }
 
-        .control-btn.active-red:hover {
-            background: var(--accent-red-hover);
-            border-color: rgba(248, 113, 113, 0.3);
-            box-shadow: 0 0 16px rgba(239, 68, 68, 0.2);
-            transform: translateY(-1px);
-        }
-
         .control-btn.active-green {
             background: var(--success);
             border-color: rgba(34, 197, 94, 0.3);
@@ -433,29 +456,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             background: var(--success);
         }
 
-        .control-btn.active-green:hover {
-            background: var(--accent-green-hover);
-            border-color: rgba(74, 222, 128, 0.3);
-            box-shadow: 0 0 16px rgba(34, 197, 94, 0.2);
-            transform: translateY(-1px);
-        }
-
         .control-btn:disabled {
             opacity: 0.35;
             cursor: not-allowed;
             pointer-events: none;
             -webkit-pointer-events: none;
-        }
-
-        .control-btn:disabled:hover {
-            background: var(--bg-elevated);
-            border-color: var(--border-subtle);
-            transform: none;
-            box-shadow: none;
-        }
-
-        .control-btn:disabled:hover::before {
-            opacity: 0;
         }
 
         .control-btn:disabled:active {
@@ -488,10 +493,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             box-shadow: var(--shadow-lg);
         }
 
-        .pip-wrapper:hover {
-            border-color: var(--border-medium);
-            box-shadow: var(--shadow-xl);
-            transform: translateY(-2px);
+        @media (hover: hover) {
+            .pip-wrapper:hover {
+                border-color: var(--border-medium);
+                box-shadow: var(--shadow-xl);
+                transform: translateY(-2px);
+            }
         }
 
         @media (max-width: 400px) {
@@ -629,9 +636,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             color: var(--text-muted);
         }
 
-        .stats-close:hover {
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--text-primary);
+        @media (hover: hover) {
+            .stats-close:hover {
+                background: rgba(255, 255, 255, 0.08);
+                color: var(--text-primary);
+            }
         }
 
         .stats-content {
@@ -732,8 +741,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
         }
-        input[type=range]::-webkit-slider-thumb:hover {
-            transform: scale(1.15);
+        @media (hover: hover) {
+            input[type=range]::-webkit-slider-thumb:hover {
+                transform: scale(1.15);
+            }
         }
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
@@ -775,9 +786,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             border-radius: 8px;
             transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .vol-row button:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: scale(1.05);
+        @media (hover: hover) {
+            .vol-row button:hover {
+                background: rgba(255, 255, 255, 0.1);
+                transform: scale(1.05);
+            }
         }
 
         .speaking-glow {
@@ -1028,10 +1041,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             border-radius: 10px;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
         }
-        .btn-primary:hover {
-            background: var(--accent-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(79, 112, 244, 0.25);
+        @media (hover: hover) {
+            .btn-primary:hover {
+                background: var(--accent-hover);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(79, 112, 244, 0.25);
+            }
         }
 
         .btn-primary:active {
@@ -1109,10 +1124,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             box-shadow: none;
         }
 
-        .status-pill:hover {
-            background: var(--bg-elevated-strong);
-            border-color: var(--border-medium);
-            box-shadow: none;
+        @media (hover: hover) {
+            .status-pill:hover {
+                background: var(--bg-elevated-strong);
+                border-color: var(--border-medium);
+                box-shadow: none;
+            }
         }
 
         .label-text {
@@ -1228,8 +1245,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             transition: all 0.15s ease;
         }
 
-        .sidebar-header button:hover {
-            background: rgba(255, 255, 255, 0.08);
+        @media (hover: hover) {
+            .sidebar-header button:hover {
+                background: rgba(255, 255, 255, 0.08);
+            }
         }
 
         @media (min-width: 640px) {
@@ -1263,11 +1282,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             box-shadow: none;
         }
 
-        .room-item:hover {
-            border-color: var(--border-medium);
-            background: var(--bg-elevated);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
+        @media (hover: hover) {
+            .room-item:hover {
+                border-color: var(--border-medium);
+                background: var(--bg-elevated);
+                transform: translateY(-1px);
+                box-shadow: var(--shadow-md);
+            }
         }
 
         .room-item.active {
@@ -1315,9 +1336,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             transition: all 0.2s ease;
         }
 
-        .mini-avatar:hover {
-            border-color: var(--border-medium);
-            transform: scale(1.05);
+        @media (hover: hover) {
+            .mini-avatar:hover {
+                border-color: var(--border-medium);
+                transform: scale(1.05);
+            }
         }
 
         .mini-avatar img {
@@ -1408,8 +1431,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .room-user-row:hover {
-            background: rgba(255, 255, 255, 0.04);
+        @media (hover: hover) {
+            .room-user-row:hover {
+                background: rgba(255, 255, 255, 0.04);
+            }
         }
 
         .room-user-name {
@@ -1493,9 +1518,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             justify-content: center;
         }
 
-        .user-volume-menu .uvm-close:hover {
-            color: var(--text-primary);
-            background: rgba(255, 255, 255, 0.08);
+        @media (hover: hover) {
+            .user-volume-menu .uvm-close:hover {
+                color: var(--text-primary);
+                background: rgba(255, 255, 255, 0.08);
+            }
         }
 
         .user-volume-menu .uvm-section {
@@ -1538,9 +1565,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             flex-shrink: 0;
         }
 
-        .user-volume-menu .uvm-slider-row button:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: scale(1.1);
+        @media (hover: hover) {
+            .user-volume-menu .uvm-slider-row button:hover {
+                background: rgba(255, 255, 255, 0.1);
+                transform: scale(1.1);
+            }
         }
 
         .user-volume-menu .uvm-slider-row button.muted {
