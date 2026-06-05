@@ -2011,7 +2011,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         <div class="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
                             <div class="flex flex-col">
                                 <span class="text-sm font-semibold text-white">Low Bandwidth Mode</span>
-                                <span class="text-xs text-zinc-400">Greatly lowers audio & video quality to save data</span>
+                                <span class="text-xs text-zinc-400">Reduces audio & video quality to save data</span>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="setupLowBandwidth" onchange="handleLowBandwidthChange(this.checked)" class="sr-only peer">
@@ -2098,7 +2098,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             <div class="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
                                 <div class="flex flex-col">
                                     <span class="text-sm font-semibold text-white">Low Bandwidth Mode</span>
-                                    <span class="text-xs text-zinc-400">Greatly lowers audio & video quality to save data</span>
+                                    <span class="text-xs text-zinc-400">Reduces audio & video quality to save data</span>
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="settingsLowBandwidth" onchange="handleLowBandwidthChange(this.checked)" class="sr-only peer">
