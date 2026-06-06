@@ -2621,7 +2621,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const maxReconnectionAttempts = isIOS ? 50 : 20;
         const baseReconnectionDelay = 1000;
         const maxReconnectionDelay = isIOS ? 15000 : 30000;
-        let hasLeftRoom = false;
+        let hasLeftRoom = true;
         let isReconnecting = false;
         let awaitingPassword = false;
         let desktopSlowRetryCount = 0;
@@ -3079,9 +3079,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             } catch(e) {}
         }
 
-        function stopAllMedia() {
+        function stopAllMedia(isActualUnload = false) {
             if (isUnloading) return; // Prevent multiple calls
-            isUnloading = true;
+            if (isActualUnload) {
+                isUnloading = true;
+            }
 
             // Stop local stream
             if (localStream) {
@@ -3141,22 +3143,24 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 audioContext = null;
             }
 
-            // Force clear all video elements
-            try {
-                const videos = document.querySelectorAll('video');
-                videos.forEach(v => {
-                    try {
-                        v.pause();
-                        v.srcObject = null;
-                        v.removeAttribute('src'); // Explicitly remove src
-                        v.load();
-                    } catch(e) {}
-                });
-            } catch(e) {}
+            // Only perform DOM manipulation if we are NOT unloading, as doing so during page tear-down crashes iOS Safari
+            if (!isActualUnload) {
+                try {
+                    const videos = document.querySelectorAll('video');
+                    videos.forEach(v => {
+                        try {
+                            v.pause();
+                            v.srcObject = null;
+                            v.removeAttribute('src'); // Explicitly remove src
+                            v.load();
+                        } catch(e) {}
+                    });
+                } catch(e) {}
+            }
         }
 
-        function clearActiveTabSession() {
-            stopAllMedia();
+        function clearActiveTabSession(isActualUnload = false) {
+            stopAllMedia(isActualUnload);
             try {
                 if (activeTabSessionKey) {
                     const data = localStorage.getItem(activeTabSessionKey);
@@ -3185,9 +3189,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             } catch(e) { return false; }
         }
 
-        window.addEventListener('beforeunload', clearActiveTabSession);
-        window.addEventListener('pagehide', clearActiveTabSession);
-        window.addEventListener('unload', clearActiveTabSession);
+        window.addEventListener('beforeunload', () => clearActiveTabSession(true));
+        window.addEventListener('pagehide', () => clearActiveTabSession(true));
+        window.addEventListener('unload', () => clearActiveTabSession(true));
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
                 // If we are in the setup screen and not joined yet, 
@@ -3705,34 +3709,54 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         function stopNoSleepVideo() {
             if (noSleepVideo) {
-                noSleepVideo.pause();
-                noSleepVideo.remove();
+                try {
+                    noSleepVideo.pause();
+                    noSleepVideo.remove();
+                } catch(e) {}
                 noSleepVideo = null;
             }
         }
 
         async function requestWakeLock() {
+            if (hasLeftRoom) return;
             try {
                 if ('wakeLock' in navigator) {
+                    if (wakeLock) {
+                        try { await wakeLock.release(); } catch(e) {}
+                        wakeLock = null;
+                    }
                     wakeLock = await navigator.wakeLock.request('screen');
                     wakeLock.addEventListener('release', () => {
                         console.log('Wake Lock released');
+                        wakeLock = null;
                     });
                     console.log('Wake Lock active');
                 } else if (isIOS) {
-                    // iOS Safari doesn't support Wake Lock API — use NoSleep video trick
                     startNoSleepVideo();
                 }
             } catch (err) {
-                console.error(`${err.name}, ${err.message}`);
+                console.error(`Wake Lock failed: ${err.name}, ${err.message}`);
                 if (isIOS) startNoSleepVideo();
             }
         }
 
         document.addEventListener('visibilitychange', async () => {
-            if (wakeLock !== null && document.visibilityState === 'visible') {
-                await requestWakeLock();
+            if (document.visibilityState === 'visible') {
+                if (!isIOS) {
+                    await checkAndRestartLocalStreamIfNeeded();
+                }
+                if (wakeLock !== null || !hasLeftRoom) {
+                    await requestWakeLock();
+                }
             }
+        });
+
+        ['click', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                if (!wakeLock && !hasLeftRoom) {
+                    requestWakeLock();
+                }
+            }, { passive: true });
         });
 
         async function loadDevices() {
@@ -5107,6 +5131,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
              }
         }
 
+        async function checkAndRestartLocalStreamIfNeeded() {
+            if (hasLeftRoom) return;
+            const needsRestart = !localStream || localStream.getTracks().some(track => track.readyState === 'ended');
+            if (needsRestart) {
+                console.log("Local stream tracks are ended/missing. Re-acquiring media...");
+                try {
+                    await startPreview();
+                } catch(e) {
+                    console.error("Failed to restart local stream on wakeup:", e);
+                }
+            }
+        }
+
         async function joinRoom() {
 
             hasLeftRoom = false;
@@ -5238,112 +5275,110 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 toggleOnTheGoMode(true, true);
             }
 
-            window.addEventListener('offline', () => {
-                console.warn('Network connection lost (offline)');
-                updateStatus('disconnected', 'Network Offline');
+            await requestWakeLock();
+        }
 
-                updateConnectionStatus();
-            });
+        // Global event listeners to handle network and lifecycle events
+        window.addEventListener('offline', () => {
+            if (hasLeftRoom) return;
+            console.warn('Network connection lost (offline)');
+            updateStatus('disconnected', 'Network Offline');
+            updateConnectionStatus();
+        });
 
-            window.addEventListener('online', () => {
+        window.addEventListener('online', () => {
+            if (hasLeftRoom) return;
 
-                if (hasLeftRoom) {
-                    console.log('User left the room, not reconnecting on network restore');
-                    return;
-                }
-
-                if (isReconnecting) {
-                    console.log('Already reconnecting, skipping network restore trigger');
-                    return;
-                }
-
-                console.log('Network connection restored (online)');
-                updateStatus('connecting', 'Reconnecting...');
-
-                reconnectionAttempts = 0;
-                connectWs();
-            });
-
-            if (isIOS) {
-                document.addEventListener('visibilitychange', () => {
-                    if (document.visibilityState === 'visible' && !hasLeftRoom) {
-                        stopHeartbeat();
-
-                        if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
-                            console.log('iOS returned from background, WebSocket dead, reconnecting...');
-                            isReconnecting = false;
-                            reconnectionAttempts = 0;
-                            connectWs();
-                        } else if (ws.readyState === WebSocket.OPEN) {
-                            startHeartbeat();
-
-                            let hasDeadPeer = false;
-                            for (const uid in peers) {
-                                const peerState = peers[uid].connectionState || peers[uid].iceConnectionState;
-                                if (peerState === 'disconnected' || peerState === 'failed' || peerState === 'closed') {
-                                    hasDeadPeer = true;
-                                    break;
-                                }
-                            }
-                            if (hasDeadPeer) {
-                                console.log('iOS returned from background, dead peers detected, re-establishing...');
-                                for (const uid in peers) {
-                                    removePeer(uid);
-                                }
-                                peerCamStatus = {};
-                                peerScreenStatus = {};
-                                peerScreenHasAudio = {};
-                                isReconnecting = false;
-                                reconnectionAttempts = 0;
-                                connectWs();
-                            }
-                        }
-                        if (audioContext && audioContext.state === 'suspended') {
-                            audioContext.resume().catch(e => {});
-                        }
-                    }
-                });
+            if (isReconnecting) {
+                console.log('Already reconnecting, skipping network restore trigger');
+                return;
             }
 
-            // iOS WebSocket watchdog — catches silent WS deaths that don't trigger onclose
-            if (isIOS) {
-                let iosWatchdogInterval = setInterval(() => {
-                    if (hasLeftRoom) return;
-                    const now = Date.now();
-                    const pongAge = now - lastPongTime;
-                    // If we haven't received a pong in 3x the heartbeat interval, WS is probably dead
-                    const watchdogThreshold = heartbeatIntervalMs * 3 + heartbeatTimeoutMs;
-                    if (ws && ws.readyState === WebSocket.OPEN && pongAge > watchdogThreshold) {
-                        console.warn(`iOS watchdog: no pong in ${Math.round(pongAge/1000)}s, force-reconnecting`);
-                        missedPongCount = 0;
-                        ws.close();
-                    } else if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
-                        if (!isReconnecting && !hasLeftRoom) {
-                            console.warn('iOS watchdog: WebSocket is dead and no reconnection in progress, reconnecting...');
-                            reconnectionAttempts = 0;
-                            isReconnecting = false;
-                            connectWs();
-                        }
-                    }
-                }, 30000);
-            }
+            console.log('Network connection restored (online)');
+            updateStatus('connecting', 'Reconnecting...');
 
-            // Handle iOS BFCache restoration (back-forward cache)
-            window.addEventListener('pageshow', (event) => {
-                if (event.persisted && !hasLeftRoom) {
-                    console.log('Page restored from BFCache, checking WebSocket...');
-                    if (!ws || ws.readyState !== WebSocket.OPEN) {
+            reconnectionAttempts = 0;
+            connectWs();
+        });
+
+        if (isIOS) {
+            document.addEventListener('visibilitychange', async () => {
+                if (document.visibilityState === 'visible' && !hasLeftRoom) {
+                    stopHeartbeat();
+                    
+                    // Restart media tracks if they were ended by iOS during lock/background
+                    await checkAndRestartLocalStreamIfNeeded();
+
+                    if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+                        console.log('iOS returned from background, WebSocket dead, reconnecting...');
                         isReconnecting = false;
                         reconnectionAttempts = 0;
                         connectWs();
-                    } else {
+                    } else if (ws.readyState === WebSocket.OPEN) {
                         startHeartbeat();
+
+                        let hasDeadPeer = false;
+                        for (const uid in peers) {
+                            const peerState = peers[uid].connectionState || peers[uid].iceConnectionState;
+                            if (peerState === 'disconnected' || peerState === 'failed' || peerState === 'closed') {
+                                hasDeadPeer = true;
+                                break;
+                            }
+                        }
+                        if (hasDeadPeer) {
+                            console.log('iOS returned from background, dead peers detected, re-establishing...');
+                            for (const uid in peers) {
+                                removePeer(uid);
+                            }
+                            peerCamStatus = {};
+                            peerScreenStatus = {};
+                            peerScreenHasAudio = {};
+                            isReconnecting = false;
+                            reconnectionAttempts = 0;
+                            connectWs();
+                        }
+                    }
+                    if (audioContext && audioContext.state === 'suspended') {
+                        audioContext.resume().catch(e => {});
                     }
                 }
             });
 
-            await requestWakeLock();
+            // iOS WebSocket watchdog — catches silent WS deaths that don't trigger onclose
+            setInterval(() => {
+                if (hasLeftRoom) return;
+                const now = Date.now();
+                const pongAge = now - lastPongTime;
+                // If we haven't received a pong in 3x the heartbeat interval, WS is probably dead
+                const watchdogThreshold = heartbeatIntervalMs * 3 + heartbeatTimeoutMs;
+                if (ws && ws.readyState === WebSocket.OPEN && pongAge > watchdogThreshold) {
+                    console.warn(`iOS watchdog: no pong in ${Math.round(pongAge/1000)}s, force-reconnecting`);
+                    missedPongCount = 0;
+                    ws.close();
+                } else if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+                    if (!isReconnecting && !hasLeftRoom) {
+                        console.warn('iOS watchdog: WebSocket is dead and no reconnection in progress, reconnecting...');
+                        reconnectionAttempts = 0;
+                        isReconnecting = false;
+                        connectWs();
+                    }
+                }
+            }, 30000);
         }
+
+        // Handle iOS BFCache restoration (back-forward cache)
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted && !hasLeftRoom) {
+                console.log('Page restored from BFCache, checking WebSocket...');
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    isReconnecting = false;
+                    reconnectionAttempts = 0;
+                    connectWs();
+                } else {
+                    startHeartbeat();
+                }
+            }
+        });
 
         const welcomeOverlay = document.getElementById('welcomeOverlay');
 
@@ -8120,7 +8155,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             hasLeftRoom = true;
 
-            clearActiveTabSession();
+            // Release wake lock and stop no sleep video
+            if (wakeLock) {
+                try {
+                    wakeLock.release();
+                } catch(e) {}
+                wakeLock = null;
+            }
+            stopNoSleepVideo();
+
+            clearActiveTabSession(false);
 
             if (statsWindowVisible) {
                 toggleStatsWindow();
@@ -8211,7 +8255,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (overlay) overlay.classList.remove('open');
             document.body.classList.remove('sidebar-open');
 
-            if (welcomeOverlay) welcomeOverlay.style.display = 'flex';
+            sessionStorage.setItem('rustrooms_welcomed', 'false');
+            sessionStorage.setItem('rustrooms_setup_done', 'false');
+
+            const inviteOverlay = document.getElementById('inviteWelcomeOverlay');
+
+            if (roomId) {
+                updateInviteOverlay();
+                if (welcomeOverlay) welcomeOverlay.style.display = 'none';
+            } else {
+                if (welcomeOverlay) welcomeOverlay.style.display = 'flex';
+                if (inviteOverlay) {
+                    inviteOverlay.classList.add('hidden', 'opacity-0');
+                }
+            }
             if (mainApp) mainApp.style.display = 'none';
             if (taskbar) taskbar.style.display = 'none';
 
