@@ -5158,10 +5158,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 alertBtn.onclick = function() {
                     closeCustomAlert();
                     alertBtn.onclick = oldOnClick;
+                    sessionStorage.setItem('rustrooms_welcomed', 'false');
+                    sessionStorage.setItem('rustrooms_setup_done', 'false');
+                    stopAllMedia(false);
+                    roomId = '';
+                    channelId = '';
                     history.replaceState(null, '', '/');
                     document.getElementById('welcomeOverlay').style.display = 'flex';
                     document.querySelector('main').style.display = 'none';
                     document.querySelector('.taskbar').style.display = 'none';
+                    const configOverlay = document.getElementById('configOverlay');
+                    if (configOverlay) {
+                        configOverlay.classList.add('hidden', 'opacity-0');
+                    }
                 };
 
                 document.getElementById('alertModal').classList.add('open');
