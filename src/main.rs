@@ -8258,6 +8258,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             sessionStorage.setItem('rustrooms_welcomed', 'false');
             sessionStorage.setItem('rustrooms_setup_done', 'false');
 
+            roomId = '';
+            channelId = '';
+            if (window.location.pathname !== '/') {
+                history.pushState(null, "", "/");
+            }
+
             const inviteOverlay = document.getElementById('inviteWelcomeOverlay');
 
             if (roomId) {
