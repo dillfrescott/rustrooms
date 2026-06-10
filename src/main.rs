@@ -5,7 +5,7 @@ use axum::{
     },
     http::header,
     response::{Html, IntoResponse, Redirect},
-    routing::get,
+    routing::{get, post},
     Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
@@ -174,6 +174,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             future: {
                 hoverOnlyWhenSupported: true,
             }
+        }
+    </script>
+    <script>
+        const TURNSTILE_SITE_KEY = "{{TURNSTILE_SITE_KEY}}";
+        if (TURNSTILE_SITE_KEY && TURNSTILE_SITE_KEY.trim() !== "" && !TURNSTILE_SITE_KEY.startsWith("{{")) {
+            const script = document.createElement('script');
+            script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
         }
     </script>
     <link href="/assets/inter.css" rel="stylesheet">
@@ -1873,6 +1883,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
+    <div id="turnstileModal" class="modal-overlay">
+        <div class="modal-content text-center space-y-5 flex flex-col items-center">
+            <h3 id="turnstileTitle" class="text-xl font-bold text-white break-words">Security Check</h3>
+            <p id="turnstileDesc" class="text-zinc-300 text-sm break-words">Please complete the security verification to join the call.</p>
+            
+            <!-- Cloudflare Turnstile Widget -->
+            <div id="turnstileWidget" class="my-2 min-h-[65px] flex items-center justify-center"></div>
+
+            <button id="btnCancelTurnstile" onclick="cancelTurnstile()" class="btn-secondary w-full py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
+        </div>
+    </div>
+
     <div id="confirmModal" class="modal-overlay">
         <div class="modal-content text-center space-y-5">
             <h3 id="confirmTitle" class="text-xl font-bold text-white break-words">Confirm</h3>
@@ -2422,7 +2444,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 const style = window.getComputedStyle(overlay);
                 const isVisible = style.display !== 'none' && 
                                   style.visibility !== 'hidden' && 
-                                  style.opacity !== '0' && 
                                   !document.hidden;
                 if (isVisible) {
                     if (!animationId) {
@@ -2512,7 +2533,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 const style = window.getComputedStyle(overlay);
                 const isVisible = style.display !== 'none' && 
                                   style.visibility !== 'hidden' && 
-                                  style.opacity !== '0' && 
                                   !document.hidden;
                 if (isVisible) {
                     if (!animationId) {
@@ -2604,7 +2624,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 const style = window.getComputedStyle(overlay);
                 const isVisible = style.display !== 'none' && 
                                   style.visibility !== 'hidden' && 
-                                  style.opacity !== '0' && 
                                   !document.hidden;
                 if (isVisible) {
                     if (!animationId) {
@@ -2669,6 +2688,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         let userNickname = "Guest";
         let userAvatar = null;
         let userAvatarIsGif = false;
+        if (!sessionStorage.getItem('rustrooms_tab_session_id')) {
+            sessionStorage.setItem('rustrooms_tab_session_id', crypto.randomUUID());
+        }
         let userAvatarStaticFrame = null;
         let sidebarOpen = false;
         let globalRoomList = {};
@@ -5247,6 +5269,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     alertBtn.onclick = oldOnClick;
                     sessionStorage.setItem('rustrooms_welcomed', 'false');
                     sessionStorage.setItem('rustrooms_setup_done', 'false');
+                    sessionStorage.removeItem('rustrooms_turnstile_passed');
                     stopAllMedia(false);
                     roomId = '';
                     channelId = '';
@@ -5264,7 +5287,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 return;
             }
 
-            proceedJoinRoom();
+            const turnstilePassed = sessionStorage.getItem('rustrooms_turnstile_passed') === 'true';
+            if (typeof TURNSTILE_SITE_KEY !== 'undefined' && TURNSTILE_SITE_KEY && TURNSTILE_SITE_KEY.trim() !== '' && !TURNSTILE_SITE_KEY.startsWith('{{') && !turnstilePassed) {
+                showTurnstileModal();
+            } else {
+                proceedJoinRoom();
+            }
         }
 
         async function proceedJoinRoom() {
@@ -6456,6 +6484,125 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
+        let turnstileWidgetId = null;
+
+        function showTurnstileModal() {
+            const modal = document.getElementById('turnstileModal');
+            modal.classList.add('open');
+
+            // Reset UI to initial state
+            document.getElementById('turnstileTitle').innerText = "Security Check";
+            document.getElementById('turnstileDesc').innerText = "Please complete the security verification to join the call.";
+            document.getElementById('turnstileWidget').classList.remove('hidden');
+            document.getElementById('btnCancelTurnstile').classList.remove('hidden');
+
+            function renderTurnstile() {
+                if (window.turnstile) {
+                    if (turnstileWidgetId !== null) {
+                        try {
+                            turnstile.remove(turnstileWidgetId);
+                        } catch(e){}
+                    }
+                    turnstileWidgetId = turnstile.render('#turnstileWidget', {
+                        sitekey: TURNSTILE_SITE_KEY,
+                        theme: 'dark',
+                        callback: function(token) {
+                            verifyTurnstileToken(token);
+                        },
+                        'error-callback': function() {
+                            handleTurnstileFailure("An error occurred during security verification.");
+                        },
+                        'expired-callback': function() {
+                            if (turnstileWidgetId !== null) {
+                                turnstile.reset(turnstileWidgetId);
+                            }
+                        }
+                    });
+                } else {
+                    handleTurnstileFailure("Cloudflare Turnstile failed to load. Please check your internet connection.");
+                }
+            }
+
+            if (!window.turnstile) {
+                document.getElementById('turnstileDesc').innerText = "Loading security check...";
+                let checkCount = 0;
+                const interval = setInterval(() => {
+                    checkCount++;
+                    if (window.turnstile) {
+                        clearInterval(interval);
+                        document.getElementById('turnstileDesc').innerText = "Please complete the security verification to join the call.";
+                        renderTurnstile();
+                    } else if (checkCount > 50) {
+                        clearInterval(interval);
+                        handleTurnstileFailure("Cloudflare Turnstile failed to load. Please check your internet connection.");
+                    }
+                }, 100);
+            } else {
+                renderTurnstile();
+            }
+        }
+
+        async function verifyTurnstileToken(token) {
+            try {
+                const response = await fetch('/verify-turnstile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        token: token,
+                        tabSessionId: sessionStorage.getItem('rustrooms_tab_session_id') || ''
+                    })
+                });
+
+                if (response.ok) {
+                    sessionStorage.setItem('rustrooms_turnstile_passed', 'true');
+                    closeTurnstileModal();
+                    proceedJoinRoom();
+                } else {
+                    const data = await response.json().catch(() => ({}));
+                    handleTurnstileFailure(data.error || "Verification failed on server.");
+                }
+            } catch (err) {
+                console.error("Turnstile verification error:", err);
+                handleTurnstileFailure("Network error during verification.");
+            }
+        }
+
+        function handleTurnstileFailure(msg) {
+            document.getElementById('turnstileDesc').innerText = msg;
+            
+            // Reset Turnstile widget to let them try again
+            if (window.turnstile && turnstileWidgetId !== null) {
+                try {
+                    turnstile.reset(turnstileWidgetId);
+                } catch(e) {}
+            }
+            
+            const btn = document.getElementById('btnCancelTurnstile');
+            btn.innerText = "Try Again";
+            btn.onclick = function() {
+                btn.innerText = "Cancel";
+                btn.onclick = cancelTurnstile;
+                showTurnstileModal();
+            };
+        }
+
+        function cancelTurnstile() {
+            closeTurnstileModal();
+        }
+
+        function closeTurnstileModal() {
+            const modal = document.getElementById('turnstileModal');
+            modal.classList.remove('open');
+            if (window.turnstile && turnstileWidgetId !== null) {
+                try {
+                    turnstile.remove(turnstileWidgetId);
+                } catch (e) {}
+                turnstileWidgetId = null;
+            }
+        }
+
         function proceedToSetup() {
             sessionStorage.setItem('rustrooms_welcomed', 'true');
             const inviteOverlay = document.getElementById('inviteWelcomeOverlay');
@@ -6657,7 +6804,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             peerScreenHasAudio = {};
             pendingCandidates = {};
 
-            ws = new WebSocket(wsUrl);
+            const currentTabSessionId = sessionStorage.getItem('rustrooms_tab_session_id') || '';
+            const wsUrlWithSession = wsUrl + (wsUrl.includes('?') ? '&' : '?') + 'tabSessionId=' + encodeURIComponent(currentTabSessionId);
+            ws = new WebSocket(wsUrlWithSession);
 
                         ws.onopen = () => {
                             if (wsConnectionId !== thisConnectionId) return; // stale connection
@@ -6872,6 +7021,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         hasLeftRoom = true;
                                         alert("You have been kicked from the room.");
                                         sessionStorage.removeItem('rustrooms_setup_done');
+                                        sessionStorage.removeItem('rustrooms_turnstile_passed');
                                         window.location.href = "/";
                                     } else {
                                         playNotificationSound('leave');
@@ -8367,6 +8517,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             sessionStorage.setItem('rustrooms_welcomed', 'false');
             sessionStorage.setItem('rustrooms_setup_done', 'false');
+            sessionStorage.removeItem('rustrooms_turnstile_passed');
 
             roomId = '';
             channelId = '';
@@ -8436,6 +8587,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (otgDot) otgDot.className = 'connection-dot';
 
             sessionStorage.removeItem('rustrooms_setup_done');
+            sessionStorage.removeItem('rustrooms_turnstile_passed');
             history.replaceState(null, '', '/');
         }
 
@@ -9831,6 +9983,13 @@ struct ClusterMessage {
     signal_msg: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+struct TurnstileRequest {
+    token: String,
+    #[serde(rename = "tabSessionId")]
+    tab_session_id: String,
+}
+
 #[derive(Clone)]
 struct AppState {
     rooms: RoomMap,
@@ -9845,6 +10004,9 @@ struct AppState {
     connected_peers: Arc<Mutex<HashSet<String>>>,
     pub recent_cluster_msg_ids: Arc<Mutex<HashSet<String>>>,
     pub cluster_msg_history: Arc<Mutex<VecDeque<String>>>,
+    turnstile_secret_key: Option<String>,
+    http_client: reqwest::Client,
+    verified_tab_sessions: Arc<Mutex<HashMap<String, std::time::Instant>>>,
 }
 
 #[tokio::main]
@@ -9884,6 +10046,13 @@ async fn main() {
         println!("URL RESTRICTION: Enabled - only allowing access from {}", url);
     }
 
+    let turnstile_secret_key = std::env::var("TURNSTILE_SECRET_KEY").ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+    if turnstile_secret_key.is_some() {
+        println!("TURNSTILE: Enabled (credentials found in environment variables)");
+    }
+    let http_client = reqwest::Client::new();
+    let verified_tab_sessions = Arc::new(Mutex::new(HashMap::new()));
+
     let state = AppState {
         rooms,
         room_cleanup_generations,
@@ -9897,12 +10066,16 @@ async fn main() {
         connected_peers: Arc::new(Mutex::new(HashSet::new())),
         recent_cluster_msg_ids: Arc::new(Mutex::new(HashSet::new())),
         cluster_msg_history: Arc::new(Mutex::new(VecDeque::new())),
+        turnstile_secret_key,
+        http_client,
+        verified_tab_sessions,
     };
 
     let app = Router::new()
         .route("/", get(index))
         .route("/new", get(new_room))
         .route("/new/", get(redirect_new_trailing_slash))
+        .route("/verify-turnstile", post(verify_turnstile))
         .route("/{room_id}", get(index))
         .route("/{room_id}/", get(redirect_room_trailing_slash))
         .route("/{room_id}/{channel_id}", get(index))
@@ -9949,6 +10122,84 @@ async fn main() {
     }
 
     axum::serve(listener, app).await.unwrap();
+}
+
+async fn verify_turnstile(
+    State(state): State<AppState>,
+    axum::Json(payload): axum::Json<TurnstileRequest>,
+) -> impl IntoResponse {
+    let secret_key = match &state.turnstile_secret_key {
+        Some(key) => key,
+        None => {
+            return (
+                axum::http::StatusCode::OK,
+                axum::Json(serde_json::json!({ "success": true })),
+            );
+        }
+    };
+
+    let params = [
+        ("secret", secret_key.as_str()),
+        ("response", payload.token.as_str()),
+    ];
+
+    let res = match state.http_client
+        .post("https://challenges.cloudflare.com/turnstile/v0/siteverify")
+        .form(&params)
+        .send()
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error sending request to Cloudflare: {:?}", e);
+            return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                axum::Json(serde_json::json!({ "success": false, "error": "Failed to connect to verification server" })),
+            );
+        }
+    };
+
+    #[derive(Deserialize)]
+    struct CfResponse {
+        success: bool,
+        #[serde(rename = "error-codes")]
+        error_codes: Option<Vec<String>>,
+    }
+
+    let cf_res: CfResponse = match res.json().await {
+        Ok(val) => val,
+        Err(e) => {
+            eprintln!("Error decoding Cloudflare response: {:?}", e);
+            return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                axum::Json(serde_json::json!({ "success": false, "error": "Invalid response from verification server" })),
+            );
+        }
+    };
+
+    if cf_res.success {
+        {
+            let mut sessions = state.verified_tab_sessions.lock().await;
+            let now = std::time::Instant::now();
+            sessions.retain(|_, time| now.duration_since(*time).as_secs() < 43200);
+            sessions.insert(payload.tab_session_id.clone(), now);
+        }
+        (
+            axum::http::StatusCode::OK,
+            axum::Json(serde_json::json!({ "success": true })),
+        )
+    } else {
+        let errors = cf_res.error_codes.unwrap_or_default().join(", ");
+        let error_msg = if errors.is_empty() {
+            "Verification failed".to_string()
+        } else {
+            format!("Verification failed: {}", errors)
+        };
+        (
+            axum::http::StatusCode::BAD_REQUEST,
+            axum::Json(serde_json::json!({ "success": false, "error": error_msg })),
+        )
+    }
 }
 
 async fn new_room(
@@ -10021,11 +10272,22 @@ async fn index(State(state): State<AppState>, headers: axum::http::HeaderMap) ->
     let turn_username = std::env::var("TURN_USERNAME").unwrap_or_default();
     let turn_credential = std::env::var("TURN_CREDENTIAL").unwrap_or_default();
 
-    let html = get_html_page(&turn_url, &turn_username, &turn_credential);
+    let turnstile_site_key = std::env::var("TURNSTILE_SITE_KEY").unwrap_or_default();
+    let turnstile_enabled = !turnstile_site_key.trim().is_empty() && state.turnstile_secret_key.is_some();
+
+    let mut html = get_html_page(&turn_url, &turn_username, &turn_credential);
+    html = html.replace("{{TURNSTILE_SITE_KEY}}", &turnstile_site_key);
+
+    let csp = if turnstile_enabled {
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com; script-src-elem 'self' 'unsafe-inline' https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws: https://challenges.cloudflare.com; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
+    } else {
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; script-src-elem 'self' 'unsafe-inline'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
+    };
+
     (
         [(
             header::CONTENT_SECURITY_POLICY,
-            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; script-src-elem 'self' 'unsafe-inline'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
+            csp
         )],
         Html(html)
     ).into_response()
@@ -10038,6 +10300,14 @@ async fn ws_handler(
     headers: axum::http::HeaderMap,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    if state.turnstile_secret_key.is_some() {
+        let tab_session_id = _params.get("tabSessionId").map(|s| s.as_str()).unwrap_or("");
+        let sessions = state.verified_tab_sessions.lock().await;
+        if !sessions.contains_key(tab_session_id) {
+            return (axum::http::StatusCode::FORBIDDEN, "Forbidden: Security verification required").into_response();
+        }
+    }
+
     let mut channel_id = channel_id.chars().take(MAX_CHANNEL_ID_LEN).collect::<String>();
     if channel_id.eq_ignore_ascii_case("general") {
         channel_id = "General".to_string();
