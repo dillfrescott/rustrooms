@@ -2395,36 +2395,35 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 animationId = requestAnimationFrame(animate);
             }
 
-            if (overlay) {
-                const observer = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        const isVisible = entry.isIntersecting && !document.hidden;
-                        if (isVisible) {
-                            if (!animationId) {
-                                animate();
-                            }
-                        } else {
-                            if (animationId) {
-                                cancelAnimationFrame(animationId);
-                                animationId = null;
-                            }
-                            particles = [];
-                            ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        }
-                    });
-                }, { threshold: 0 });
-                observer.observe(overlay);
-
-                document.addEventListener('visibilitychange', () => {
-                    if (document.hidden) {
-                        if (animationId) {
-                            cancelAnimationFrame(animationId);
-                            animationId = null;
-                        }
-                        particles = [];
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+            function checkVisibility() {
+                const style = window.getComputedStyle(overlay);
+                const isVisible = style.display !== 'none' && 
+                                  style.visibility !== 'hidden' && 
+                                  style.opacity !== '0' && 
+                                  !document.hidden;
+                if (isVisible) {
+                    if (!animationId) {
+                        animate();
                     }
+                } else {
+                    if (animationId) {
+                        cancelAnimationFrame(animationId);
+                        animationId = null;
+                    }
+                    particles = [];
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+
+            if (overlay) {
+                checkVisibility();
+
+                const observer = new MutationObserver(() => {
+                    checkVisibility();
                 });
+                observer.observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });
+
+                document.addEventListener('visibilitychange', checkVisibility);
             }
         })();
 
@@ -2486,36 +2485,35 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 animationId = requestAnimationFrame(animate);
             }
 
-            if (overlay) {
-                const observer = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        const isVisible = entry.isIntersecting && !document.hidden;
-                        if (isVisible) {
-                            if (!animationId) {
-                                animate();
-                            }
-                        } else {
-                            if (animationId) {
-                                cancelAnimationFrame(animationId);
-                                animationId = null;
-                            }
-                            particles = [];
-                            ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        }
-                    });
-                }, { threshold: 0 });
-                observer.observe(overlay);
-
-                document.addEventListener('visibilitychange', () => {
-                    if (document.hidden) {
-                        if (animationId) {
-                            cancelAnimationFrame(animationId);
-                            animationId = null;
-                        }
-                        particles = [];
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+            function checkVisibility() {
+                const style = window.getComputedStyle(overlay);
+                const isVisible = style.display !== 'none' && 
+                                  style.visibility !== 'hidden' && 
+                                  style.opacity !== '0' && 
+                                  !document.hidden;
+                if (isVisible) {
+                    if (!animationId) {
+                        animate();
                     }
+                } else {
+                    if (animationId) {
+                        cancelAnimationFrame(animationId);
+                        animationId = null;
+                    }
+                    particles = [];
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+
+            if (overlay) {
+                checkVisibility();
+
+                const observer = new MutationObserver(() => {
+                    checkVisibility();
                 });
+                observer.observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });
+
+                document.addEventListener('visibilitychange', checkVisibility);
             }
         })();
 
@@ -2579,36 +2577,35 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 animationId = requestAnimationFrame(animate);
             }
 
-            if (overlay) {
-                const observer = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        const isVisible = entry.isIntersecting && !document.hidden;
-                        if (isVisible) {
-                            if (!animationId) {
-                                animate();
-                            }
-                        } else {
-                            if (animationId) {
-                                cancelAnimationFrame(animationId);
-                                animationId = null;
-                            }
-                            particles = [];
-                            ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        }
-                    });
-                }, { threshold: 0 });
-                observer.observe(overlay);
-
-                document.addEventListener('visibilitychange', () => {
-                    if (document.hidden) {
-                        if (animationId) {
-                            cancelAnimationFrame(animationId);
-                            animationId = null;
-                        }
-                        particles = [];
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+            function checkVisibility() {
+                const style = window.getComputedStyle(overlay);
+                const isVisible = style.display !== 'none' && 
+                                  style.visibility !== 'hidden' && 
+                                  style.opacity !== '0' && 
+                                  !document.hidden;
+                if (isVisible) {
+                    if (!animationId) {
+                        animate();
                     }
+                } else {
+                    if (animationId) {
+                        cancelAnimationFrame(animationId);
+                        animationId = null;
+                    }
+                    particles = [];
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+
+            if (overlay) {
+                checkVisibility();
+
+                const observer = new MutationObserver(() => {
+                    checkVisibility();
                 });
+                observer.observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });
+
+                document.addEventListener('visibilitychange', checkVisibility);
             }
         })();
     </script>
