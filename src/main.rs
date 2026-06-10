@@ -3693,7 +3693,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         async function initAudioWorklet() {
-            if (isIOS) return false;
             if (workletLoadingPromise) return workletLoadingPromise;
 
             if (!audioContext) {
@@ -3995,7 +3994,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         audio: {
                             deviceId: { exact: audioId },
                             echoCancellation: true,
-                            noiseSuppression: isIOS,
+                            noiseSuppression: false,
                             autoGainControl: true,                            sampleRate: 48000
                         }
                     };
@@ -4752,7 +4751,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     audio: {
                         deviceId: audioSource ? { exact: audioSource } : undefined,
                         echoCancellation: true,
-                        noiseSuppression: isIOS,
+                        noiseSuppression: false,
                         autoGainControl: true,                        sampleRate: 48000
                     },
                     video: videoConstraints
@@ -4889,7 +4888,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     let rawStream = await navigator.mediaDevices.getUserMedia({ 
                         audio: {
                             echoCancellation: true,
-                            noiseSuppression: isIOS,
+                            noiseSuppression: false,
                             autoGainControl: true,                        }, 
                         video: false
                     });
