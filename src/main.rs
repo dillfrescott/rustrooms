@@ -2340,6 +2340,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         (function() {
             const canvas = document.getElementById('particleCanvas');
             const ctx = canvas.getContext('2d');
+            const overlay = document.getElementById('welcomeOverlay');
             let particles = [];
             let animationId = null;
 
@@ -2384,18 +2385,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             function animate() {
-                animationId = requestAnimationFrame(animate);
-                const overlay = document.getElementById('welcomeOverlay');
-                const isVisible = overlay && !overlay.classList.contains('hidden') && overlay.style.display !== 'none' && !document.hidden;
-
-                if (!isVisible) {
-                    if (particles.length > 0) {
-                        particles = [];
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    }
-                    return;
-                }
-
                 if (particles.length === 0) init();
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2403,15 +2392,46 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     p.update();
                     p.draw();
                 });
+                animationId = requestAnimationFrame(animate);
             }
 
-            init();
-            animate();
+            if (overlay) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        const isVisible = entry.isIntersecting && !document.hidden;
+                        if (isVisible) {
+                            if (!animationId) {
+                                animate();
+                            }
+                        } else {
+                            if (animationId) {
+                                cancelAnimationFrame(animationId);
+                                animationId = null;
+                            }
+                            particles = [];
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        }
+                    });
+                }, { threshold: 0 });
+                observer.observe(overlay);
+
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        if (animationId) {
+                            cancelAnimationFrame(animationId);
+                            animationId = null;
+                        }
+                        particles = [];
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
+                });
+            }
         })();
 
         (function() {
             const canvas = document.getElementById('particleCanvasConfig');
             const ctx = canvas.getContext('2d');
+            const overlay = document.getElementById('configOverlay');
             let particles = [];
             let animationId = null;
 
@@ -2456,18 +2476,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             function animate() {
-                animationId = requestAnimationFrame(animate);
-                const overlay = document.getElementById('configOverlay');
-                const isVisible = overlay && !overlay.classList.contains('hidden') && overlay.style.display !== 'none' && !document.hidden;
-
-                if (!isVisible) {
-                    if (particles.length > 0) {
-                        particles = [];
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    }
-                    return;
-                }
-
                 if (particles.length === 0) init();
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2475,10 +2483,40 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     p.update();
                     p.draw();
                 });
+                animationId = requestAnimationFrame(animate);
             }
 
-            init();
-            animate();
+            if (overlay) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        const isVisible = entry.isIntersecting && !document.hidden;
+                        if (isVisible) {
+                            if (!animationId) {
+                                animate();
+                            }
+                        } else {
+                            if (animationId) {
+                                cancelAnimationFrame(animationId);
+                                animationId = null;
+                            }
+                            particles = [];
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        }
+                    });
+                }, { threshold: 0 });
+                observer.observe(overlay);
+
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        if (animationId) {
+                            cancelAnimationFrame(animationId);
+                            animationId = null;
+                        }
+                        particles = [];
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
+                });
+            }
         })();
 
         // Particle background for invite welcome overlay
@@ -2486,6 +2524,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const canvas = document.getElementById('particleCanvasInvite');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
+            const overlay = document.getElementById('inviteWelcomeOverlay');
             let particles = [];
             let animationId = null;
 
@@ -2530,18 +2569,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
 
             function animate() {
-                animationId = requestAnimationFrame(animate);
-                const overlay = document.getElementById('inviteWelcomeOverlay');
-                const isVisible = overlay && !overlay.classList.contains('hidden') && overlay.style.display !== 'none' && !document.hidden;
-
-                if (!isVisible) {
-                    if (particles.length > 0) {
-                        particles = [];
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    }
-                    return;
-                }
-
                 if (particles.length === 0) init();
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2549,10 +2576,40 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     p.update();
                     p.draw();
                 });
+                animationId = requestAnimationFrame(animate);
             }
 
-            init();
-            animate();
+            if (overlay) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        const isVisible = entry.isIntersecting && !document.hidden;
+                        if (isVisible) {
+                            if (!animationId) {
+                                animate();
+                            }
+                        } else {
+                            if (animationId) {
+                                cancelAnimationFrame(animationId);
+                                animationId = null;
+                            }
+                            particles = [];
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        }
+                    });
+                }, { threshold: 0 });
+                observer.observe(overlay);
+
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        if (animationId) {
+                            cancelAnimationFrame(animationId);
+                            animationId = null;
+                        }
+                        particles = [];
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
+                });
+            }
         })();
     </script>
     <script>
@@ -4078,6 +4135,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         async function setupAudioMonitor(stream, targetId) {
+            if (isIOS) return;
             if (!audioContext) return;
             if (!stream.getAudioTracks().length) return;
 
@@ -4572,6 +4630,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         function restartGif(url) {
+            if (isIOS) return url;
             return url.split('#')[0] + '#' + Date.now();
         }
 
@@ -8021,6 +8080,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             cleanupAudioMonitor(`wrapper-${userId}`);
 
             if (peers[userId]) {
+                try {
+                    peers[userId].getReceivers().forEach(receiver => {
+                        if (receiver.track) {
+                            receiver.track.onmute = null;
+                            receiver.track.onunmute = null;
+                            receiver.track.onended = null;
+                        }
+                    });
+                } catch(e) {}
 
                 if (peers[userId]._disconnectTimeout) {
                     clearTimeout(peers[userId]._disconnectTimeout);
@@ -8033,7 +8101,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const vid = document.getElementById(`vid-${userId}`);
             if (vid) {
                 vid.pause();
-                vid.srcObject = null;
+                if (vid.srcObject) {
+                    try {
+                        vid.srcObject.getTracks().forEach(track => track.stop());
+                    } catch(e) {}
+                    vid.srcObject = null;
+                }
             }
 
             const el = document.getElementById(`wrapper-${userId}`);
