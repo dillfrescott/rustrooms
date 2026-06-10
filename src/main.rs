@@ -164,7 +164,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Rust Rooms</title>
+    <title>RustRooms</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
     <meta name="theme-color" content="#000000">
@@ -3701,7 +3701,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             workletLoadingPromise = (async () => {
                 try {
-                    await audioContext.audioWorklet.addModule('/rnnoise_processor.js');
+                    await audioContext.audioWorklet.addModule('/rnnoise_processor.js', { type: 'module' });
                     console.log("AudioWorklet loaded");
                     return true;
                 } catch (err) {
