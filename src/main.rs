@@ -5148,6 +5148,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
                  videoTrack.stop();
                  localStream.removeTrack(videoTrack);
+
+                 if (previewVideo) {
+                     previewVideo.srcObject = null;
+                 }
+                 const localVideoEl = document.getElementById('localVideo');
+                 if (localVideoEl) {
+                     localVideoEl.srcObject = null;
+                 }
+
                  pendingCamToggle = true;
 
                  btnCam.disabled = false;
@@ -8764,6 +8773,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     const localVideo = document.getElementById('localVideo');
                     if (localVideo) {
                         localVideo.srcObject = null;
+                    }
+                    if (previewVideo) {
+                        previewVideo.srcObject = null;
                     }
 
                     btn.classList.add('active-red');
