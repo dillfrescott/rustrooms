@@ -113,9 +113,9 @@ self.addEventListener('fetch', (event) => {
 async fn icon_svg() -> impl IntoResponse {
     let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
     <rect width="512" height="512" rx="128" ry="128" fill="#000000"/>
-    <circle cx="256" cy="256" r="180" fill="#4f70f4" fill-opacity="0.15"/>
-    <circle cx="256" cy="256" r="140" fill="#4f70f4" fill-opacity="0.3"/>
-    <circle cx="256" cy="256" r="100" fill="#4f70f4"/>
+    <circle cx="256" cy="256" r="180" fill="#6366f1" fill-opacity="0.15"/>
+    <circle cx="256" cy="256" r="140" fill="#6366f1" fill-opacity="0.3"/>
+    <circle cx="256" cy="256" r="100" fill="#6366f1"/>
     <path d="M256 196a60 60 0 1 0 0 120 60 60 0 0 0 0-120z" fill="#ffffff"/>
     <path d="M196 256a60 60 0 0 1 120 0" stroke="#ffffff" stroke-width="20" stroke-linecap="round"/>
 </svg>"##;
@@ -181,24 +181,24 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         :root {
             --bg-primary: #000000;
             --bg-secondary: #000000;
-            --bg-tertiary: #0a0a0a;
-            --bg-elevated: #0f0f0f;
-            --bg-elevated-strong: #141414;
+            --bg-tertiary: #08080a;
+            --bg-elevated: #0a0a0e;
+            --bg-elevated-strong: #111116;
 
-            --border-subtle: rgba(255, 255, 255, 0.1);
-            --border-medium: rgba(255, 255, 255, 0.16);
-            --border-strong: rgba(255, 255, 255, 0.22);
-            --border-accent: rgba(79, 112, 244, 0.25);
+            --border-subtle: rgba(255, 255, 255, 0.055);
+            --border-medium: rgba(255, 255, 255, 0.09);
+            --border-strong: rgba(255, 255, 255, 0.14);
+            --border-accent: rgba(99, 102, 241, 0.3);
 
-            --text-primary: #f0f0f2;
-            --text-secondary: #8b8b94;
-            --text-muted: #52525b;
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888a0;
+            --text-muted: #4a4a5e;
 
-            --accent: #4f70f4;
-            --accent-hover: #6e8af6;
-            --accent-glow: rgba(79, 112, 244, 0.2);
-            --accent-blue: #4f70f4;
-            --accent-dark-blue: #3b59f1;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.18);
+            --accent-blue: #6366f1;
+            --accent-dark-blue: #4f46e5;
 
             --accent-green: #22c55e;
             --accent-green-hover: #4ade80;
@@ -208,16 +208,25 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             --accent-yellow: #eab308;
 
             --success: #22c55e;
-            --success-glow: rgba(34, 197, 94, 0.2);
+            --success-glow: rgba(34, 197, 94, 0.18);
             --danger: #ef4444;
-            --danger-glow: rgba(239, 68, 68, 0.2);
+            --danger-glow: rgba(239, 68, 68, 0.18);
             --warning: #eab308;
-            --warning-glow: rgba(234, 179, 8, 0.2);
+            --warning-glow: rgba(234, 179, 8, 0.18);
 
             --shadow-sm: 0 0 0 rgba(0, 0, 0, 0);
-            --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.12);
-            --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.15);
-            --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
+            --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.25);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
+            --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --radius-pill: 999px;
+
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         html {
@@ -251,34 +260,35 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         ::selection {
             background: var(--accent);
-            color: var(--text-primary);
+            color: #ffffff;
         }
 
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb {
-            background: var(--border-strong);
-            border-radius: 4px;
-            transition: background 0.2s ease;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-pill);
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: var(--border-accent);
+            background: rgba(255, 255, 255, 0.14);
         }
 
         .glass-panel {
-            background: var(--bg-elevated);
+            background: rgba(10, 10, 14, 0.85);
             border: 1px solid var(--border-subtle);
             box-shadow: var(--shadow-lg);
-            border-radius: 16px;
+            border-radius: var(--radius-xl);
+            backdrop-filter: blur(40px) saturate(1.2);
+            -webkit-backdrop-filter: blur(40px) saturate(1.2);
         }
 
         .video-container {
             position: relative;
             background: var(--bg-secondary);
-            border-radius: 12px;
+            border-radius: var(--radius-lg);
             overflow: hidden;
             border: 1px solid var(--border-subtle);
-            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: border-color 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out);
             display: flex;
             flex-direction: column;
             width: 100%;
@@ -324,8 +334,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             width: 100%;
             height: 100%;
             object-fit: cover;
-            filter: blur(40px) saturate(1.5);
-            opacity: 0.2;
+            filter: blur(48px) saturate(1.4);
+            opacity: 0.18;
             pointer-events: none;
             -webkit-user-drag: none;
             user-drag: none;
@@ -335,16 +345,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             position: relative;
             width: 120px;
             height: 120px;
-            border-radius: 12px;
+            border-radius: var(--radius-lg);
             overflow: hidden;
-            border: 2px solid var(--border-subtle);
+            border: 1.5px solid var(--border-medium);
             background: var(--bg-tertiary);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s var(--ease-out);
         }
 
         .avatar-center:hover {
-            border-color: var(--border-medium);
-            box-shadow: none;
+            border-color: var(--border-strong);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08);
         }
 
         .avatar-center img {
@@ -369,7 +379,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             .avatar-center {
                 width: 144px;
                 height: 144px;
-                border-width: 2px;
+                border-width: 1.5px;
             }
         }
 
@@ -385,13 +395,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .control-btn {
             padding: 0;
-            border-radius: 14px;
+            border-radius: var(--radius-md);
             border: 1px solid var(--border-subtle);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.25s var(--ease-out);
             background: var(--bg-elevated);
             color: var(--text-primary);
             width: 52px;
@@ -405,20 +415,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             .control-btn:hover {
                 background: var(--bg-elevated-strong);
                 border-color: var(--border-medium);
-                transform: translateY(-1px);
-                box-shadow: var(--shadow-md);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             }
             .control-btn.active-red:hover {
                 background: var(--accent-red-hover);
-                border-color: rgba(248, 113, 113, 0.3);
-                box-shadow: 0 0 16px rgba(239, 68, 68, 0.2);
-                transform: translateY(-1px);
+                border-color: rgba(248, 113, 113, 0.25);
+                box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
+                transform: translateY(-2px);
             }
             .control-btn.active-green:hover {
                 background: var(--accent-green-hover);
-                border-color: rgba(74, 222, 128, 0.3);
-                box-shadow: 0 0 16px rgba(34, 197, 94, 0.2);
-                transform: translateY(-1px);
+                border-color: rgba(74, 222, 128, 0.25);
+                box-shadow: 0 4px 20px rgba(34, 197, 94, 0.25);
+                transform: translateY(-2px);
             }
             .control-btn:disabled:hover {
                 background: var(--bg-elevated);
@@ -432,7 +442,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .control-btn:active {
-            transform: scale(0.96) translateY(0);
+            transform: scale(0.94) translateY(0);
             transition: transform 0.1s ease;
         }
 
@@ -442,14 +452,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .control-btn.active-red {
             background: var(--danger);
-            border-color: rgba(239, 68, 68, 0.3);
-            box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.2);
+            box-shadow: 0 0 16px rgba(239, 68, 68, 0.12);
         }
 
         .control-btn.active-green {
             background: var(--success);
-            border-color: rgba(34, 197, 94, 0.3);
-            box-shadow: 0 0 12px rgba(34, 197, 94, 0.15);
+            border-color: rgba(34, 197, 94, 0.2);
+            box-shadow: 0 0 16px rgba(34, 197, 94, 0.12);
         }
 
         .control-btn.active-green:active {
@@ -457,7 +467,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .control-btn:disabled {
-            opacity: 0.35;
+            opacity: 0.3;
             cursor: not-allowed;
             pointer-events: none;
             -webkit-pointer-events: none;
@@ -484,11 +494,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             touch-action: none;
             width: 160px;
             aspect-ratio: 16/9;
-            border-radius: 12px;
+            border-radius: var(--radius-md);
             border: 1px solid var(--border-subtle);
             overflow: hidden;
             z-index: 75;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.35s var(--ease-out);
             background: var(--bg-elevated);
             box-shadow: var(--shadow-lg);
         }
@@ -517,21 +527,21 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .connection-dot {
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             background-color: var(--danger);
             border-radius: 50%;
             display: inline-block;
-            transition: background-color 0.3s, box-shadow 0.3s;
-            box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+            transition: background-color 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out);
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
         }
         .connection-dot.connected {
             background-color: var(--success);
-            box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
+            box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
         }
         .connection-dot.connecting {
             background-color: var(--warning);
-            box-shadow: 0 0 8px rgba(234, 179, 8, 0.3);
+            box-shadow: 0 0 6px rgba(234, 179, 8, 0.4);
             animation: pulse 2s infinite;
         }
 
@@ -586,17 +596,19 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             width: 320px;
             max-width: calc(100vw - 32px);
             max-height: calc(100vh - 32px);
-            background: var(--bg-elevated-strong);
+            background: rgba(10, 10, 14, 0.92);
             border: 1px solid var(--border-medium);
-            border-radius: 14px;
+            border-radius: var(--radius-lg);
             box-shadow: var(--shadow-xl);
             z-index: 9999;
             opacity: 0;
             visibility: hidden;
             transform: translateY(-8px) scale(0.98);
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s var(--ease-out);
             overflow: hidden;
             overflow-y: auto;
+            backdrop-filter: blur(40px) saturate(1.2);
+            -webkit-backdrop-filter: blur(40px) saturate(1.2);
         }
 
         .stats-window.visible {
@@ -611,7 +623,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             justify-content: space-between;
             padding: 14px 18px;
             border-bottom: 1px solid var(--border-subtle);
-            background: var(--bg-elevated);
+            background: rgba(10, 10, 14, 0.5);
         }
 
         .stats-title {
@@ -735,40 +747,43 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             height: 14px;
             width: 14px;
             border-radius: 50%;
-            background: var(--text-primary);
+            background: var(--accent);
             cursor: pointer;
             margin-top: -5px;
-            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s var(--ease-spring), box-shadow 0.2s var(--ease-out);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
         }
         @media (hover: hover) {
             input[type=range]::-webkit-slider-thumb:hover {
-                transform: scale(1.15);
+                transform: scale(1.2);
+                box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.12);
             }
         }
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
-            height: 4px;
+            height: 3px;
             cursor: pointer;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: var(--radius-pill);
         }
 
         .volume-controls {
             position: absolute;
             bottom: 12px;
             right: 12px;
-            background: #0a0a0a;
+            background: rgba(8, 8, 10, 0.9);
             padding: 10px 14px;
-            border-radius: 12px;
+            border-radius: var(--radius-md);
             display: flex;
             flex-direction: column;
             gap: 10px;
             opacity: 0;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.35s var(--ease-out);
             align-items: flex-end;
             border: 1px solid var(--border-subtle);
             box-shadow: var(--shadow-xl);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
         }
         .video-container:hover .volume-controls {
             opacity: 1;
@@ -794,15 +809,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .speaking-glow {
-            border: 3px solid var(--accent) !important;
-            box-shadow: 0 0 24px rgba(79, 112, 244, 0.45), inset 0 0 24px rgba(79, 112, 244, 0.1) !important;
-            transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            border: 2px solid var(--accent) !important;
+            box-shadow: 0 0 28px rgba(99, 102, 241, 0.35), inset 0 0 20px rgba(99, 102, 241, 0.06) !important;
+            transition: border 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
             z-index: 50;
         }
 
         #localPipWrapper.speaking-glow {
-            border: 3px solid var(--accent) !important;
-            box-shadow: 0 0 16px rgba(79, 112, 244, 0.45) !important;
+            border: 2px solid var(--accent) !important;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.35) !important;
             z-index: 75;
         }
 
@@ -960,9 +975,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .mic-meter {
             width: 100%;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.06);
-            border-radius: 2px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: var(--radius-pill);
             overflow: hidden;
             margin-top: 10px;
         }
@@ -970,15 +985,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             height: 100%;
             width: 0%;
             background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
-            border-radius: 2px;
+            border-radius: var(--radius-pill);
             transition: width 0.04s linear;
         }
 
         .taskbar {
-            background: #000000;
+            background: rgba(0, 0, 0, 0.85);
             border-top: 1px solid var(--border-subtle);
             padding-bottom: env(safe-area-inset-bottom);
             box-shadow: none;
+            backdrop-filter: blur(32px) saturate(1.2);
+            -webkit-backdrop-filter: blur(32px) saturate(1.2);
         }
 
         @media (min-width: 768px) {
@@ -1010,8 +1027,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             background: var(--bg-tertiary);
             border: 1px solid var(--border-subtle);
             color: var(--text-primary);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 10px;
+            transition: all 0.25s var(--ease-out);
+            border-radius: var(--radius-md);
             box-shadow: none;
         }
 
@@ -1037,15 +1054,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .btn-primary {
             background: var(--accent);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 10px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            transition: all 0.25s var(--ease-out);
+            border-radius: var(--radius-md);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
         }
         @media (hover: hover) {
             .btn-primary:hover {
                 background: var(--accent-hover);
                 transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(79, 112, 244, 0.25);
+                box-shadow: 0 6px 20px rgba(99, 102, 241, 0.25);
             }
         }
 
@@ -1057,8 +1074,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .btn-secondary {
             background: var(--bg-elevated);
             border: 1px solid var(--border-subtle);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 10px;
+            transition: all 0.25s var(--ease-out);
+            border-radius: var(--radius-md);
             box-shadow: none;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
@@ -1117,16 +1134,18 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .status-pill {
-            background: var(--bg-elevated);
+            background: rgba(10, 10, 14, 0.7);
             border: 1px solid var(--border-subtle);
-            border-radius: 999px !important;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: var(--radius-pill) !important;
+            transition: all 0.25s var(--ease-out);
             box-shadow: none;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
         }
 
         @media (hover: hover) {
             .status-pill:hover {
-                background: var(--bg-elevated-strong);
+                background: rgba(17, 17, 22, 0.85);
                 border-color: var(--border-medium);
                 box-shadow: none;
             }
@@ -1146,7 +1165,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .fadeIn {
-            animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: fadeIn 0.5s var(--ease-out);
         }
 
         @keyframes fadeOut {
@@ -1155,7 +1174,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         @keyframes fadeIn {
-            0% { opacity: 0; transform: translateY(12px); }
+            0% { opacity: 0; transform: translateY(16px); }
             100% { opacity: 1; transform: translateY(0); }
         }
 
@@ -1176,7 +1195,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             bottom: 0;
             width: 340px;
             z-index: 100;
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.45s var(--ease-out);
             background: var(--bg-secondary);
             border-right: 1px solid var(--border-subtle);
             display: flex;
@@ -1274,10 +1293,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .room-item {
             background: var(--bg-tertiary);
             border: 1px solid var(--border-subtle);
-            border-radius: 12px;
+            border-radius: var(--radius-md);
             padding: 14px;
             margin-bottom: 8px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.25s var(--ease-out);
             cursor: pointer;
             box-shadow: none;
         }
@@ -1293,7 +1312,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .room-item.active {
             border-color: var(--accent);
-            background: rgba(79, 112, 244, 0.06);
+            background: rgba(99, 102, 241, 0.05);
             box-shadow: 0 0 0 1px var(--border-accent);
         }
 
@@ -1326,20 +1345,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .mini-avatar {
             width: 26px;
             height: 26px;
-            border-radius: 8px;
+            border-radius: var(--radius-sm);
             background: var(--bg-primary);
             border: 1px solid var(--border-subtle);
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
+            transition: all 0.25s var(--ease-out);
         }
 
         @media (hover: hover) {
             .mini-avatar:hover {
                 border-color: var(--border-medium);
-                transform: scale(1.05);
+                transform: scale(1.08);
             }
         }
 
@@ -1356,27 +1375,27 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .mini-avatar.speaking-glow {
-            border: 3px solid var(--accent) !important;
-            box-shadow: 0 0 10px rgba(79, 112, 244, 0.5) !important;
-            transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            border: 2px solid var(--accent) !important;
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.45) !important;
+            transition: border 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
         }
 
         .sidebar-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
             z-index: 90;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.35s ease;
+            transition: opacity 0.4s var(--ease-out);
             will-change: opacity;
         }
 
         .sidebar-overlay.open {
             opacity: 1;
             pointer-events: auto;
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             will-change: auto;
         }
 
@@ -1389,16 +1408,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             z-index: 300;
             display: flex;
             align-items: center;
             justify-content: center;
             opacity: 0;
             pointer-events: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.35s var(--ease-out);
         }
 
         .modal-overlay.open {
@@ -1407,15 +1426,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .modal-content {
-            background: var(--bg-elevated);
+            background: rgba(10, 10, 14, 0.92);
             border: 1px solid var(--border-medium);
-            border-radius: 16px;
+            border-radius: var(--radius-xl);
             width: 90%;
             max-width: 420px;
             padding: 36px 28px;
             transform: scale(0.95) translateY(12px);
-            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.4s var(--ease-out);
             box-shadow: var(--shadow-xl);
+            backdrop-filter: blur(40px) saturate(1.2);
+            -webkit-backdrop-filter: blur(40px) saturate(1.2);
         }
 
         .modal-overlay.open .modal-content {
@@ -1460,7 +1481,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .status-icon.active {
-            color: #ef4444;
+            color: var(--danger);
             opacity: 1;
         }
 
@@ -1469,15 +1490,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             z-index: 200;
             min-width: 220px;
             max-width: 260px;
-            background: var(--bg-elevated-strong);
+            background: rgba(10, 10, 14, 0.92);
             border: 1px solid var(--border-medium);
-            border-radius: 14px;
+            border-radius: var(--radius-lg);
             padding: 14px 16px;
             box-shadow: var(--shadow-xl);
             opacity: 0;
             transform: scale(0.95) translateY(-4px);
             pointer-events: none;
-            transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: opacity 0.25s var(--ease-out), transform 0.25s var(--ease-out);
+            backdrop-filter: blur(40px) saturate(1.2);
+            -webkit-backdrop-filter: blur(40px) saturate(1.2);
         }
 
         .user-volume-menu.open {
@@ -1610,20 +1633,20 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         @keyframes otg-pulse {
             0% {
                 transform: scale(1.02);
-                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+                box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5);
             }
             70% {
                 transform: scale(1.08);
-                box-shadow: 0 0 0 15px rgba(59, 130, 246, 0);
+                box-shadow: 0 0 0 15px rgba(99, 102, 241, 0);
             }
             100% {
                 transform: scale(1.02);
-                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+                box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
             }
         }
         .otg-speaking-pulse {
             animation: otg-pulse 1.8s infinite cubic-bezier(0.4, 0, 0.6, 1);
-            border-color: #3b82f6 !important;
+            border-color: #6366f1 !important;
         }
 
         @keyframes otgRotateDevice {
@@ -1876,8 +1899,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         <canvas id="particleCanvas"></canvas>
         <div class="text-center space-y-8 max-w-md w-full relative z-10">
             <div class="space-y-4" id="welcomeTitleContainer">
-                <h1 class="text-5xl md:text-7xl font-bold tracking-tight" style="color: #ffffff; font-weight: 800; letter-spacing: -0.04em;">Rust Rooms</h1>
-                <p style="color: var(--text-secondary);" class="text-base md:text-lg font-normal opacity-70">Simple, secure, and fast video conferencing.</p>
+                <h1 class="text-5xl md:text-7xl font-bold tracking-tight" style="color: #ffffff; font-weight: 800; letter-spacing: -0.05em; background: linear-gradient(135deg, #ffffff 0%, #c7c7d4 50%, #ffffff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Rust Rooms</h1>
+                <p style="color: var(--text-secondary);" class="text-base md:text-lg font-normal opacity-60">Simple, secure, and fast video conferencing.</p>
             </div>
 
             <div id="startActionContainer" class="relative min-h-[72px] flex justify-center items-center">
@@ -1899,10 +1922,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         <canvas id="particleCanvasInvite"></canvas>
         <div class="glass-panel p-8 md:p-12 rounded-3xl max-w-lg w-full relative z-10 text-center space-y-8 overflow-hidden">
             <div class="space-y-3">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-2">
                     <span class="relative flex h-2 w-2">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
                     </span>
                     Live Call
                 </div>
@@ -1918,7 +1941,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             </div>
 
             <div class="pt-4">
-                <button onclick="proceedToSetup()" class="btn-primary w-full py-4 text-white rounded-2xl font-bold text-lg transition-all shadow-lg hover:shadow-blue-500/20 group">
+                <button onclick="proceedToSetup()" class="btn-primary w-full py-4 text-white rounded-2xl font-bold text-lg transition-all shadow-lg hover:shadow-indigo-500/20 group">
                     Join Conversation
                     <svg class="inline-block ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                 </button>
@@ -2015,7 +2038,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="setupLowBandwidth" onchange="handleLowBandwidthChange(this.checked)" class="sr-only peer">
-                                <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
                             </label>
                         </div>
                         <div id="setupOnTheGoRow" class="hidden flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
@@ -2025,7 +2048,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="setupOnTheGo" onchange="handleOnTheGoChange(this.checked)" class="sr-only peer">
-                                <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
                             </label>
                         </div>
                     </div>
@@ -2102,7 +2125,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="settingsLowBandwidth" onchange="handleLowBandwidthChange(this.checked)" class="sr-only peer">
-                                    <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
                                 </label>
                             </div>
                             <div id="settingsOnTheGoRow" class="hidden flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
@@ -2112,7 +2135,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="settingsOnTheGo" onchange="handleOnTheGoChange(this.checked)" class="sr-only peer">
-                                    <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
                                 </label>
                             </div>
                         </div>
@@ -2170,7 +2193,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     <img id="onTheGoAvatar" src="" class="w-full h-full object-cover rounded-full hidden" draggable="false">
                     <span id="onTheGoAvatarPlaceholder" class="text-5xl sm:text-6xl text-zinc-400">👤</span>
                     <!-- Speaking indicator wave/glow -->
-                    <div id="onTheGoSpeakingGlow" class="absolute inset-0 rounded-full border-4 border-blue-500 scale-100 opacity-0 transition-all duration-300"></div>
+                    <div id="onTheGoSpeakingGlow" class="absolute inset-0 rounded-full border-4 border-indigo-500 scale-100 opacity-0 transition-all duration-300"></div>
                 </div>
                 <div class="space-y-1">
                     <h3 id="onTheGoSpeakingName" class="text-xl font-bold text-white">No one speaking</h3>
@@ -2226,7 +2249,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
     </div>
 
     <div id="appLayout" class="hidden flex-col h-full w-full">
-        <div class="app-topbar flex-none p-3 sm:p-4 md:p-5 z-40 flex justify-between items-center gap-2 md:gap-4 pl-3 md:pl-4" style="background: #000000; border-bottom: 1px solid var(--border-subtle);">
+        <div class="app-topbar flex-none p-3 sm:p-4 md:p-5 z-40 flex justify-between items-center gap-2 md:gap-4 pl-3 md:pl-4" style="background: rgba(0, 0, 0, 0.7); border-bottom: 1px solid var(--border-subtle); backdrop-filter: blur(32px) saturate(1.2); -webkit-backdrop-filter: blur(32px) saturate(1.2);">
             <div class="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                 <button id="sidebarToggle" onclick="toggleSidebar()" class="control-btn shadow-lg hidden !w-10 !h-10 md:!w-12 md:!h-12 flex-shrink-0" title="Channels">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
@@ -2371,14 +2394,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 draw() {
                     ctx.beginPath();
                     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(147, 130, 255, ${this.opacity})`;
+                    ctx.fillStyle = `rgba(129, 140, 248, ${this.opacity})`;
                     ctx.fill();
                 }
             }
 
             function init() {
                 particles = [];
-                const particleCount = Math.floor((canvas.width * canvas.height) / 15000);
+                const particleCount = Math.floor((canvas.width * canvas.height) / 18000);
                 for (let i = 0; i < particleCount; i++) {
                     particles.push(new Particle());
                 }
@@ -2461,14 +2484,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 draw() {
                     ctx.beginPath();
                     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(147, 130, 255, ${this.opacity})`;
+                    ctx.fillStyle = `rgba(129, 140, 248, ${this.opacity})`;
                     ctx.fill();
                 }
             }
 
             function init() {
                 particles = [];
-                const particleCount = Math.floor((canvas.width * canvas.height) / 15000);
+                const particleCount = Math.floor((canvas.width * canvas.height) / 18000);
                 for (let i = 0; i < particleCount; i++) {
                     particles.push(new Particle());
                 }
@@ -2553,14 +2576,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 draw() {
                     ctx.beginPath();
                     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(147, 130, 255, ${this.opacity})`;
+                    ctx.fillStyle = `rgba(129, 140, 248, ${this.opacity})`;
                     ctx.fill();
                 }
             }
 
             function init() {
                 particles = [];
-                const particleCount = Math.floor((canvas.width * canvas.height) / 15000);
+                const particleCount = Math.floor((canvas.width * canvas.height) / 18000);
                 for (let i = 0; i < particleCount; i++) {
                     particles.push(new Particle());
                 }
@@ -6085,7 +6108,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         function handleRoomDragEnd(e) {
             e.target.closest('.room-item').classList.remove('opacity-50');
-            document.querySelectorAll('.room-item').forEach(el => el.classList.remove('border-t-2', 'border-blue-500'));
+            document.querySelectorAll('.room-item').forEach(el => el.classList.remove('border-t-2', 'border-indigo-500'));
         }
 
         function handleRoomDragOver(e) {
@@ -6093,14 +6116,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             e.dataTransfer.dropEffect = 'move';
             const roomItem = e.target.closest('.room-item');
             if (roomItem && roomItem.dataset.rid !== roomDragState.draggedRid) {
-                roomItem.classList.add('border-t-2', 'border-blue-500');
+                roomItem.classList.add('border-t-2', 'border-indigo-500');
             }
         }
 
         function handleRoomDragLeave(e) {
             const roomItem = e.target.closest('.room-item');
             if (roomItem) {
-                roomItem.classList.remove('border-t-2', 'border-blue-500');
+                roomItem.classList.remove('border-t-2', 'border-indigo-500');
             }
         }
 
@@ -6350,7 +6373,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                              <div class="user-count">${userIds.length}</div>
                              ${rid.toLowerCase() !== 'general' ? `
                                 <div class="flex gap-1 pointer-events-auto">
-                                    <button onclick="renameRoom(this.closest('.room-item').dataset.rid, event)" class="p-1 text-zinc-500 hover:text-blue-500 transition-colors" title="Rename Channel">
+                                    <button onclick="renameRoom(this.closest('.room-item').dataset.rid, event)" class="p-1 text-zinc-500 hover:text-indigo-500 transition-colors" title="Rename Channel">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                     </button>
                                     <button onclick="deleteRoom(this.closest('.room-item').dataset.rid, event)" class="p-1 text-zinc-500 hover:text-red-500 transition-colors" title="Delete Channel">
@@ -7677,10 +7700,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             fsBtn.addEventListener('fullscreenchange', () => {
                 if (document.fullscreenElement === container) {
                     fsBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3"/></svg>';
-                    fsBtn.classList.add('bg-blue-600');
+                    fsBtn.classList.add('bg-indigo-600');
                 } else {
                     fsBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
-                    fsBtn.classList.remove('bg-blue-600');
+                    fsBtn.classList.remove('bg-indigo-600');
                 }
             });
 
