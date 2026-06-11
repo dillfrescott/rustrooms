@@ -6641,28 +6641,33 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 
                 const data = await res.json();
                 
+                const uids = Object.keys(data.users);
+                if (uids.length === 0) {
+                    sessionStorage.setItem('rustrooms_welcomed', 'true');
+                    configOverlay.classList.remove('hidden');
+                    configOverlay.classList.remove('opacity-0');
+                    initSetupButtonTouchHandlers();
+                    loadDevices();
+                    return;
+                }
+                
                 document.getElementById('inviteChannelName').innerText = `# ${data.name}`;
                 
                 const userList = document.getElementById('inviteUserList');
                 userList.innerHTML = '';
                 
-                const uids = Object.keys(data.users);
-                if (uids.length === 0) {
-                    userList.innerHTML = '<p class="text-zinc-500 italic text-sm">No one is here yet. Be the first!</p>';
-                } else {
-                    uids.forEach(uid => {
-                        const u = data.users[uid];
-                        const userDiv = document.createElement('div');
-                        userDiv.className = 'flex flex-col items-center gap-2 p-3 rounded-2xl bg-zinc-900/50 border border-zinc-800 min-w-[100px]';
-                        userDiv.innerHTML = `
-                            <div class="w-12 h-12 rounded-xl overflow-hidden bg-zinc-800 border border-zinc-700">
-                                ${u.avatar ? `<img src="${escapeHtml(u.staticFrame || u.avatar)}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-xl">👤</div>`}
-                            </div>
-                            <span class="text-xs font-semibold text-zinc-300 truncate max-w-[80px]">${escapeHtml(u.nickname)}</span>
-                        `;
-                        userList.appendChild(userDiv);
-                    });
-                }
+                uids.forEach(uid => {
+                    const u = data.users[uid];
+                    const userDiv = document.createElement('div');
+                    userDiv.className = 'flex flex-col items-center gap-2 p-3 rounded-2xl bg-zinc-900/50 border border-zinc-800 min-w-[100px]';
+                    userDiv.innerHTML = `
+                        <div class="w-12 h-12 rounded-xl overflow-hidden bg-zinc-800 border border-zinc-700">
+                            ${u.avatar ? `<img src="${escapeHtml(u.staticFrame || u.avatar)}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-xl">👤</div>`}
+                        </div>
+                        <span class="text-xs font-semibold text-zinc-300 truncate max-w-[80px]">${escapeHtml(u.nickname)}</span>
+                    `;
+                    userList.appendChild(userDiv);
+                });
                 
                 if (data.created_at > 0) {
                     const updateDuration = () => {
