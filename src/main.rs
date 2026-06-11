@@ -3367,154 +3367,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             volControls.appendChild(row);
         }
 
-        let rtcConfig = {
-            iceServers: []
-        };
-
-        const defaultTurnUrl = "{{TURN_URL}}";
-        let hasStaticTurn = false;
-        if (defaultTurnUrl && defaultTurnUrl.trim() !== "" && !defaultTurnUrl.startsWith("{{")) {
-            // Check if it's standard TCP/TLS port (allow only 3478, 5349, 443 with TCP)
-            let isAllowed = false;
-            if (defaultTurnUrl.startsWith('stun:')) {
-                isAllowed = defaultTurnUrl.includes(':3478');
-            } else {
-                const isTcp = defaultTurnUrl.includes('transport=tcp') || defaultTurnUrl.startsWith('turns:');
-                if (isTcp) {
-                    const baseUrl = defaultTurnUrl.split('?')[0];
-                    const parts = baseUrl.split(':');
-                    if (parts.length > 0) {
-                        const lastPart = parts[parts.length - 1];
-                        const port = parseInt(lastPart, 10);
-                        if (!isNaN(port)) {
-                            isAllowed = (port === 3478 || port === 5349 || port === 443);
-                        } else {
-                            isAllowed = true;
-                        }
-                    } else {
-                        isAllowed = true;
-                    }
-                }
-            }
-            if (isAllowed) {
-                rtcConfig.iceServers.push({
-                    urls: defaultTurnUrl,
+        const rtcConfig = {
+            iceServers: [
+                {
+                    urls: "{{TURN_URL}}",
                     username: "{{TURN_USERNAME}}",
                     credential: "{{TURN_CREDENTIAL}}"
-                });
-                if (defaultTurnUrl.startsWith('turn:') || defaultTurnUrl.startsWith('turns:')) {
-                    hasStaticTurn = true;
                 }
-            }
-        } else {
-            rtcConfig.iceServers.push({
-                urls: "stun:stun.cloudflare.com:3478"
-            });
-        }
-
-        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-        const isCellular = connection && (connection.type === 'cellular' || ['2g', '3g', '4g', '5g'].includes(connection.effectiveType));
-        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-        if (hasStaticTurn && (isCellular || isMobile)) {
-            rtcConfig.iceTransportPolicy = 'relay';
-            console.log('Mobile/Cellular connection detected with static TURN. Forcing iceTransportPolicy to "relay" to prevent port/network flooding.');
-        }
-
-        let iceServersLoaded = false;
-        let iceServersPromise = null;
-
-        function fetchIceServers() {
-            if (!iceServersPromise) {
-                iceServersPromise = (async () => {
-                    try {
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 3000);
-                        const response = await fetch('/api/ice-servers', { signal: controller.signal });
-                        clearTimeout(timeoutId);
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data && data.iceServers && data.iceServers.length > 0) {
-                                // Filter out non-TCP/non-standard port URLs from ICE servers (only allow TCP/TLS on standard 3478, 5349, 443)
-                                data.iceServers.forEach(server => {
-                                    if (server.urls) {
-                                        if (Array.isArray(server.urls)) {
-                                            server.urls = server.urls.filter(url => {
-                                                if (url.startsWith('stun:')) {
-                                                    return url.includes(':3478');
-                                                }
-                                                const isTcp = url.includes('transport=tcp') || url.startsWith('turns:');
-                                                if (!isTcp) return false;
-
-                                                const baseUrl = url.split('?')[0];
-                                                const parts = baseUrl.split(':');
-                                                if (parts.length > 0) {
-                                                    const lastPart = parts[parts.length - 1];
-                                                    const port = parseInt(lastPart, 10);
-                                                    if (!isNaN(port)) {
-                                                        return port === 3478 || port === 5349 || port === 443;
-                                                    }
-                                                }
-                                                return true;
-                                            });
-                                        } else if (typeof server.urls === 'string') {
-                                            const url = server.urls;
-                                            let keep = true;
-                                            if (url.startsWith('stun:')) {
-                                                keep = url.includes(':3478');
-                                            } else {
-                                                const isTcp = url.includes('transport=tcp') || url.startsWith('turns:');
-                                                if (!isTcp) {
-                                                    keep = false;
-                                                } else {
-                                                    const baseUrl = url.split('?')[0];
-                                                    const parts = baseUrl.split(':');
-                                                    if (parts.length > 0) {
-                                                        const lastPart = parts[parts.length - 1];
-                                                        const port = parseInt(lastPart, 10);
-                                                        if (!isNaN(port)) {
-                                                            keep = (port === 3478 || port === 5349 || port === 443);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            if (!keep) {
-                                                server.urls = [];
-                                            }
-                                        }
-                                    }
-                                });
-                                // Remove servers that have no URLs left
-                                data.iceServers = data.iceServers.filter(server => {
-                                    return server.urls && (Array.isArray(server.urls) ? server.urls.length > 0 : server.urls !== '');
-                                });
-
-                                rtcConfig.iceServers = data.iceServers;
-                                iceServersLoaded = true;
-
-                                // Check if we have TURN/TURNS servers in the dynamic list
-                                const hasTurn = data.iceServers.some(server =>
-                                    server.urls && (
-                                        Array.isArray(server.urls)
-                                            ? server.urls.some(url => url.startsWith('turn:') || url.startsWith('turns:'))
-                                            : (server.urls.startsWith('turn:') || server.urls.startsWith('turns:'))
-                                    )
-                                );
-
-                                if (hasTurn && (isCellular || isMobile)) {
-                                    rtcConfig.iceTransportPolicy = 'relay';
-                                    console.log('Mobile/Cellular connection detected with dynamic TURN. Forcing iceTransportPolicy to "relay" to prevent port/network flooding.');
-                                }
-                            }
-                        }
-                    } catch (e) {
-                        console.error("Failed to load ICE servers:", e);
-                    }
-                })();
-            }
-            return iceServersPromise;
-        }
-        fetchIceServers();
+            ]
+        };
 
         function getReconnectDelay(attempt) {
             const exponentialDelay = Math.min(
@@ -6930,10 +6791,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             });
         }
 
-        async function connectWs() {
-            if (!iceServersLoaded) {
-                await fetchIceServers();
-            }
+        function connectWs() {
             // Close any existing WebSocket to prevent ghost connections
             wsConnectionId++;
             const thisConnectionId = wsConnectionId;
@@ -10258,7 +10116,6 @@ async fn main() {
         .route("/new", get(new_room))
         .route("/new/", get(redirect_new_trailing_slash))
         .route("/verify-turnstile", post(verify_turnstile))
-        .route("/api/ice-servers", get(get_ice_servers))
         .route("/{room_id}", get(index))
         .route("/{room_id}/", get(redirect_room_trailing_slash))
         .route("/{room_id}/{channel_id}", get(index))
@@ -10445,113 +10302,6 @@ async fn verify_turnstile(
             axum::http::StatusCode::BAD_REQUEST,
             axum::Json(serde_json::json!({ "success": false, "error": error_msg })),
         )
-    }
-}
-
-#[derive(Debug, Serialize)]
-struct CloudflareRequest {
-    ttl: u32,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-struct IceServer {
-    urls: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    username: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    credential: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-struct IceServersResponse {
-    ice_servers: Vec<IceServer>,
-}
-
-async fn get_ice_servers(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
-    let key_id = std::env::var("CLOUDFLARE_TURN_KEY_ID").unwrap_or_default();
-    let token = std::env::var("CLOUDFLARE_TURN_KEY_API_TOKEN").unwrap_or_default();
-
-    if key_id.trim().is_empty() || token.trim().is_empty() {
-        // Fallback to standard static TURN config
-        let turn_url = std::env::var("TURN_URL").unwrap_or_default();
-        let turn_username = std::env::var("TURN_USERNAME").unwrap_or_default();
-        let turn_credential = std::env::var("TURN_CREDENTIAL").unwrap_or_default();
-
-        let fallback = IceServersResponse {
-            ice_servers: vec![IceServer {
-                urls: if turn_url.trim().is_empty() {
-                    vec!["stun:stun.cloudflare.com:3478".to_string()]
-                } else {
-                    vec![turn_url]
-                },
-                username: Some(turn_username).filter(|s| !s.trim().is_empty()),
-                credential: Some(turn_credential).filter(|s| !s.trim().is_empty()),
-            }]
-        };
-        return axum::Json(fallback).into_response();
-    }
-
-    let url = format!(
-        "https://rtc.live.cloudflare.com/v1/turn/keys/{}/credentials/generate-ice-servers",
-        key_id.trim()
-    );
-
-    match state.http_client.post(&url)
-        .header("Authorization", format!("Bearer {}", token.trim()))
-        .header("Content-Type", "application/json")
-        .json(&CloudflareRequest { ttl: 86400 })
-        .send()
-        .await
-    {
-        Ok(resp) => {
-            if resp.status().is_success() {
-                if let Ok(mut data) = resp.json::<IceServersResponse>().await {
-                    for server in &mut data.ice_servers {
-                        server.urls.retain(|url| {
-                            let is_stun = url.starts_with("stun:");
-                            if is_stun {
-                                return url.contains(":3478");
-                            }
-
-                            let is_tcp = url.contains("transport=tcp") || url.starts_with("turns:");
-                            if !is_tcp {
-                                return false;
-                            }
-
-                            let base_url = url.split('?').next().unwrap_or(url);
-                            let parts: Vec<&str> = base_url.split(':').collect();
-                            if let Some(last_part) = parts.last() {
-                                if let Ok(port) = last_part.parse::<u16>() {
-                                    let is_allowed_port = port == 3478 || port == 5349 || port == 443;
-                                    if !is_allowed_port {
-                                        eprintln!("Cloudflare TURN: Filtering out non-standard port URL: {}", url);
-                                    }
-                                    return is_allowed_port;
-                                }
-                            }
-                            true
-                        });
-                    }
-                    return axum::Json(data).into_response();
-                }
-            } else {
-                let status = resp.status();
-                if let Ok(err_text) = resp.text().await {
-                    eprintln!("Cloudflare API returned error status {}: {}", status, err_text);
-                } else {
-                    eprintln!("Cloudflare API returned error status {}", status);
-                }
-            }
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-        Err(e) => {
-            eprintln!("Failed to send request to Cloudflare: {:?}", e);
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
     }
 }
 
