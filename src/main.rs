@@ -2660,6 +2660,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
         if (channelId.length > 32) channelId = channelId.substring(0, 32);
 
+        // Check if user changed the URL code and hit enter
+        const lastRoomId = sessionStorage.getItem('rustrooms_last_room_id');
+        const lastChannelId = sessionStorage.getItem('rustrooms_last_channel_id');
+        if (lastRoomId && (roomId !== lastRoomId || channelId !== lastChannelId)) {
+            sessionStorage.setItem('rustrooms_setup_done', 'false');
+            sessionStorage.removeItem('rustrooms_turnstile_passed');
+            sessionStorage.setItem('rustrooms_welcomed', 'true');
+        }
+
         const initialChannelNameEl = document.getElementById('currentChannelName');
         if (initialChannelNameEl && channelId) {
             initialChannelNameEl.innerText = `# ${channelId}`;
@@ -5270,6 +5279,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     sessionStorage.setItem('rustrooms_welcomed', 'false');
                     sessionStorage.setItem('rustrooms_setup_done', 'false');
                     sessionStorage.removeItem('rustrooms_turnstile_passed');
+                    sessionStorage.removeItem('rustrooms_last_room_id');
+                    sessionStorage.removeItem('rustrooms_last_channel_id');
                     stopAllMedia(false);
                     roomId = '';
                     channelId = '';
@@ -5394,6 +5405,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             connectWs();
 
             sessionStorage.setItem('rustrooms_setup_done', 'true');
+            sessionStorage.setItem('rustrooms_last_room_id', roomId);
+            sessionStorage.setItem('rustrooms_last_channel_id', channelId);
 
             if (isOnTheGoMode) {
                 toggleOnTheGoMode(true, true);
@@ -6225,6 +6238,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             roomId = newRoomId;
             channelId = newChannelId;
+            sessionStorage.setItem('rustrooms_last_room_id', roomId);
+            sessionStorage.setItem('rustrooms_last_channel_id', channelId);
 
             const channelNameEl = document.getElementById('currentChannelName');
             if (channelNameEl) {
@@ -7022,6 +7037,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         alert("You have been kicked from the room.");
                                         sessionStorage.removeItem('rustrooms_setup_done');
                                         sessionStorage.removeItem('rustrooms_turnstile_passed');
+                                        sessionStorage.removeItem('rustrooms_last_room_id');
+                                        sessionStorage.removeItem('rustrooms_last_channel_id');
                                         window.location.href = "/";
                                     } else {
                                         playNotificationSound('leave');
@@ -8518,6 +8535,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             sessionStorage.setItem('rustrooms_welcomed', 'false');
             sessionStorage.setItem('rustrooms_setup_done', 'false');
             sessionStorage.removeItem('rustrooms_turnstile_passed');
+            sessionStorage.removeItem('rustrooms_last_room_id');
+            sessionStorage.removeItem('rustrooms_last_channel_id');
 
             roomId = '';
             channelId = '';
@@ -8588,6 +8607,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             sessionStorage.removeItem('rustrooms_setup_done');
             sessionStorage.removeItem('rustrooms_turnstile_passed');
+            sessionStorage.removeItem('rustrooms_last_room_id');
+            sessionStorage.removeItem('rustrooms_last_channel_id');
             history.replaceState(null, '', '/');
         }
 
