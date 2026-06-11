@@ -819,8 +819,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .speaking-glow {
-            border: 2px solid var(--accent) !important;
-            box-shadow: 0 0 28px rgba(99, 102, 241, 0.35), inset 0 0 20px rgba(99, 102, 241, 0.06) !important;
+            border: 3.5px solid var(--accent) !important;
+            box-shadow: 0 0 38px rgba(99, 102, 241, 0.6), inset 0 0 24px rgba(99, 102, 241, 0.12) !important;
             transition: border 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
             z-index: 50;
         }
@@ -1385,8 +1385,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .mini-avatar.speaking-glow {
-            border: 2px solid var(--accent) !important;
-            box-shadow: 0 0 12px rgba(99, 102, 241, 0.45) !important;
+            border: 2.5px solid var(--accent) !important;
+            box-shadow: 0 0 16px rgba(99, 102, 241, 0.6) !important;
             transition: border 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
         }
 
@@ -2666,6 +2666,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         if (lastRoomId && (roomId !== lastRoomId || channelId !== lastChannelId)) {
             sessionStorage.setItem('rustrooms_setup_done', 'false');
             sessionStorage.removeItem('rustrooms_turnstile_passed');
+            sessionStorage.removeItem('rustrooms_tab_session_token');
             sessionStorage.setItem('rustrooms_welcomed', 'true');
         }
 
@@ -4185,7 +4186,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         async function setupAudioMonitor(stream, targetId) {
-            if (isIOS) return;
             if (!audioContext) return;
             if (!stream.getAudioTracks().length) return;
 
@@ -4200,7 +4200,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             audioMonitorGeneration[targetId]++;
             const myGeneration = audioMonitorGeneration[targetId];
 
-            const source = audioContext.createMediaStreamSource(stream);
+            let source;
+            try {
+                source = audioContext.createMediaStreamSource(stream);
+            } catch (err) {
+                console.warn("[setupAudioMonitor] Failed to createMediaStreamSource for", targetId, err);
+                return;
+            }
             const analyser = audioContext.createAnalyser();
             analyser.fftSize = 256;
             source.connect(analyser);
@@ -5279,6 +5285,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     sessionStorage.setItem('rustrooms_welcomed', 'false');
                     sessionStorage.setItem('rustrooms_setup_done', 'false');
                     sessionStorage.removeItem('rustrooms_turnstile_passed');
+                    sessionStorage.removeItem('rustrooms_tab_session_token');
                     sessionStorage.removeItem('rustrooms_last_room_id');
                     sessionStorage.removeItem('rustrooms_last_channel_id');
                     stopAllMedia(false);
@@ -6571,6 +6578,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 });
 
                 if (response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    if (data.token) {
+                        sessionStorage.setItem('rustrooms_tab_session_token', data.token);
+                    }
                     sessionStorage.setItem('rustrooms_turnstile_passed', 'true');
                     closeTurnstileModal();
                     proceedJoinRoom();
@@ -6824,7 +6835,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             peerScreenHasAudio = {};
             pendingCandidates = {};
 
-            const currentTabSessionId = sessionStorage.getItem('rustrooms_tab_session_id') || '';
+            const currentTabSessionId = sessionStorage.getItem('rustrooms_tab_session_token') || sessionStorage.getItem('rustrooms_tab_session_id') || '';
             const wsUrlWithSession = wsUrl + (wsUrl.includes('?') ? '&' : '?') + 'tabSessionId=' + encodeURIComponent(currentTabSessionId);
             ws = new WebSocket(wsUrlWithSession);
 
@@ -7042,6 +7053,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         alert("You have been kicked from the room.");
                                         sessionStorage.removeItem('rustrooms_setup_done');
                                         sessionStorage.removeItem('rustrooms_turnstile_passed');
+                                        sessionStorage.removeItem('rustrooms_tab_session_token');
                                         sessionStorage.removeItem('rustrooms_last_room_id');
                                         sessionStorage.removeItem('rustrooms_last_channel_id');
                                         window.location.href = "/";
@@ -8540,6 +8552,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             sessionStorage.setItem('rustrooms_welcomed', 'false');
             sessionStorage.setItem('rustrooms_setup_done', 'false');
             sessionStorage.removeItem('rustrooms_turnstile_passed');
+            sessionStorage.removeItem('rustrooms_tab_session_token');
             sessionStorage.removeItem('rustrooms_last_room_id');
             sessionStorage.removeItem('rustrooms_last_channel_id');
 
@@ -8612,6 +8625,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             sessionStorage.removeItem('rustrooms_setup_done');
             sessionStorage.removeItem('rustrooms_turnstile_passed');
+            sessionStorage.removeItem('rustrooms_tab_session_token');
             sessionStorage.removeItem('rustrooms_last_room_id');
             sessionStorage.removeItem('rustrooms_last_channel_id');
             history.replaceState(null, '', '/');
@@ -10150,6 +10164,61 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
+fn create_session_token(tab_session_id: &str, secret: &str) -> String {
+    let exp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() + 86400; // 24 hours validity
+
+    let data_to_sign = format!("{}.{}", tab_session_id, exp);
+    let mut hasher = Sha1::new();
+    hasher.update(data_to_sign.as_bytes());
+    hasher.update(b".");
+    hasher.update(secret.as_bytes());
+    let result = hasher.finalize();
+    let signature = result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+
+    format!("{}.{}.{}", tab_session_id, exp, signature)
+}
+
+fn verify_session_token(token: &str, secret: &str) -> Option<String> {
+    let parts: Vec<&str> = token.split('.').collect();
+    if parts.len() != 3 {
+        return None;
+    }
+    let tab_session_id = parts[0];
+    let exp_str = parts[1];
+    let signature = parts[2];
+
+    let exp: u64 = match exp_str.parse() {
+        Ok(t) => t,
+        Err(_) => return None,
+    };
+
+    let now = match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+        Ok(d) => d.as_secs(),
+        Err(_) => return None,
+    };
+
+    if now > exp {
+        return None; // Token expired
+    }
+
+    let data_to_sign = format!("{}.{}", tab_session_id, exp);
+    let mut hasher = Sha1::new();
+    hasher.update(data_to_sign.as_bytes());
+    hasher.update(b".");
+    hasher.update(secret.as_bytes());
+    let result = hasher.finalize();
+    let expected_signature = result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+
+    if signature == expected_signature {
+        Some(tab_session_id.to_string())
+    } else {
+        None
+    }
+}
+
 async fn verify_turnstile(
     State(state): State<AppState>,
     axum::Json(payload): axum::Json<TurnstileRequest>,
@@ -10204,15 +10273,23 @@ async fn verify_turnstile(
     };
 
     if cf_res.success {
+        let token = if let Some(ref secret) = state.turnstile_secret_key {
+            create_session_token(&payload.tab_session_id, secret)
+        } else {
+            String::new()
+        };
         {
             let mut sessions = state.verified_tab_sessions.lock().await;
             let now = std::time::Instant::now();
             sessions.retain(|_, time| now.duration_since(*time).as_secs() < 43200);
             sessions.insert(payload.tab_session_id.clone(), now);
+            if !token.is_empty() {
+                sessions.insert(token.clone(), now);
+            }
         }
         (
             axum::http::StatusCode::OK,
-            axum::Json(serde_json::json!({ "success": true })),
+            axum::Json(serde_json::json!({ "success": true, "token": token })),
         )
     } else {
         let errors = cf_res.error_codes.unwrap_or_default().join(", ");
@@ -10328,8 +10405,19 @@ async fn ws_handler(
 ) -> impl IntoResponse {
     if state.turnstile_secret_key.is_some() {
         let tab_session_id = _params.get("tabSessionId").map(|s| s.as_str()).unwrap_or("");
-        let sessions = state.verified_tab_sessions.lock().await;
-        if !sessions.contains_key(tab_session_id) {
+        let mut sessions = state.verified_tab_sessions.lock().await;
+        let mut is_verified = sessions.contains_key(tab_session_id);
+        if !is_verified {
+            if let Some(ref secret) = state.turnstile_secret_key {
+                if let Some(original_id) = verify_session_token(tab_session_id, secret) {
+                    let now = std::time::Instant::now();
+                    sessions.insert(tab_session_id.to_string(), now);
+                    sessions.insert(original_id, now);
+                    is_verified = true;
+                }
+            }
+        }
+        if !is_verified {
             return (axum::http::StatusCode::FORBIDDEN, "Forbidden: Security verification required").into_response();
         }
     }
@@ -11984,4 +12072,45 @@ async fn channel_status(
         created_at,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_token_creation_and_verification() {
+        let secret = "my_super_secret_turnstile_key";
+        let tab_session_id = "test-session-uuid";
+        let token = create_session_token(tab_session_id, secret);
+        
+        // Ensure the token starts with the tab session ID
+        assert!(token.starts_with(tab_session_id));
+        
+        // Verification should succeed with the correct secret
+        let verified_id = verify_session_token(&token, secret);
+        assert_eq!(verified_id, Some(tab_session_id.to_string()));
+        
+        // Verification should fail with an incorrect secret
+        let bad_verified_id = verify_session_token(&token, "wrong_secret");
+        assert_eq!(bad_verified_id, None);
+        
+        // Verification should fail with an expired token
+        let exp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() - 10; // Expired 10 seconds ago
+        let data_to_sign = format!("{}.{}", tab_session_id, exp);
+        let mut hasher = Sha1::new();
+        hasher.update(data_to_sign.as_bytes());
+        hasher.update(b".");
+        hasher.update(secret.as_bytes());
+        let result = hasher.finalize();
+        let signature = result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+        let expired_token = format!("{}.{}.{}", tab_session_id, exp, signature);
+        
+        let expired_verified_id = verify_session_token(&expired_token, secret);
+        assert_eq!(expired_verified_id, None);
+    }
+}
+
 
