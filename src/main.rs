@@ -2041,7 +2041,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             <p id="nullcaptchaDesc" class="text-zinc-300 text-sm break-words">Please complete the security verification to join the call.</p>
             
             <!-- Cloudflare NullCaptcha Widget -->
-            <div id="nullcaptchaWidget" class="my-2 min-h-[65px] flex items-center justify-center"></div>
+            <div id="nullcaptchaWidget" class="my-2 min-h-[65px] flex flex-col items-center justify-center"></div>
 
             <button id="btnCancelNullCaptcha" onclick="cancelNullCaptcha()" class="btn-secondary w-full py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
         </div>
