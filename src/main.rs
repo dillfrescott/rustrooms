@@ -1867,7 +1867,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             border: 1.5px solid var(--text-primary, #ffffff);
             border-top-color: transparent;
             border-radius: 50%;
-            animation: spin 0.7s linear infinite;
+            animation: captcha-spin 0.7s linear infinite;
             display: none;
         }
 
@@ -1960,7 +1960,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             color: #888888;
         }
 
-        @keyframes spin {
+        @keyframes captcha-spin {
             0% {
                 transform: translate(-50%, -50%) rotate(0deg);
             }
