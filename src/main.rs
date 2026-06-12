@@ -177,10 +177,10 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
     </script>
     <script>
-        const TURNSTILE_SITE_KEY = "{{TURNSTILE_SITE_KEY}}";
-        if (TURNSTILE_SITE_KEY && TURNSTILE_SITE_KEY.trim() !== "" && !TURNSTILE_SITE_KEY.startsWith("{{")) {
+        const NULLCAPTCHA_URL = "{{NULLCAPTCHA_URL}}";
+        if (NULLCAPTCHA_URL && NULLCAPTCHA_URL.trim() !== "" && !NULLCAPTCHA_URL.startsWith("{{")) {
             const script = document.createElement('script');
-            script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+            script.src = NULLCAPTCHA_URL + "/js/null.js";
             script.async = true;
             script.defer = true;
             document.head.appendChild(script);
@@ -1816,6 +1816,158 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 font-size: 0.75rem !important;
             }
         }
+
+        /* Null CAPTCHA Widget Styles */
+        .captcha-widget {
+            border: 1px solid var(--border-medium, rgba(255, 255, 255, 0.09));
+            background: #000000;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            user-select: none;
+            margin: 0.5rem 0;
+            width: 350px;
+        }
+
+        .captcha-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .checkbox-container {
+            width: 24px;
+            height: 24px;
+            border: 1.5px solid #333333;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            transition: all 0.1s ease;
+        }
+
+        .checkbox-container:hover {
+            border-color: var(--text-primary, #ffffff);
+            box-shadow: none;
+        }
+
+        .checkbox-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid var(--text-primary, #ffffff);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: none;
+        }
+
+        .checkbox-checkmark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 14px;
+            height: 14px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .checkbox-checkmark svg {
+            color: #22c55e;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .checkbox-cross {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 14px;
+            height: 14px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .checkbox-cross svg {
+            color: #ef4444;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .captcha-widget.loading .checkbox-container {
+            border-color: transparent !important;
+            cursor: wait;
+        }
+        .captcha-widget.loading .checkbox-spinner {
+            display: block;
+        }
+
+        .captcha-widget.verified .checkbox-container {
+            border-color: #22c55e !important;
+            background: transparent;
+            cursor: default;
+        }
+        .captcha-widget.verified .checkbox-checkmark {
+            display: flex;
+        }
+
+        .captcha-widget.failed .checkbox-container {
+            border-color: #ef4444 !important;
+            background: transparent;
+            cursor: pointer;
+        }
+        .captcha-widget.failed .checkbox-cross {
+            display: flex;
+        }
+
+        .captcha-text {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .captcha-brand {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.15rem;
+        }
+
+        .captcha-brand-logo {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.2px;
+        }
+
+        .captcha-brand-desc {
+            font-size: 0.6rem;
+            color: #888888;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
     </style>
 
     <link rel="stylesheet" href="/assets/croppie.min.css" />
@@ -1883,15 +2035,15 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         </div>
     </div>
 
-    <div id="turnstileModal" class="modal-overlay">
+    <div id="nullcaptchaModal" class="modal-overlay">
         <div class="modal-content text-center space-y-5 flex flex-col items-center">
-            <h3 id="turnstileTitle" class="text-xl font-bold text-white break-words">Security Check</h3>
-            <p id="turnstileDesc" class="text-zinc-300 text-sm break-words">Please complete the security verification to join the call.</p>
+            <h3 id="nullcaptchaTitle" class="text-xl font-bold text-white break-words">Security Check</h3>
+            <p id="nullcaptchaDesc" class="text-zinc-300 text-sm break-words">Please complete the security verification to join the call.</p>
             
-            <!-- Cloudflare Turnstile Widget -->
-            <div id="turnstileWidget" class="my-2 min-h-[65px] flex items-center justify-center"></div>
+            <!-- Cloudflare NullCaptcha Widget -->
+            <div id="nullcaptchaWidget" class="my-2 min-h-[65px] flex items-center justify-center"></div>
 
-            <button id="btnCancelTurnstile" onclick="cancelTurnstile()" class="btn-secondary w-full py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
+            <button id="btnCancelNullCaptcha" onclick="cancelNullCaptcha()" class="btn-secondary w-full py-3 text-white rounded-xl font-medium transition-all">Cancel</button>
         </div>
     </div>
 
@@ -2665,7 +2817,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const lastChannelId = sessionStorage.getItem('rustrooms_last_channel_id');
         if (lastRoomId && (roomId !== lastRoomId || channelId !== lastChannelId)) {
             sessionStorage.setItem('rustrooms_setup_done', 'false');
-            sessionStorage.removeItem('rustrooms_turnstile_passed');
+            sessionStorage.removeItem('rustrooms_nullcaptcha_passed');
             sessionStorage.removeItem('rustrooms_tab_session_token');
             sessionStorage.setItem('rustrooms_welcomed', 'true');
         }
@@ -5284,7 +5436,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     alertBtn.onclick = oldOnClick;
                     sessionStorage.setItem('rustrooms_welcomed', 'false');
                     sessionStorage.setItem('rustrooms_setup_done', 'false');
-                    sessionStorage.removeItem('rustrooms_turnstile_passed');
+                    sessionStorage.removeItem('rustrooms_nullcaptcha_passed');
                     sessionStorage.removeItem('rustrooms_tab_session_token');
                     sessionStorage.removeItem('rustrooms_last_room_id');
                     sessionStorage.removeItem('rustrooms_last_channel_id');
@@ -5305,9 +5457,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 return;
             }
 
-            const turnstilePassed = sessionStorage.getItem('rustrooms_turnstile_passed') === 'true';
-            if (typeof TURNSTILE_SITE_KEY !== 'undefined' && TURNSTILE_SITE_KEY && TURNSTILE_SITE_KEY.trim() !== '' && !TURNSTILE_SITE_KEY.startsWith('{{') && !turnstilePassed) {
-                showTurnstileModal();
+            const nullcaptchaPassed = sessionStorage.getItem('rustrooms_nullcaptcha_passed') === 'true';
+            if (typeof NULLCAPTCHA_URL !== 'undefined' && NULLCAPTCHA_URL && NULLCAPTCHA_URL.trim() !== '' && !NULLCAPTCHA_URL.startsWith('{{') && !nullcaptchaPassed) {
+                showNullCaptchaModal();
             } else {
                 proceedJoinRoom();
             }
@@ -6506,67 +6658,49 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
-        let turnstileWidgetId = null;
-
-        function showTurnstileModal() {
-            const modal = document.getElementById('turnstileModal');
+        function showNullCaptchaModal() {
+            const modal = document.getElementById('nullcaptchaModal');
             modal.classList.add('open');
 
             // Reset UI to initial state
-            document.getElementById('turnstileTitle').innerText = "Security Check";
-            document.getElementById('turnstileDesc').innerText = "Please complete the security verification to join the call.";
-            document.getElementById('turnstileWidget').classList.remove('hidden');
-            document.getElementById('btnCancelTurnstile').classList.remove('hidden');
+            document.getElementById('nullcaptchaTitle').innerText = "Security Check";
+            document.getElementById('nullcaptchaDesc').innerText = "Please complete the security verification to join the call.";
+            document.getElementById('nullcaptchaWidget').classList.remove('hidden');
+            document.getElementById('btnCancelNullCaptcha').classList.remove('hidden');
 
-            function renderTurnstile() {
-                if (window.turnstile) {
-                    if (turnstileWidgetId !== null) {
-                        try {
-                            turnstile.remove(turnstileWidgetId);
-                        } catch(e){}
+            function renderNullCaptcha() {
+                window.NullCaptcha.render('nullcaptchaWidget', {
+                    onSuccess: (token) => {
+                        verifyNullCaptchaToken(token);
+                    },
+                    onFailure: (err) => {
+                        handleNullCaptchaFailure(err || "Verification failed. Please try again.");
                     }
-                    turnstileWidgetId = turnstile.render('#turnstileWidget', {
-                        sitekey: TURNSTILE_SITE_KEY,
-                        theme: 'dark',
-                        callback: function(token) {
-                            verifyTurnstileToken(token);
-                        },
-                        'error-callback': function() {
-                            handleTurnstileFailure("An error occurred during security verification.");
-                        },
-                        'expired-callback': function() {
-                            if (turnstileWidgetId !== null) {
-                                turnstile.reset(turnstileWidgetId);
-                            }
-                        }
-                    });
-                } else {
-                    handleTurnstileFailure("Cloudflare Turnstile failed to load. Please check your internet connection.");
-                }
+                });
             }
 
-            if (!window.turnstile) {
-                document.getElementById('turnstileDesc').innerText = "Loading security check...";
+            if (!window.NullCaptcha) {
+                document.getElementById('nullcaptchaDesc').innerText = "Loading security check...";
                 let checkCount = 0;
                 const interval = setInterval(() => {
                     checkCount++;
-                    if (window.turnstile) {
+                    if (window.NullCaptcha) {
                         clearInterval(interval);
-                        document.getElementById('turnstileDesc').innerText = "Please complete the security verification to join the call.";
-                        renderTurnstile();
+                        document.getElementById('nullcaptchaDesc').innerText = "Please complete the security verification to join the call.";
+                        renderNullCaptcha();
                     } else if (checkCount > 50) {
                         clearInterval(interval);
-                        handleTurnstileFailure("Cloudflare Turnstile failed to load. Please check your internet connection.");
+                        handleNullCaptchaFailure("Null CAPTCHA failed to load. Please check your internet connection.");
                     }
                 }, 100);
             } else {
-                renderTurnstile();
+                renderNullCaptcha();
             }
         }
 
-        async function verifyTurnstileToken(token) {
+        async function verifyNullCaptchaToken(token) {
             try {
-                const response = await fetch('/verify-turnstile', {
+                const response = await fetch('/verify-nullcaptcha', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -6582,51 +6716,47 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     if (data.token) {
                         sessionStorage.setItem('rustrooms_tab_session_token', data.token);
                     }
-                    sessionStorage.setItem('rustrooms_turnstile_passed', 'true');
-                    closeTurnstileModal();
+                    sessionStorage.setItem('rustrooms_nullcaptcha_passed', 'true');
+                    closeNullCaptchaModal();
                     proceedJoinRoom();
                 } else {
                     const data = await response.json().catch(() => ({}));
-                    handleTurnstileFailure(data.error || "Verification failed on server.");
+                    handleNullCaptchaFailure(data.error || "Verification failed on server.");
                 }
             } catch (err) {
-                console.error("Turnstile verification error:", err);
-                handleTurnstileFailure("Network error during verification.");
+                console.error("Verification error:", err);
+                handleNullCaptchaFailure("Network error during verification.");
             }
         }
 
-        function handleTurnstileFailure(msg) {
-            document.getElementById('turnstileDesc').innerText = msg;
+        function handleNullCaptchaFailure(msg) {
+            document.getElementById('nullcaptchaDesc').innerText = msg;
             
-            // Reset Turnstile widget to let them try again
-            if (window.turnstile && turnstileWidgetId !== null) {
-                try {
-                    turnstile.reset(turnstileWidgetId);
-                } catch(e) {}
+            const captchaWidget = document.getElementById('captcha-widget');
+            if (captchaWidget) {
+                captchaWidget.className = "captcha-widget failed";
+                const textLabel = document.getElementById('captcha-text-label');
+                if (textLabel) textLabel.textContent = "Verification Failed";
             }
             
-            const btn = document.getElementById('btnCancelTurnstile');
+            const btn = document.getElementById('btnCancelNullCaptcha');
             btn.innerText = "Try Again";
             btn.onclick = function() {
                 btn.innerText = "Cancel";
-                btn.onclick = cancelTurnstile;
-                showTurnstileModal();
+                btn.onclick = cancelNullCaptcha;
+                showNullCaptchaModal();
             };
         }
 
-        function cancelTurnstile() {
-            closeTurnstileModal();
+        function cancelNullCaptcha() {
+            closeNullCaptchaModal();
         }
 
-        function closeTurnstileModal() {
-            const modal = document.getElementById('turnstileModal');
+        function closeNullCaptchaModal() {
+            const modal = document.getElementById('nullcaptchaModal');
             modal.classList.remove('open');
-            if (window.turnstile && turnstileWidgetId !== null) {
-                try {
-                    turnstile.remove(turnstileWidgetId);
-                } catch (e) {}
-                turnstileWidgetId = null;
-            }
+            const widgetContainer = document.getElementById('nullcaptchaWidget');
+            if (widgetContainer) widgetContainer.innerHTML = '';
         }
 
         function proceedToSetup() {
@@ -7052,7 +7182,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         hasLeftRoom = true;
                                         alert("You have been kicked from the room.");
                                         sessionStorage.removeItem('rustrooms_setup_done');
-                                        sessionStorage.removeItem('rustrooms_turnstile_passed');
+                                        sessionStorage.removeItem('rustrooms_nullcaptcha_passed');
                                         sessionStorage.removeItem('rustrooms_tab_session_token');
                                         sessionStorage.removeItem('rustrooms_last_room_id');
                                         sessionStorage.removeItem('rustrooms_last_channel_id');
@@ -8551,7 +8681,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             sessionStorage.setItem('rustrooms_welcomed', 'false');
             sessionStorage.setItem('rustrooms_setup_done', 'false');
-            sessionStorage.removeItem('rustrooms_turnstile_passed');
+            sessionStorage.removeItem('rustrooms_nullcaptcha_passed');
             sessionStorage.removeItem('rustrooms_tab_session_token');
             sessionStorage.removeItem('rustrooms_last_room_id');
             sessionStorage.removeItem('rustrooms_last_channel_id');
@@ -8624,7 +8754,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (otgDot) otgDot.className = 'connection-dot';
 
             sessionStorage.removeItem('rustrooms_setup_done');
-            sessionStorage.removeItem('rustrooms_turnstile_passed');
+            sessionStorage.removeItem('rustrooms_nullcaptcha_passed');
             sessionStorage.removeItem('rustrooms_tab_session_token');
             sessionStorage.removeItem('rustrooms_last_room_id');
             sessionStorage.removeItem('rustrooms_last_channel_id');
@@ -10024,7 +10154,7 @@ struct ClusterMessage {
 }
 
 #[derive(Debug, Deserialize)]
-struct TurnstileRequest {
+struct NullCaptchaRequest {
     token: String,
     #[serde(rename = "tabSessionId")]
     tab_session_id: String,
@@ -10044,7 +10174,7 @@ struct AppState {
     connected_peers: Arc<Mutex<HashSet<String>>>,
     pub recent_cluster_msg_ids: Arc<Mutex<HashSet<String>>>,
     pub cluster_msg_history: Arc<Mutex<VecDeque<String>>>,
-    turnstile_secret_key: Option<String>,
+    nullcaptcha_url: Option<String>,
     http_client: reqwest::Client,
     verified_tab_sessions: Arc<Mutex<HashMap<String, std::time::Instant>>>,
 }
@@ -10086,9 +10216,9 @@ async fn main() {
         println!("URL RESTRICTION: Enabled - only allowing access from {}", url);
     }
 
-    let turnstile_secret_key = std::env::var("TURNSTILE_SECRET_KEY").ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
-    if turnstile_secret_key.is_some() {
-        println!("TURNSTILE: Enabled (credentials found in environment variables)");
+    let nullcaptcha_url = std::env::var("NULLCAPTCHA_URL").ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+    if nullcaptcha_url.is_some() {
+        println!("NULLCAPTCHA: Enabled (URL found in environment variables)");
     }
     let http_client = reqwest::Client::new();
     let verified_tab_sessions = Arc::new(Mutex::new(HashMap::new()));
@@ -10106,7 +10236,7 @@ async fn main() {
         connected_peers: Arc::new(Mutex::new(HashSet::new())),
         recent_cluster_msg_ids: Arc::new(Mutex::new(HashSet::new())),
         cluster_msg_history: Arc::new(Mutex::new(VecDeque::new())),
-        turnstile_secret_key,
+        nullcaptcha_url,
         http_client,
         verified_tab_sessions,
     };
@@ -10115,7 +10245,7 @@ async fn main() {
         .route("/", get(index))
         .route("/new", get(new_room))
         .route("/new/", get(redirect_new_trailing_slash))
-        .route("/verify-turnstile", post(verify_turnstile))
+        .route("/verify-nullcaptcha", post(verify_nullcaptcha))
         .route("/{room_id}", get(index))
         .route("/{room_id}/", get(redirect_room_trailing_slash))
         .route("/{room_id}/{channel_id}", get(index))
@@ -10219,12 +10349,13 @@ fn verify_session_token(token: &str, secret: &str) -> Option<String> {
     }
 }
 
-async fn verify_turnstile(
+async fn verify_nullcaptcha(
     State(state): State<AppState>,
-    axum::Json(payload): axum::Json<TurnstileRequest>,
+    axum::Json(payload): axum::Json<NullCaptchaRequest>,
 ) -> impl IntoResponse {
-    let secret_key = match &state.turnstile_secret_key {
-        Some(key) => key,
+    println!("verify_nullcaptcha received token: {:?}", payload.token);
+    let url = match &state.nullcaptcha_url {
+        Some(u) => u,
         None => {
             return (
                 axum::http::StatusCode::OK,
@@ -10233,20 +10364,21 @@ async fn verify_turnstile(
         }
     };
 
-    let params = [
-        ("secret", secret_key.as_str()),
-        ("response", payload.token.as_str()),
-    ];
+    let validation_payload = serde_json::json!({
+        "token": payload.token
+    });
+
+    let validation_endpoint = format!("{}/api/validate", url.trim_end_matches('/'));
 
     let res = match state.http_client
-        .post("https://challenges.cloudflare.com/turnstile/v0/siteverify")
-        .form(&params)
+        .post(&validation_endpoint)
+        .json(&validation_payload)
         .send()
         .await
     {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("Error sending request to Cloudflare: {:?}", e);
+            eprintln!("Error sending request to Null CAPTCHA: {:?}", e);
             return (
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(serde_json::json!({ "success": false, "error": "Failed to connect to verification server" })),
@@ -10255,16 +10387,15 @@ async fn verify_turnstile(
     };
 
     #[derive(Deserialize)]
-    struct CfResponse {
+    struct ValidateResponse {
         success: bool,
-        #[serde(rename = "error-codes")]
-        error_codes: Option<Vec<String>>,
+        error: Option<String>,
     }
 
-    let cf_res: CfResponse = match res.json().await {
+    let validate_res: ValidateResponse = match res.json().await {
         Ok(val) => val,
         Err(e) => {
-            eprintln!("Error decoding Cloudflare response: {:?}", e);
+            eprintln!("Error decoding Null CAPTCHA response: {:?}", e);
             return (
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                 axum::Json(serde_json::json!({ "success": false, "error": "Invalid response from verification server" })),
@@ -10272,32 +10403,21 @@ async fn verify_turnstile(
         }
     };
 
-    if cf_res.success {
-        let token = if let Some(ref secret) = state.turnstile_secret_key {
-            create_session_token(&payload.tab_session_id, secret)
-        } else {
-            String::new()
-        };
+    if validate_res.success {
+        let token = create_session_token(&payload.tab_session_id, url);
         {
             let mut sessions = state.verified_tab_sessions.lock().await;
             let now = std::time::Instant::now();
             sessions.retain(|_, time| now.duration_since(*time).as_secs() < 43200);
             sessions.insert(payload.tab_session_id.clone(), now);
-            if !token.is_empty() {
-                sessions.insert(token.clone(), now);
-            }
+            sessions.insert(token.clone(), now);
         }
         (
             axum::http::StatusCode::OK,
             axum::Json(serde_json::json!({ "success": true, "token": token })),
         )
     } else {
-        let errors = cf_res.error_codes.unwrap_or_default().join(", ");
-        let error_msg = if errors.is_empty() {
-            "Verification failed".to_string()
-        } else {
-            format!("Verification failed: {}", errors)
-        };
+        let error_msg = validate_res.error.unwrap_or_else(|| "Verification failed".to_string());
         (
             axum::http::StatusCode::BAD_REQUEST,
             axum::Json(serde_json::json!({ "success": false, "error": error_msg })),
@@ -10375,22 +10495,25 @@ async fn index(State(state): State<AppState>, headers: axum::http::HeaderMap) ->
     let turn_username = std::env::var("TURN_USERNAME").unwrap_or_default();
     let turn_credential = std::env::var("TURN_CREDENTIAL").unwrap_or_default();
 
-    let turnstile_site_key = std::env::var("TURNSTILE_SITE_KEY").unwrap_or_default();
-    let turnstile_enabled = !turnstile_site_key.trim().is_empty() && state.turnstile_secret_key.is_some();
+    let nullcaptcha_url = state.nullcaptcha_url.clone().unwrap_or_default();
+    let nullcaptcha_enabled = !nullcaptcha_url.is_empty();
 
     let mut html = get_html_page(&turn_url, &turn_username, &turn_credential);
-    html = html.replace("{{TURNSTILE_SITE_KEY}}", &turnstile_site_key);
+    html = html.replace("{{NULLCAPTCHA_URL}}", &nullcaptcha_url);
 
-    let csp = if turnstile_enabled {
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com; script-src-elem 'self' 'unsafe-inline' https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws: https://challenges.cloudflare.com; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
+    let csp = if nullcaptcha_enabled {
+        format!(
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' {0}; script-src-elem 'self' 'unsafe-inline' {0}; frame-src 'self' {0}; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws: {0}; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';",
+            nullcaptcha_url
+        )
     } else {
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; script-src-elem 'self' 'unsafe-inline'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';"
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; script-src-elem 'self' 'unsafe-inline'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';".to_string()
     };
 
     (
         [(
             header::CONTENT_SECURITY_POLICY,
-            csp
+            axum::http::HeaderValue::from_str(&csp).unwrap()
         )],
         Html(html)
     ).into_response()
@@ -10403,18 +10526,16 @@ async fn ws_handler(
     headers: axum::http::HeaderMap,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    if state.turnstile_secret_key.is_some() {
+    if let Some(ref url) = state.nullcaptcha_url {
         let tab_session_id = _params.get("tabSessionId").map(|s| s.as_str()).unwrap_or("");
         let mut sessions = state.verified_tab_sessions.lock().await;
         let mut is_verified = sessions.contains_key(tab_session_id);
         if !is_verified {
-            if let Some(ref secret) = state.turnstile_secret_key {
-                if let Some(original_id) = verify_session_token(tab_session_id, secret) {
-                    let now = std::time::Instant::now();
-                    sessions.insert(tab_session_id.to_string(), now);
-                    sessions.insert(original_id, now);
-                    is_verified = true;
-                }
+            if let Some(original_id) = verify_session_token(tab_session_id, url) {
+                let now = std::time::Instant::now();
+                sessions.insert(tab_session_id.to_string(), now);
+                sessions.insert(original_id, now);
+                is_verified = true;
             }
         }
         if !is_verified {
@@ -12079,7 +12200,7 @@ mod tests {
 
     #[test]
     fn test_token_creation_and_verification() {
-        let secret = "my_super_secret_turnstile_key";
+        let secret = "my_super_secret_nullcaptcha_key";
         let tab_session_id = "test-session-uuid";
         let token = create_session_token(tab_session_id, secret);
         
