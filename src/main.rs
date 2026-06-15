@@ -5,7 +5,7 @@ use axum::{
     },
     http::header,
     response::{Html, IntoResponse, Redirect},
-    routing::{get, post},
+    routing::get,
     Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
@@ -210,16 +210,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                 }
             }
-        }
-    </script>
-    <script>
-        const NULLCAPTCHA_URL = "{{NULLCAPTCHA_URL}}";
-        if (NULLCAPTCHA_URL && NULLCAPTCHA_URL.trim() !== "" && !NULLCAPTCHA_URL.startsWith("{{")) {
-            const script = document.createElement('script');
-            script.src = NULLCAPTCHA_URL + "/js/null.js";
-            script.async = true;
-            script.defer = true;
-            document.head.appendChild(script);
         }
     </script>
     <link href="/assets/inter.css" rel="stylesheet">
@@ -1862,158 +1852,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
-        /* Null CAPTCHA Widget Styles */
-        .captcha-widget {
-            border: 1px solid var(--border-medium, rgba(255, 255, 255, 0.09));
-            background: #000000;
-            border-radius: 8px;
-            padding: 1rem 1.25rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: relative;
-            user-select: none;
-            margin: 0.5rem 0;
-            width: 350px;
-        }
-
-        .captcha-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .checkbox-container {
-            width: 24px;
-            height: 24px;
-            border: 1.5px solid #333333;
-            border-radius: 4px;
-            cursor: pointer;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            transition: all 0.1s ease;
-        }
-
-        .checkbox-container:hover {
-            border-color: var(--text-primary, #ffffff);
-            box-shadow: none;
-        }
-
-        .checkbox-spinner {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 14px;
-            height: 14px;
-            border: 1.5px solid var(--text-primary, #ffffff);
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: captcha-spin 0.7s linear infinite;
-            display: none;
-        }
-
-        .checkbox-checkmark {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 14px;
-            height: 14px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .checkbox-checkmark svg {
-            color: #22c55e;
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        .checkbox-cross {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 14px;
-            height: 14px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .checkbox-cross svg {
-            color: #ef4444;
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        .captcha-widget.loading .checkbox-container {
-            border-color: transparent !important;
-            cursor: wait;
-        }
-        .captcha-widget.loading .checkbox-spinner {
-            display: block;
-        }
-
-        .captcha-widget.verified .checkbox-container {
-            border-color: #22c55e !important;
-            background: transparent;
-            cursor: default;
-        }
-        .captcha-widget.verified .checkbox-checkmark {
-            display: flex;
-        }
-
-        .captcha-widget.failed .checkbox-container {
-            border-color: #ef4444 !important;
-            background: transparent;
-            cursor: pointer;
-        }
-        .captcha-widget.failed .checkbox-cross {
-            display: flex;
-        }
-
-        .captcha-text {
-            font-size: 0.95rem;
-            font-weight: 500;
-            color: #ffffff;
-        }
-
-        .captcha-brand {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 0.15rem;
-        }
-
-        .captcha-brand-logo {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: #ffffff;
-            letter-spacing: -0.2px;
-        }
-
-        .captcha-brand-desc {
-            font-size: 0.6rem;
-            color: #888888;
-        }
-
-        @keyframes captcha-spin {
-            0% {
-                transform: translate(-50%, -50%) rotate(0deg);
-            }
-            100% {
-                transform: translate(-50%, -50%) rotate(360deg);
-            }
-        }
-
         /* Ensure switches are rounded */
         .switch-track {
             border-radius: var(--radius-pill) !important;
@@ -2085,18 +1923,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             <h3 id="alertTitle" class="text-xl font-bold text-white break-words">Alert</h3>
             <p id="alertMessage" class="text-zinc-300 text-sm break-words"></p>
             <button onclick="closeCustomAlert()" class="btn-primary w-full py-3 rounded-xl font-medium transition-all">OK</button>
-        </div>
-    </div>
-
-    <div id="nullcaptchaModal" class="modal-overlay">
-        <div class="modal-content text-center space-y-5 flex flex-col items-center">
-            <h3 id="nullcaptchaTitle" class="text-xl font-bold text-white break-words">Security Check</h3>
-            <p id="nullcaptchaDesc" class="text-zinc-300 text-sm break-words">Please complete the security verification to join the call.</p>
-            
-            <!-- Cloudflare NullCaptcha Widget -->
-            <div id="nullcaptchaWidget" class="my-2 min-h-[65px] flex flex-col items-center justify-center"></div>
-
-            <button id="btnCancelNullCaptcha" onclick="cancelNullCaptcha()" class="btn-secondary w-full py-3 rounded-xl font-medium transition-all">Cancel</button>
         </div>
     </div>
 
@@ -2873,8 +2699,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         const lastChannelId = sessionStorage.getItem('rustrooms_last_channel_id');
         if (lastRoomId && (roomId !== lastRoomId || channelId !== lastChannelId)) {
             sessionStorage.setItem('rustrooms_setup_done', 'false');
-            sessionStorage.removeItem('rustrooms_nullcaptcha_passed');
-            sessionStorage.removeItem('rustrooms_tab_session_token');
             sessionStorage.setItem('rustrooms_welcomed', 'true');
         }
 
@@ -5492,8 +5316,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     alertBtn.onclick = oldOnClick;
                     sessionStorage.setItem('rustrooms_welcomed', 'false');
                     sessionStorage.setItem('rustrooms_setup_done', 'false');
-                    sessionStorage.removeItem('rustrooms_nullcaptcha_passed');
-                    sessionStorage.removeItem('rustrooms_tab_session_token');
                     sessionStorage.removeItem('rustrooms_last_room_id');
                     sessionStorage.removeItem('rustrooms_last_channel_id');
                     stopAllMedia(false);
@@ -5513,12 +5335,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 return;
             }
 
-            const nullcaptchaPassed = sessionStorage.getItem('rustrooms_nullcaptcha_passed') === 'true';
-            if (typeof NULLCAPTCHA_URL !== 'undefined' && NULLCAPTCHA_URL && NULLCAPTCHA_URL.trim() !== '' && !NULLCAPTCHA_URL.startsWith('{{') && !nullcaptchaPassed) {
-                showNullCaptchaModal();
-            } else {
-                proceedJoinRoom();
-            }
+            proceedJoinRoom();
         }
 
         async function proceedJoinRoom() {
@@ -6714,107 +6531,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
-        function showNullCaptchaModal() {
-            const modal = document.getElementById('nullcaptchaModal');
-            modal.classList.add('open');
-
-            // Reset UI to initial state
-            document.getElementById('nullcaptchaTitle').innerText = "Security Check";
-            document.getElementById('nullcaptchaDesc').innerText = "Please complete the security verification to join the call.";
-            document.getElementById('nullcaptchaWidget').classList.remove('hidden');
-            document.getElementById('btnCancelNullCaptcha').classList.remove('hidden');
-
-            function renderNullCaptcha() {
-                window.NullCaptcha.render('nullcaptchaWidget', {
-                    onSuccess: (token) => {
-                        verifyNullCaptchaToken(token);
-                    },
-                    onFailure: (err) => {
-                        handleNullCaptchaFailure(err || "Verification failed. Please try again.");
-                    }
-                });
-            }
-
-            if (!window.NullCaptcha) {
-                document.getElementById('nullcaptchaDesc').innerText = "Loading security check...";
-                let checkCount = 0;
-                const interval = setInterval(() => {
-                    checkCount++;
-                    if (window.NullCaptcha) {
-                        clearInterval(interval);
-                        document.getElementById('nullcaptchaDesc').innerText = "Please complete the security verification to join the call.";
-                        renderNullCaptcha();
-                    } else if (checkCount > 50) {
-                        clearInterval(interval);
-                        handleNullCaptchaFailure("Null CAPTCHA failed to load. Please check your internet connection.");
-                    }
-                }, 100);
-            } else {
-                renderNullCaptcha();
-            }
-        }
-
-        async function verifyNullCaptchaToken(token) {
-            try {
-                const response = await fetch('/verify-nullcaptcha', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 
-                        token: token,
-                        tabSessionId: sessionStorage.getItem('rustrooms_tab_session_id') || ''
-                    })
-                });
-
-                if (response.ok) {
-                    const data = await response.json().catch(() => ({}));
-                    if (data.token) {
-                        sessionStorage.setItem('rustrooms_tab_session_token', data.token);
-                    }
-                    sessionStorage.setItem('rustrooms_nullcaptcha_passed', 'true');
-                    closeNullCaptchaModal();
-                    proceedJoinRoom();
-                } else {
-                    const data = await response.json().catch(() => ({}));
-                    handleNullCaptchaFailure(data.error || "Verification failed on server.");
-                }
-            } catch (err) {
-                console.error("Verification error:", err);
-                handleNullCaptchaFailure("Network error during verification.");
-            }
-        }
-
-        function handleNullCaptchaFailure(msg) {
-            document.getElementById('nullcaptchaDesc').innerText = msg;
-            
-            const captchaWidget = document.getElementById('captcha-widget');
-            if (captchaWidget) {
-                captchaWidget.className = "captcha-widget failed";
-                const textLabel = document.getElementById('captcha-text-label');
-                if (textLabel) textLabel.textContent = "Verification Failed";
-            }
-            
-            const btn = document.getElementById('btnCancelNullCaptcha');
-            btn.innerText = "Try Again";
-            btn.onclick = function() {
-                btn.innerText = "Cancel";
-                btn.onclick = cancelNullCaptcha;
-                showNullCaptchaModal();
-            };
-        }
-
-        function cancelNullCaptcha() {
-            closeNullCaptchaModal();
-        }
-
-        function closeNullCaptchaModal() {
-            const modal = document.getElementById('nullcaptchaModal');
-            modal.classList.remove('open');
-            const widgetContainer = document.getElementById('nullcaptchaWidget');
-            if (widgetContainer) widgetContainer.innerHTML = '';
-        }
-
         function proceedToSetup() {
             sessionStorage.setItem('rustrooms_welcomed', 'true');
             const inviteOverlay = document.getElementById('inviteWelcomeOverlay');
@@ -7021,9 +6737,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             peerScreenHasAudio = {};
             pendingCandidates = {};
 
-            const currentTabSessionId = sessionStorage.getItem('rustrooms_tab_session_token') || sessionStorage.getItem('rustrooms_tab_session_id') || '';
-            const wsUrlWithSession = wsUrl + (wsUrl.includes('?') ? '&' : '?') + 'tabSessionId=' + encodeURIComponent(currentTabSessionId);
-            ws = new WebSocket(wsUrlWithSession);
+            ws = new WebSocket(wsUrl);
 
                         ws.onopen = () => {
                             if (wsConnectionId !== thisConnectionId) return; // stale connection
@@ -7238,8 +6952,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                         hasLeftRoom = true;
                                         alert("You have been kicked from the room.");
                                         sessionStorage.removeItem('rustrooms_setup_done');
-                                        sessionStorage.removeItem('rustrooms_nullcaptcha_passed');
-                                        sessionStorage.removeItem('rustrooms_tab_session_token');
                                         sessionStorage.removeItem('rustrooms_last_room_id');
                                         sessionStorage.removeItem('rustrooms_last_channel_id');
                                         window.location.href = "/";
@@ -8737,8 +8449,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             sessionStorage.setItem('rustrooms_welcomed', 'false');
             sessionStorage.setItem('rustrooms_setup_done', 'false');
-            sessionStorage.removeItem('rustrooms_nullcaptcha_passed');
-            sessionStorage.removeItem('rustrooms_tab_session_token');
             sessionStorage.removeItem('rustrooms_last_room_id');
             sessionStorage.removeItem('rustrooms_last_channel_id');
 
@@ -8810,8 +8520,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             if (otgDot) otgDot.className = 'connection-dot';
 
             sessionStorage.removeItem('rustrooms_setup_done');
-            sessionStorage.removeItem('rustrooms_nullcaptcha_passed');
-            sessionStorage.removeItem('rustrooms_tab_session_token');
             sessionStorage.removeItem('rustrooms_last_room_id');
             sessionStorage.removeItem('rustrooms_last_channel_id');
             history.replaceState(null, '', '/');
@@ -10209,13 +9917,6 @@ struct ClusterMessage {
     signal_msg: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
-struct NullCaptchaRequest {
-    token: String,
-    #[serde(rename = "tabSessionId")]
-    tab_session_id: String,
-}
-
 #[derive(Clone)]
 struct AppState {
     rooms: RoomMap,
@@ -10230,9 +9931,6 @@ struct AppState {
     connected_peers: Arc<Mutex<HashSet<String>>>,
     pub recent_cluster_msg_ids: Arc<Mutex<HashSet<String>>>,
     pub cluster_msg_history: Arc<Mutex<VecDeque<String>>>,
-    nullcaptcha_url: Option<String>,
-    http_client: reqwest::Client,
-    verified_tab_sessions: Arc<Mutex<HashMap<String, std::time::Instant>>>,
 }
 
 #[tokio::main]
@@ -10272,13 +9970,6 @@ async fn main() {
         println!("URL RESTRICTION: Enabled - only allowing access from {}", url);
     }
 
-    let nullcaptcha_url = std::env::var("NULLCAPTCHA_URL").ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
-    if nullcaptcha_url.is_some() {
-        println!("NULLCAPTCHA: Enabled (URL found in environment variables)");
-    }
-    let http_client = reqwest::Client::new();
-    let verified_tab_sessions = Arc::new(Mutex::new(HashMap::new()));
-
     let state = AppState {
         rooms,
         room_cleanup_generations,
@@ -10292,16 +9983,12 @@ async fn main() {
         connected_peers: Arc::new(Mutex::new(HashSet::new())),
         recent_cluster_msg_ids: Arc::new(Mutex::new(HashSet::new())),
         cluster_msg_history: Arc::new(Mutex::new(VecDeque::new())),
-        nullcaptcha_url,
-        http_client,
-        verified_tab_sessions,
     };
 
     let app = Router::new()
         .route("/", get(index))
         .route("/new", get(new_room))
         .route("/new/", get(redirect_new_trailing_slash))
-        .route("/verify-nullcaptcha", post(verify_nullcaptcha))
         .route("/{room_id}", get(index))
         .route("/{room_id}/", get(redirect_room_trailing_slash))
         .route("/{room_id}/{channel_id}", get(index))
@@ -10348,137 +10035,6 @@ async fn main() {
     }
 
     axum::serve(listener, app).await.unwrap();
-}
-
-fn create_session_token(tab_session_id: &str, secret: &str) -> String {
-    let exp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs() + 86400; // 24 hours validity
-
-    let data_to_sign = format!("{}.{}", tab_session_id, exp);
-    let mut hasher = Sha1::new();
-    hasher.update(data_to_sign.as_bytes());
-    hasher.update(b".");
-    hasher.update(secret.as_bytes());
-    let result = hasher.finalize();
-    let signature = result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
-
-    format!("{}.{}.{}", tab_session_id, exp, signature)
-}
-
-fn verify_session_token(token: &str, secret: &str) -> Option<String> {
-    let parts: Vec<&str> = token.split('.').collect();
-    if parts.len() != 3 {
-        return None;
-    }
-    let tab_session_id = parts[0];
-    let exp_str = parts[1];
-    let signature = parts[2];
-
-    let exp: u64 = match exp_str.parse() {
-        Ok(t) => t,
-        Err(_) => return None,
-    };
-
-    let now = match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-        Ok(d) => d.as_secs(),
-        Err(_) => return None,
-    };
-
-    if now > exp {
-        return None; // Token expired
-    }
-
-    let data_to_sign = format!("{}.{}", tab_session_id, exp);
-    let mut hasher = Sha1::new();
-    hasher.update(data_to_sign.as_bytes());
-    hasher.update(b".");
-    hasher.update(secret.as_bytes());
-    let result = hasher.finalize();
-    let expected_signature = result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
-
-    if signature == expected_signature {
-        Some(tab_session_id.to_string())
-    } else {
-        None
-    }
-}
-
-async fn verify_nullcaptcha(
-    State(state): State<AppState>,
-    axum::Json(payload): axum::Json<NullCaptchaRequest>,
-) -> impl IntoResponse {
-    println!("verify_nullcaptcha received token: {:?}", payload.token);
-    let url = match &state.nullcaptcha_url {
-        Some(u) => u,
-        None => {
-            return (
-                axum::http::StatusCode::OK,
-                axum::Json(serde_json::json!({ "success": true })),
-            );
-        }
-    };
-
-    let validation_payload = serde_json::json!({
-        "token": payload.token
-    });
-
-    let validation_endpoint = format!("{}/api/validate", url.trim_end_matches('/'));
-
-    let res = match state.http_client
-        .post(&validation_endpoint)
-        .json(&validation_payload)
-        .send()
-        .await
-    {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("Error sending request to Null CAPTCHA: {:?}", e);
-            return (
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                axum::Json(serde_json::json!({ "success": false, "error": "Failed to connect to verification server" })),
-            );
-        }
-    };
-
-    #[derive(Deserialize)]
-    struct ValidateResponse {
-        success: bool,
-        error: Option<String>,
-    }
-
-    let validate_res: ValidateResponse = match res.json().await {
-        Ok(val) => val,
-        Err(e) => {
-            eprintln!("Error decoding Null CAPTCHA response: {:?}", e);
-            return (
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                axum::Json(serde_json::json!({ "success": false, "error": "Invalid response from verification server" })),
-            );
-        }
-    };
-
-    if validate_res.success {
-        let token = create_session_token(&payload.tab_session_id, url);
-        {
-            let mut sessions = state.verified_tab_sessions.lock().await;
-            let now = std::time::Instant::now();
-            sessions.retain(|_, time| now.duration_since(*time).as_secs() < 43200);
-            sessions.insert(payload.tab_session_id.clone(), now);
-            sessions.insert(token.clone(), now);
-        }
-        (
-            axum::http::StatusCode::OK,
-            axum::Json(serde_json::json!({ "success": true, "token": token })),
-        )
-    } else {
-        let error_msg = validate_res.error.unwrap_or_else(|| "Verification failed".to_string());
-        (
-            axum::http::StatusCode::BAD_REQUEST,
-            axum::Json(serde_json::json!({ "success": false, "error": error_msg })),
-        )
-    }
 }
 
 async fn new_room(
@@ -10551,20 +10107,9 @@ async fn index(State(state): State<AppState>, headers: axum::http::HeaderMap) ->
     let turn_username = std::env::var("TURN_USERNAME").unwrap_or_default();
     let turn_credential = std::env::var("TURN_CREDENTIAL").unwrap_or_default();
 
-    let nullcaptcha_url = state.nullcaptcha_url.clone().unwrap_or_default();
-    let nullcaptcha_enabled = !nullcaptcha_url.is_empty();
+    let html = get_html_page(&turn_url, &turn_username, &turn_credential);
 
-    let mut html = get_html_page(&turn_url, &turn_username, &turn_credential);
-    html = html.replace("{{NULLCAPTCHA_URL}}", &nullcaptcha_url);
-
-    let csp = if nullcaptcha_enabled {
-        format!(
-            "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' {0}; script-src-elem 'self' 'unsafe-inline' {0}; frame-src 'self' {0}; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws: {0}; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';",
-            nullcaptcha_url
-        )
-    } else {
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; script-src-elem 'self' 'unsafe-inline'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';".to_string()
-    };
+    let csp = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; script-src-elem 'self' 'unsafe-inline'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; connect-src 'self' wss: ws:; media-src 'self' blob:; object-src 'none'; frame-ancestors 'none';".to_string();
 
     (
         [(
@@ -10577,28 +10122,11 @@ async fn index(State(state): State<AppState>, headers: axum::http::HeaderMap) ->
 
 async fn ws_handler(
     Path((room_id, channel_id)): Path<(String, String)>,
-    Query(_params): Query<HashMap<String, String>>,
+    Query(_): Query<HashMap<String, String>>,
     ws: WebSocketUpgrade,
     headers: axum::http::HeaderMap,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    if let Some(ref url) = state.nullcaptcha_url {
-        let tab_session_id = _params.get("tabSessionId").map(|s| s.as_str()).unwrap_or("");
-        let mut sessions = state.verified_tab_sessions.lock().await;
-        let mut is_verified = sessions.contains_key(tab_session_id);
-        if !is_verified {
-            if let Some(original_id) = verify_session_token(tab_session_id, url) {
-                let now = std::time::Instant::now();
-                sessions.insert(tab_session_id.to_string(), now);
-                sessions.insert(original_id, now);
-                is_verified = true;
-            }
-        }
-        if !is_verified {
-            return (axum::http::StatusCode::FORBIDDEN, "Forbidden: Security verification required").into_response();
-        }
-    }
-
     let mut channel_id = channel_id.chars().take(MAX_CHANNEL_ID_LEN).collect::<String>();
     if channel_id.eq_ignore_ascii_case("general") {
         channel_id = "General".to_string();
@@ -12250,44 +11778,6 @@ async fn channel_status(
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
 
-    #[test]
-    fn test_token_creation_and_verification() {
-        let secret = "my_super_secret_nullcaptcha_key";
-        let tab_session_id = "test-session-uuid";
-        let token = create_session_token(tab_session_id, secret);
-        
-        // Ensure the token starts with the tab session ID
-        assert!(token.starts_with(tab_session_id));
-        
-        // Verification should succeed with the correct secret
-        let verified_id = verify_session_token(&token, secret);
-        assert_eq!(verified_id, Some(tab_session_id.to_string()));
-        
-        // Verification should fail with an incorrect secret
-        let bad_verified_id = verify_session_token(&token, "wrong_secret");
-        assert_eq!(bad_verified_id, None);
-        
-        // Verification should fail with an expired token
-        let exp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs() - 10; // Expired 10 seconds ago
-        let data_to_sign = format!("{}.{}", tab_session_id, exp);
-        let mut hasher = Sha1::new();
-        hasher.update(data_to_sign.as_bytes());
-        hasher.update(b".");
-        hasher.update(secret.as_bytes());
-        let result = hasher.finalize();
-        let signature = result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
-        let expired_token = format!("{}.{}.{}", tab_session_id, exp, signature);
-        
-        let expired_verified_id = verify_session_token(&expired_token, secret);
-        assert_eq!(expired_verified_id, None);
-    }
-}
 
 
