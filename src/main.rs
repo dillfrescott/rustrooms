@@ -9579,7 +9579,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }, 2000);
             }
 
-            if (otgBtn && !otgBtn.classList.contains('bg-emerald-600')) {
+            if (otgBtn && !otgBtn.classList.contains('bg-green-600')) {
                 const originalHTML = otgBtn.innerHTML;
                 const originalClass = otgBtn.className;
 
@@ -9589,7 +9589,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     </div>
                     <span id="onTheGoCopyText">Copied!</span>
                 `;
-                otgBtn.classList.add('bg-emerald-600', 'border-emerald-600');
+                otgBtn.classList.add('bg-green-600', 'border-green-600');
                 otgBtn.classList.remove('bg-zinc-800', 'hover:bg-zinc-700', 'border-zinc-700');
 
                 setTimeout(() => {
