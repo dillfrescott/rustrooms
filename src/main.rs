@@ -176,28 +176,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             },
             theme: {
                 extend: {
-                    borderRadius: {
-                        'none': '0px',
-                        'sm': '0px',
-                        'DEFAULT': '0px',
-                        'md': '0px',
-                        'lg': '0px',
-                        'xl': '0px',
-                        '2xl': '0px',
-                        '3xl': '0px',
-                        'full': '0px',
-                    },
-                    boxShadow: {
-                        'sm': 'none',
-                        'DEFAULT': 'none',
-                        'md': 'none',
-                        'lg': 'none',
-                        'xl': 'none',
-                        '2xl': 'none',
-                        '3xl': 'none',
-                        'inner': 'none',
-                        'none': 'none',
-                    },
+
                     colors: {
                         slate: {
                             50: '#000000', 100: '#000000', 200: '#000000', 300: '#8e8e93', 400: '#8e8e93',
@@ -281,16 +260,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             --warning: #ffcc00;
             --warning-glow: transparent;
 
-            --shadow-sm: none;
-            --shadow-md: none;
-            --shadow-lg: none;
-            --shadow-xl: none;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 
-            --radius-sm: 0px;
-            --radius-md: 0px;
-            --radius-lg: 0px;
-            --radius-xl: 0px;
-            --radius-pill: 0px;
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+            --radius-pill: 9999px;
 
             --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -338,7 +317,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb {
             background: var(--border-strong);
-            border-radius: 0px;
+            border-radius: var(--radius-sm);
         }
         ::-webkit-scrollbar-thumb:hover {
             background: var(--text-secondary);
@@ -347,14 +326,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .glass-panel {
             background: var(--bg-primary);
             border: 1px solid var(--border-subtle);
-            box-shadow: none;
-            border-radius: 0px;
+            box-shadow: var(--shadow-lg);
+            border-radius: var(--radius-xl);
         }
 
         .video-container {
             position: relative;
             background: var(--bg-secondary);
-            border-radius: 0px;
+            border-radius: var(--radius-lg);
             overflow: hidden;
             border: 1px solid var(--border-subtle);
             transition: border-color 0.15s ease;
@@ -362,7 +341,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             flex-direction: column;
             width: 100%;
             height: 100%;
-            box-shadow: none;
+            box-shadow: var(--shadow-sm);
         }
 
         .video-container:hover {
@@ -414,7 +393,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             position: relative;
             width: 120px;
             height: 120px;
-            border-radius: 0px;
+            border-radius: var(--radius-xl);
             overflow: hidden;
             border: 1px solid var(--border-medium);
             background: var(--bg-tertiary);
@@ -464,7 +443,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .control-btn {
             padding: 0;
-            border-radius: 0px;
+            border-radius: var(--radius-lg);
             border: 1px solid var(--border-subtle);
             cursor: pointer;
             display: flex;
@@ -477,7 +456,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             height: 52px;
             overflow: hidden;
             position: relative;
-            box-shadow: none;
+            box-shadow: var(--shadow-sm);
         }
 
         @media (hover: hover) {
@@ -568,13 +547,13 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             touch-action: none;
             width: 160px;
             aspect-ratio: 16/9;
-            border-radius: 0px;
+            border-radius: var(--radius-lg);
             border: 1px solid var(--border-subtle);
             overflow: hidden;
             z-index: 75;
             transition: all 0.15s ease;
             background: var(--bg-elevated);
-            box-shadow: none;
+            box-shadow: var(--shadow-md);
         }
 
         @media (hover: hover) {
@@ -847,7 +826,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             right: 12px;
             background: var(--bg-primary);
             padding: 10px 14px;
-            border-radius: 0px;
+            border-radius: var(--radius-md);
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -855,7 +834,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             transition: all 0.15s ease;
             align-items: flex-end;
             border: 1px solid var(--border-subtle);
-            box-shadow: none;
+            box-shadow: var(--shadow-md);
         }
         .video-container:hover .volume-controls {
             opacity: 1;
@@ -870,7 +849,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .vol-row button {
             padding: 4px;
-            border-radius: 0px;
+            border-radius: var(--radius-sm);
             transition: all 0.15s ease;
         }
         @media (hover: hover) {
@@ -1129,8 +1108,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             color: var(--bg-primary);
             border: 1px solid var(--text-primary);
             transition: all 0.15s ease;
-            border-radius: 0px;
-            box-shadow: none;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
             text-transform: uppercase;
             font-size: 11px;
             letter-spacing: 0.08em;
@@ -1156,8 +1135,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             color: var(--text-primary);
             border: 1px solid var(--border-subtle);
             transition: all 0.15s ease;
-            border-radius: 0px;
-            box-shadow: none;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
@@ -1510,12 +1489,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .modal-content {
             background: var(--bg-primary);
             border: 1px solid var(--border-strong);
-            border-radius: 0px;
+            border-radius: var(--radius-xl);
             width: 90%;
             max-width: 420px;
             padding: 36px 28px;
             transition: opacity 0.15s ease;
-            box-shadow: none;
+            box-shadow: var(--shadow-xl);
         }
 
         .modal-overlay.open .modal-content {
@@ -1571,9 +1550,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             max-width: 260px;
             background: var(--bg-primary);
             border: 1px solid var(--border-strong);
-            border-radius: 0px;
+            border-radius: var(--radius-lg);
             padding: 14px 16px;
-            box-shadow: none;
+            box-shadow: var(--shadow-md);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.15s ease;
@@ -2035,12 +2014,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             }
         }
 
-        /* Ensure switches are blocky */
+        /* Ensure switches are rounded */
         .switch-track {
-            border-radius: 0px !important;
+            border-radius: var(--radius-pill) !important;
         }
         .switch-track::after {
-            border-radius: 0px !important;
+            border-radius: var(--radius-pill) !important;
         }
     </style>
 
@@ -2286,7 +2265,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="setupLowBandwidth" onchange="handleLowBandwidthChange(this.checked)" class="sr-only peer">
-                                <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-none peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-none after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
+                                <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
                             </label>
                         </div>
                         <div id="setupOnTheGoRow" class="hidden flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
@@ -2296,7 +2275,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="setupOnTheGo" onchange="handleOnTheGoChange(this.checked)" class="sr-only peer">
-                                <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-none peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-none after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
+                                <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
                             </label>
                         </div>
                     </div>
@@ -2373,7 +2352,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="settingsLowBandwidth" onchange="handleLowBandwidthChange(this.checked)" class="sr-only peer">
-                                    <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-none peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-none after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
+                                    <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
                                 </label>
                             </div>
                             <div id="settingsOnTheGoRow" class="hidden flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
@@ -2383,7 +2362,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="settingsOnTheGo" onchange="handleOnTheGoChange(this.checked)" class="sr-only peer">
-                                    <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-none peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-none after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
+                                    <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
                                 </label>
                             </div>
                         </div>
