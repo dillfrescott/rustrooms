@@ -195,8 +195,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             500: '#8e8e93', 600: '#222222', 700: '#222222', 800: '#000000', 900: '#000000', 950: '#000000',
                         },
                         indigo: {
-                            50: '#ffffff', 100: '#ffffff', 200: '#ffffff', 300: '#ffffff', 400: '#ffffff',
-                            500: '#ffffff', 600: '#ffffff', 700: '#ffffff', 800: '#ffffff', 900: '#ffffff', 950: '#ffffff',
+                            50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8',
+                            500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81', 950: '#1e1b4b',
                         },
                         red: {
                             500: '#ff453a', 600: '#ff453a', 700: '#ff453a', 800: '#ff453a', 900: '#ff453a', 950: '#ff453a',
@@ -224,17 +224,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             --border-subtle: #222222;
             --border-medium: #222222;
             --border-strong: #333333;
-            --border-accent: #ffffff;
+            --border-accent: #6366f1;
 
             --text-primary: #ffffff;
             --text-secondary: #8e8e93;
             --text-muted: #8e8e93;
 
-            --accent: #ffffff;
-            --accent-hover: #ffffff;
-            --accent-glow: transparent;
-            --accent-blue: #ffffff;
-            --accent-dark-blue: #ffffff;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --accent-glow: rgba(99, 102, 241, 0.35);
+            --accent-blue: #818cf8;
+            --accent-dark-blue: #6366f1;
 
             --accent-green: #00ff66;
             --accent-green-hover: #00ff66;
@@ -244,9 +244,9 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             --accent-yellow: #ffcc00;
 
             --success: #00ff66;
-            --success-glow: transparent;
+            --success-glow: rgba(0, 255, 102, 0.35);
             --danger: #ff453a;
-            --danger-glow: transparent;
+            --danger-glow: rgba(255, 69, 58, 0.35);
             --warning: #ffcc00;
             --warning-glow: transparent;
 
@@ -451,25 +451,25 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         @media (hover: hover) {
             .control-btn:hover {
-                background: var(--text-primary);
-                color: var(--bg-primary);
-                border-color: var(--text-primary);
+                background: var(--accent);
+                color: #ffffff;
+                border-color: var(--accent);
                 transform: none;
-                box-shadow: none;
+                box-shadow: 0 0 10px 3px var(--accent-glow);
             }
             .control-btn.active-red:hover {
                 background: var(--bg-primary);
                 color: var(--accent-red);
                 border-color: var(--accent-red);
                 transform: none;
-                box-shadow: none;
+                box-shadow: 0 0 10px 3px var(--danger-glow);
             }
             .control-btn.active-green:hover {
                 background: var(--bg-primary);
                 color: var(--accent-green);
                 border-color: var(--accent-green);
                 transform: none;
-                box-shadow: none;
+                box-shadow: 0 0 10px 3px var(--success-glow);
             }
             .control-btn:disabled:hover {
                 background: var(--bg-elevated);
@@ -495,14 +495,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             background: var(--danger);
             color: #ffffff;
             border-color: var(--danger);
-            box-shadow: none;
+            box-shadow: 0 0 10px 3px var(--danger-glow);
         }
 
         .control-btn.active-green {
             background: var(--success);
             color: var(--bg-primary);
             border-color: var(--success);
-            box-shadow: none;
+            box-shadow: 0 0 10px 3px var(--success-glow);
         }
 
         .control-btn.active-green:active {
@@ -622,6 +622,16 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         .ping-good .ping-bar { background-color: var(--success); }
         .ping-fair .ping-bar-1, .ping-fair .ping-bar-2 { background-color: var(--warning); }
         .ping-poor .ping-bar-1 { background-color: var(--danger); }
+
+        .copy-btn-copied {
+            background: #22c55e !important;
+            border-color: #22c55e !important;
+            color: white;
+        }
+        .copy-btn-copied:hover {
+            background: #16a34a !important;
+            border-color: #16a34a !important;
+        }
 
         .status-pill {
             cursor: pointer;
@@ -851,14 +861,14 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .speaking-glow {
             border: 3px solid var(--accent) !important;
-            box-shadow: none !important;
-            transition: border 0.15s ease;
+            box-shadow: 0 0 12px 4px var(--accent-glow) !important;
+            transition: all 0.15s ease;
             z-index: 50;
         }
 
         #localPipWrapper.speaking-glow {
             border: 2px solid var(--accent) !important;
-            box-shadow: none !important;
+            box-shadow: 0 0 10px 3px var(--accent-glow) !important;
             z-index: 75;
         }
 
@@ -1094,12 +1104,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
 
         .btn-primary {
-            background: var(--text-primary);
-            color: var(--bg-primary);
-            border: 1px solid var(--text-primary);
+            background: var(--accent);
+            color: #ffffff;
+            border: 1px solid var(--accent);
             transition: all 0.15s ease;
             border-radius: var(--radius-md);
-            box-shadow: var(--shadow-sm);
+            box-shadow: 0 0 6px 2px var(--accent-glow);
             text-transform: uppercase;
             font-size: 11px;
             letter-spacing: 0.08em;
@@ -1107,11 +1117,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
         @media (hover: hover) {
             .btn-primary:hover {
-                background: var(--bg-primary);
-                color: var(--text-primary);
-                border-color: var(--text-primary);
+                background: var(--accent-hover);
+                color: #ffffff;
+                border-color: var(--accent-hover);
                 transform: none;
-                box-shadow: none;
+                box-shadow: 0 0 14px 4px var(--accent-glow);
             }
         }
 
@@ -1139,11 +1149,11 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
         @media (hover: hover) {
             .btn-secondary:hover {
-                background: var(--text-primary);
-                color: var(--bg-primary);
-                border-color: var(--text-primary);
+                background: var(--accent);
+                color: #ffffff;
+                border-color: var(--accent);
                 transform: none;
-                box-shadow: none;
+                box-shadow: 0 0 10px 3px var(--accent-glow);
             }
         }
         .btn-secondary:focus {
@@ -1172,7 +1182,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             background: var(--danger);
             color: #ffffff;
             border-color: var(--danger);
-            box-shadow: none;
+            box-shadow: 0 0 10px 3px var(--danger-glow);
         }
 
         .btn-icon-test:active, .btn-icon-test.is-pressed {
@@ -1358,17 +1368,17 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         @media (hover: hover) {
             .room-item:hover {
-                border-color: var(--border-medium);
-                background: var(--bg-elevated);
-                transform: translateY(-1px);
-                box-shadow: var(--shadow-md);
+                border-color: var(--accent);
+                background: rgba(99, 102, 241, 0.05);
+                transform: translateY(-2px);
+                box-shadow: 0 0 12px 3px var(--accent-glow);
             }
         }
 
         .room-item.active {
             border-color: var(--accent);
-            background: rgba(99, 102, 241, 0.05);
-            box-shadow: 0 0 0 1px var(--border-accent);
+            background: rgba(99, 102, 241, 0.08);
+            box-shadow: 0 0 14px 4px var(--accent-glow), 0 0 0 1px var(--border-accent);
         }
 
         .room-name {
@@ -1431,8 +1441,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
         .mini-avatar.speaking-glow {
             border: 2px solid var(--accent) !important;
-            box-shadow: none !important;
-            transition: border 0.15s ease;
+            box-shadow: 0 0 8px 3px var(--accent-glow) !important;
+            transition: all 0.15s ease;
         }
 
         .sidebar-overlay {
@@ -1691,7 +1701,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }
         .otg-speaking-pulse {
             animation: otg-pulse 1.8s infinite cubic-bezier(0.4, 0, 0.6, 1);
-            border-color: #6366f1 !important;
+            border-color: var(--accent) !important;
         }
 
         @keyframes otgRotateDevice {
@@ -2091,7 +2101,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="setupLowBandwidth" onchange="handleLowBandwidthChange(this.checked)" class="sr-only peer">
-                                <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
+                                <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:after:bg-white"></div>
                             </label>
                         </div>
                         <div id="setupOnTheGoRow" class="hidden flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
@@ -2101,7 +2111,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="setupOnTheGo" onchange="handleOnTheGoChange(this.checked)" class="sr-only peer">
-                                <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
+                                <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:after:bg-white"></div>
                             </label>
                         </div>
                     </div>
@@ -2178,7 +2188,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="settingsLowBandwidth" onchange="handleLowBandwidthChange(this.checked)" class="sr-only peer">
-                                    <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
+                                    <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:after:bg-white"></div>
                                 </label>
                             </div>
                             <div id="settingsOnTheGoRow" class="hidden flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
@@ -2188,7 +2198,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="settingsOnTheGo" onchange="handleOnTheGoChange(this.checked)" class="sr-only peer">
-                                    <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
+                                    <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:after:bg-white"></div>
                                 </label>
                             </div>
                         </div>
@@ -2435,7 +2445,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     this.vy = (Math.random() - 0.5) * 0.5;
                     this.radius = Math.random() * 2 + 1;
                     this.opacity = Math.random() * 0.5 + 0.2;
-                    this.color = Math.random() > 0.5 ? '255, 255, 255' : '156, 163, 175';
+                    this.color = Math.random() > 0.5 ? '129, 140, 248' : '99, 102, 241';
                 }
                 update() {
                     this.x += this.vx;
@@ -2525,7 +2535,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     this.vy = (Math.random() - 0.5) * 0.5;
                     this.radius = Math.random() * 2 + 1;
                     this.opacity = Math.random() * 0.5 + 0.2;
-                    this.color = Math.random() > 0.5 ? '255, 255, 255' : '156, 163, 175';
+                    this.color = Math.random() > 0.5 ? '129, 140, 248' : '99, 102, 241';
                 }
                 update() {
                     this.x += this.vx;
@@ -2617,7 +2627,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     this.vy = (Math.random() - 0.5) * 0.5;
                     this.radius = Math.random() * 2 + 1;
                     this.opacity = Math.random() * 0.5 + 0.2;
-                    this.color = Math.random() > 0.5 ? '255, 255, 255' : '156, 163, 175';
+                    this.color = Math.random() > 0.5 ? '129, 140, 248' : '99, 102, 241';
                 }
                 update() {
                     this.x += this.vx;
@@ -9252,12 +9262,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const btn = document.getElementById('btnCopy');
             const otgBtn = document.getElementById('btnOnTheGoCopy');
 
-            if (btn && !btn.classList.contains('bg-green-600')) {
+            if (btn && !btn.classList.contains('copy-btn-copied')) {
                 const originalHTML = btn.innerHTML;
                 const originalClass = btn.className;
 
                 btn.innerHTML = `<span class="text-xs md:text-sm font-medium text-white">Copied!</span><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-                btn.classList.add('bg-green-600', 'hover:bg-green-700');
+                btn.classList.add('copy-btn-copied');
                 btn.classList.remove('hover:bg-slate-700/50');
 
                 setTimeout(() => {
@@ -9266,7 +9276,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                 }, 2000);
             }
 
-            if (otgBtn && !otgBtn.classList.contains('bg-green-600')) {
+            if (otgBtn && !otgBtn.classList.contains('copy-btn-copied')) {
                 const originalHTML = otgBtn.innerHTML;
                 const originalClass = otgBtn.className;
 
@@ -9276,7 +9286,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     </div>
                     <span id="onTheGoCopyText">Copied!</span>
                 `;
-                otgBtn.classList.add('bg-green-600', 'border-green-600');
+                otgBtn.classList.add('copy-btn-copied');
                 otgBtn.classList.remove('bg-zinc-800', 'hover:bg-zinc-700', 'border-zinc-700');
 
                 setTimeout(() => {
