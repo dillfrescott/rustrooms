@@ -117,10 +117,7 @@ async fn icon_svg() -> impl IntoResponse {
     <rect x="76" y="76" width="360" height="360" fill="none" stroke="#ffffff" stroke-width="4" stroke-opacity="0.15"/>
     <rect x="116" y="116" width="280" height="280" fill="none" stroke="#ffffff" stroke-width="6" stroke-opacity="0.3"/>
     <rect x="156" y="156" width="200" height="200" fill="#ffffff"/>
-    <rect x="221" y="234" width="70" height="70" fill="#000000"/>
-    <path d="M201 249 v -35 h 110 v 35" fill="none" stroke="#000000" stroke-width="12" stroke-linejoin="miter"/>
-    <rect x="189" y="234" width="12" height="30" fill="#000000"/>
-    <rect x="311" y="234" width="12" height="30" fill="#000000"/>
+    <rect x="221" y="221" width="70" height="70" fill="#000000"/>
 </svg>"##;
     (
         [(header::CONTENT_TYPE, "image/svg+xml")],
