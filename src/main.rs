@@ -4660,6 +4660,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const file = input.files[0];
             if (!file) return;
 
+            if (file.size > 15 * 1024 * 1024) {
+                alert("File is too large! Maximum allowed size is 15MB.");
+                input.value = '';
+                return;
+            }
+
             if (file.type === 'image/gif') {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -9390,6 +9396,12 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             const file = input.files[0];
             if (!file) return;
 
+            if (file.size > 15 * 1024 * 1024) {
+                alert("File is too large! Maximum allowed size is 15MB.");
+                input.value = '';
+                return;
+            }
+
             if (file.type === 'image/gif') {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -10175,7 +10187,7 @@ async fn ws_handler(
         client_ip = forwarded_for.to_str().unwrap_or("").split(',').next().unwrap_or("").trim().to_string();
     }
 
-    ws.max_message_size(8 * 1024 * 1024)
+    ws.max_message_size(32 * 1024 * 1024)
         .on_upgrade(move |socket| handle_socket(socket, room_id, channel_id, state, client_ip))
 }
 
@@ -10192,7 +10204,7 @@ async fn cluster_ws_handler(
     } else {
         return (axum::http::StatusCode::FORBIDDEN, "Clustering not enabled").into_response();
     }
-    ws.max_message_size(8 * 1024 * 1024)
+    ws.max_message_size(32 * 1024 * 1024)
         .on_upgrade(move |socket| handle_inbound_cluster(socket, state))
 }
 
@@ -10926,7 +10938,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                 .unwrap_or(false);
 
                             if let Some(ref a) = avatar {
-                                if a.len() > 7_000_000 {
+                                if a.len() > 25_000_000 {
                                     avatar = None;
                                 }
                             }
@@ -10939,7 +10951,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                             let static_frame = parsed.data.as_ref()
                                 .and_then(|d| d.get("staticFrame"))
                                 .and_then(|v| v.as_str())
-                                .filter(|s| s.len() <= 7_000_000)
+                                .filter(|s| s.len() <= 25_000_000)
                                 .map(|s| s.to_string());
 
                             {
@@ -11114,7 +11126,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                              let mut notify_data = parsed.data.clone();
                              if let Some(serde_json::Value::Object(ref mut map)) = notify_data {
                                  if let Some(serde_json::Value::String(avatar)) = map.get("avatar") {
-                                     if avatar.len() > 7_000_000 {
+                                     if avatar.len() > 25_000_000 {
                                          map.remove("avatar");
                                      }
                                  }
@@ -11182,7 +11194,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                                         status.is_gif = false;
                                                         status.static_frame = None;
                                                     } else if let Some(a_str) = a.as_str() {
-                                                        if a_str.len() <= 7_000_000 {
+                                                        if a_str.len() <= 25_000_000 {
                                                             status.avatar = Some(a_str.to_string());
                                                         }
                                                     }
@@ -11192,7 +11204,7 @@ async fn handle_socket(socket: WebSocket, room_id: String, channel_id: String, s
                                                 }
                                                 if d.contains_key("staticFrame") {
                                                     let sf = d.get("staticFrame").and_then(|v| v.as_str())
-                                                        .filter(|s| s.len() <= 7_000_000)
+                                                        .filter(|s| s.len() <= 25_000_000)
                                                         .map(|s| s.to_string());
                                                     if sf.is_some() {
                                                         status.static_frame = sf;
