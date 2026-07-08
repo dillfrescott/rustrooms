@@ -3916,7 +3916,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             isCameraReady = false;
             if (btnCam) btnCam.disabled = true;
 
-            loadPreferences();
+            await loadPreferences();
             try {
                 try {
                     const constraints = { audio: true };
@@ -4375,8 +4375,54 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             checkAudio();
         }
 
-        function loadPreferences() {
+        const dbName = 'rustrooms_db';
+        const storeName = 'avatar_store';
+
+        function initIndexedDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(dbName, 1);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(storeName)) {
+                        db.createObjectStore(storeName, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function saveAvatarToDB(avatar, isGif, staticFrame) {
+            try {
+                const db = await initIndexedDB();
+                const transaction = db.transaction(storeName, 'readwrite');
+                const store = transaction.objectStore(storeName);
+                store.put({ id: 'current_avatar', avatar, isGif, staticFrame });
+            } catch (e) {
+                console.error("Failed to save avatar to IndexedDB", e);
+            }
+        }
+
+        async function loadAvatarFromDB() {
+            try {
+                const db = await initIndexedDB();
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction(storeName, 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.get('current_avatar');
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (e) {
+                console.error("Failed to load avatar from IndexedDB", e);
+                return null;
+            }
+        }
+
+        async function loadPreferences() {
             const stored = localStorage.getItem('rustrooms_profile');
+            let fallbackAvatar = null;
+            let fallbackIsGif = false;
             if (stored) {
                 try {
                     const data = JSON.parse(stored);
@@ -4386,32 +4432,8 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                         if (document.getElementById('settingsNicknameInput')) document.getElementById('settingsNicknameInput').value = userNickname;
                     }
                     if (data.avatar) {
-                        userAvatar = data.avatar;
-                        userAvatarIsGif = !!data.isGif;
-                        userAvatarStaticFrame = null;
-                        const displaySrc = userAvatar;
-                        if (avatarPreview) {
-                            avatarPreview.src = displaySrc;
-                            avatarPreview.classList.remove('hidden');
-                            avatarPlaceholder.classList.add('hidden');
-                            const removeBtn = document.getElementById('btnRemoveSetupAvatar');
-                            if (removeBtn) removeBtn.classList.remove('hidden');
-                        }
-                        if (document.getElementById('settingsAvatarPreview')) {
-                            const sap = document.getElementById('settingsAvatarPreview');
-                            sap.src = displaySrc;
-                            sap.classList.remove('hidden');
-                            document.getElementById('settingsAvatarPlaceholder').classList.add('hidden');
-                        }
-                        if (userAvatarIsGif) {
-                            extractGifFirstFrame(userAvatar).then(sf => {
-                                userAvatarStaticFrame = sf;
-                                if (avatarPreview) avatarPreview.src = sf;
-                                if (document.getElementById('settingsAvatarPreview')) {
-                                    document.getElementById('settingsAvatarPreview').src = sf;
-                                }
-                            });
-                        }
+                        fallbackAvatar = data.avatar;
+                        fallbackIsGif = !!data.isGif;
                     }
                     if (data.audioOutputId) {
                         currentAudioOutputId = data.audioOutputId;
@@ -4451,6 +4473,49 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                     }
                 } catch (e) { console.error("Load pref error", e); }
             }
+            try {
+                const dbData = await loadAvatarFromDB();
+                if (dbData && dbData.avatar) {
+                    userAvatar = dbData.avatar;
+                    userAvatarIsGif = !!dbData.isGif;
+                    userAvatarStaticFrame = dbData.staticFrame || null;
+                } else if (fallbackAvatar) {
+                    userAvatar = fallbackAvatar;
+                    userAvatarIsGif = fallbackIsGif;
+                    userAvatarStaticFrame = null;
+                }
+                if (userAvatar) {
+                    const displaySrc = userAvatar;
+                    if (avatarPreview) {
+                        avatarPreview.src = displaySrc;
+                        avatarPreview.classList.remove('hidden');
+                        avatarPlaceholder.classList.add('hidden');
+                        const removeBtn = document.getElementById('btnRemoveSetupAvatar');
+                        if (removeBtn) removeBtn.classList.remove('hidden');
+                    }
+                    if (document.getElementById('settingsAvatarPreview')) {
+                        const sap = document.getElementById('settingsAvatarPreview');
+                        sap.src = displaySrc;
+                        sap.classList.remove('hidden');
+                        document.getElementById('settingsAvatarPlaceholder').classList.add('hidden');
+                    }
+                    if (userAvatarIsGif && !userAvatarStaticFrame) {
+                        extractGifFirstFrame(userAvatar).then(sf => {
+                            userAvatarStaticFrame = sf;
+                            if (avatarPreview) avatarPreview.src = sf;
+                            if (document.getElementById('settingsAvatarPreview')) {
+                                document.getElementById('settingsAvatarPreview').src = sf;
+                            }
+                            saveAvatarToDB(userAvatar, userAvatarIsGif, userAvatarStaticFrame);
+                        });
+                    } else if (userAvatarIsGif && userAvatarStaticFrame) {
+                        if (avatarPreview) avatarPreview.src = userAvatarStaticFrame;
+                        if (document.getElementById('settingsAvatarPreview')) {
+                            document.getElementById('settingsAvatarPreview').src = userAvatarStaticFrame;
+                        }
+                    }
+                }
+            } catch (e) { console.error("DB Avatar error", e); }
         }
 
         function savePreferences() {
@@ -4499,8 +4564,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             try {
                 localStorage.setItem('rustrooms_profile', JSON.stringify({
                     nickname: userNickname,
-                    avatar: userAvatar,
-                    isGif: userAvatarIsGif,
                     audioOutputId: audioOutputId,
                     audioInputId: audioInputId,
                     videoInputId: videoInputId,
@@ -4514,6 +4577,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
             } catch(e) {
                 console.warn('Could not save preferences to localStorage:', e.message);
             }
+            saveAvatarToDB(userAvatar, userAvatarIsGif, userAvatarStaticFrame);
 
             currentAudioInputId = audioInputId;
             currentVideoInputId = videoInputId;
@@ -6643,36 +6707,36 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
         }, 1000);
 
         if (roomId) {
-            loadPreferences();
+            loadPreferences().then(() => {
+                // Enable On the Go mode options only for mobile and tablet devices
+                if (isMobileDevice()) {
+                    const btnOnTheGo = document.getElementById('btnOnTheGo');
+                    if (btnOnTheGo) btnOnTheGo.classList.remove('hidden');
 
-            // Enable On the Go mode options only for mobile and tablet devices
-            if (isMobileDevice()) {
-                const btnOnTheGo = document.getElementById('btnOnTheGo');
-                if (btnOnTheGo) btnOnTheGo.classList.remove('hidden');
+                    const setupOtgRow = document.getElementById('setupOnTheGoRow');
+                    if (setupOtgRow) setupOtgRow.classList.remove('hidden');
 
-                const setupOtgRow = document.getElementById('setupOnTheGoRow');
-                if (setupOtgRow) setupOtgRow.classList.remove('hidden');
+                    const settingsOtgRow = document.getElementById('settingsOnTheGoRow');
+                    if (settingsOtgRow) settingsOtgRow.classList.remove('hidden');
+                } else {
+                    // Ensure On-the-go mode setting is inactive on desktop
+                    isOnTheGoMode = false;
+                }
 
-                const settingsOtgRow = document.getElementById('settingsOnTheGoRow');
-                if (settingsOtgRow) settingsOtgRow.classList.remove('hidden');
-            } else {
-                // Ensure On-the-go mode setting is inactive on desktop
-                isOnTheGoMode = false;
-            }
+                const setupDone = sessionStorage.getItem('rustrooms_setup_done') === 'true';
+                const welcomed = sessionStorage.getItem('rustrooms_welcomed') === 'true';
 
-            const setupDone = sessionStorage.getItem('rustrooms_setup_done') === 'true';
-            const welcomed = sessionStorage.getItem('rustrooms_welcomed') === 'true';
-
-            if (setupDone && roomId) {
-                loadDevices().then(() => joinRoom());
-            } else if (welcomed) {
-                configOverlay.classList.remove('hidden');
-                configOverlay.classList.remove('opacity-0');
-                initSetupButtonTouchHandlers();
-                loadDevices();
-            } else {
-                updateInviteOverlay();
-            }
+                if (setupDone && roomId) {
+                    loadDevices().then(() => joinRoom());
+                } else if (welcomed) {
+                    configOverlay.classList.remove('hidden');
+                    configOverlay.classList.remove('opacity-0');
+                    initSetupButtonTouchHandlers();
+                    loadDevices();
+                } else {
+                    updateInviteOverlay();
+                }
+            });
         } else {
             welcomeOverlay.style.display = 'flex';
         }
