@@ -10017,6 +10017,7 @@ struct AppState {
     connected_peers: Arc<Mutex<HashSet<String>>>,
     pub recent_cluster_msg_ids: Arc<Mutex<HashSet<String>>>,
     pub cluster_msg_history: Arc<Mutex<VecDeque<String>>>,
+    node_id: String,
 }
 
 #[tokio::main]
@@ -10056,6 +10057,8 @@ async fn main() {
         println!("URL RESTRICTION: Enabled - only allowing access from {}", url);
     }
 
+    let node_id = Uuid::new_v4().to_string();
+
     let state = AppState {
         rooms,
         room_cleanup_generations,
@@ -10069,6 +10072,7 @@ async fn main() {
         connected_peers: Arc::new(Mutex::new(HashSet::new())),
         recent_cluster_msg_ids: Arc::new(Mutex::new(HashSet::new())),
         cluster_msg_history: Arc::new(Mutex::new(VecDeque::new())),
+        node_id,
     };
 
     let app = Router::new()
@@ -10268,6 +10272,11 @@ async fn cluster_ws_handler(
     } else {
         return (axum::http::StatusCode::FORBIDDEN, "Clustering not enabled").into_response();
     }
+    if let Some(peer_node_id) = params.get("node_id") {
+        if *peer_node_id == state.node_id {
+            return (axum::http::StatusCode::BAD_REQUEST, "Self connection").into_response();
+        }
+    }
     ws.max_message_size(32 * 1024 * 1024)
         .on_upgrade(move |socket| handle_inbound_cluster(socket, state))
 }
@@ -10299,6 +10308,8 @@ async fn handle_inbound_cluster(socket: WebSocket, state: AppState) {
                         data: Some(serde_json::json!({
                             "nickname": status.nickname,
                             "avatar": status.avatar,
+                            "isGif": status.is_gif,
+                            "staticFrame": status.static_frame,
                             "isMuted": status.is_muted,
                             "isDeafened": status.is_deafened,
                             "screenEnabled": status.is_screen_sharing,
@@ -10370,6 +10381,7 @@ fn spawn_dht_discovery(state: AppState, port: u16) {
             }
         };
         println!("CLUSTER: DHT client started, waiting for bootstrap...");
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
         let dht_clone = dht.clone();
         let bootstrapped = tokio::task::spawn_blocking(move || dht_clone.bootstrapped()).await.unwrap_or(false);
@@ -10405,7 +10417,7 @@ fn spawn_dht_discovery(state: AppState, port: u16) {
                 if let Ok(peers) = peers_result {
 
                     let unique_peers: HashSet<String> = peers.iter()
-                        .filter(|p| p.port() != port)
+                        .filter(|p| !(p.ip().is_loopback() && p.port() == port))
                         .map(|p| p.to_string())
                         .collect();
                     if !unique_peers.is_empty() {
@@ -10470,7 +10482,7 @@ fn spawn_dht_discovery(state: AppState, port: u16) {
 async fn connect_to_peer(url: &str, state: &AppState) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let cluster_key = state.cluster_key.as_ref().ok_or("No cluster key")?;
     let sep = if url.contains('?') { "&" } else { "?" };
-    let full_url = format!("{}{}key={}", url, sep, cluster_key);
+    let full_url = format!("{}{}key={}&node_id={}", url, sep, cluster_key, state.node_id);
 
     let (ws_stream, _) = connect_async(&full_url).await?;
     println!("CLUSTER: Connected to peer {}", url);
@@ -10501,6 +10513,8 @@ async fn connect_to_peer(url: &str, state: &AppState) -> Result<(), Box<dyn std:
                         data: Some(serde_json::json!({
                             "nickname": status.nickname,
                             "avatar": status.avatar,
+                            "isGif": status.is_gif,
+                            "staticFrame": status.static_frame,
                             "isMuted": status.is_muted,
                             "isDeafened": status.is_deafened,
                             "screenEnabled": status.is_screen_sharing,
