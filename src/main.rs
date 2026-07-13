@@ -3188,17 +3188,7 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
 
             if (speakerId === 'local') {
                 name = userNickname || "You";
-                if (userAvatar) {
-                    // For GIF avatars, animate while speaking (like the PIP/sidebar
-                    // avatars do via toggleGifAnimation) and use the static frame
-                    // as the resting display source so a stale/old image never
-                    // lingers on the persistent OTG <img> element.
-                    if (userAvatarIsGif) {
-                        avatarUrl = maxVol > 10 ? restartGif(userAvatar) : (userAvatarStaticFrame || userAvatar);
-                    } else {
-                        avatarUrl = userAvatar;
-                    }
-                }
+                avatarUrl = userAvatar;
             } else {
                 const rawUserId = speakerId.startsWith('wrapper-') ? speakerId.replace('wrapper-', '') : speakerId;
                 const wrapper = document.getElementById(`wrapper-${rawUserId}`);
@@ -9557,13 +9547,6 @@ fn get_html_page(turn_url: &str, turn_username: &str, turn_credential: &str) -> 
                      placeholder.classList.remove('hidden');
                  }
              }
-            // Reset the persistent On-the-go speaking avatar so it never shows a
-            // stale/old image after the local avatar changes. The next speaking
-            // indicator update (or static-frame resting state) will set a fresh src.
-            const otgAvatarImg = document.getElementById('onTheGoAvatar');
-            if (otgAvatarImg) {
-                otgAvatarImg.removeAttribute('src');
-            }
         }
 
         (function() {
