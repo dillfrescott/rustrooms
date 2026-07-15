@@ -1,0 +1,213 @@
+use axum::{http::header, response::IntoResponse};
+pub(crate) async fn rnnoise_js() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "application/javascript")],
+        include_str!("rnnoise.js"),
+    )
+}
+
+pub(crate) async fn rnnoise_processor_js() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "application/javascript")],
+        include_str!("rnnoise_processor.js"),
+    )
+}
+
+pub(crate) async fn manifest_json() -> impl IntoResponse {
+    let manifest = r##"{
+    "name": "RustRooms",
+    "short_name": "RustRooms",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#000000",
+    "theme_color": "#000000",
+    "description": "Simple, secure, and fast video conferencing.",
+    "icons": [
+        {
+            "src": "/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}"##;
+    (
+        [(header::CONTENT_TYPE, "application/manifest+json")],
+        manifest,
+    )
+}
+
+pub(crate) async fn service_worker_js() -> impl IntoResponse {
+    let sw = r##"
+const CACHE_NAME = 'rustrooms-v1';
+const ASSETS = [
+    '/icon.svg',
+    '/rnnoise.js',
+    '/rnnoise_processor.js',
+    '/assets/tailwind.js',
+    '/assets/tailwind-config.js',
+    '/assets/app.css',
+    '/assets/app.js',
+    '/assets/particles.js',
+    '/assets/croppie.min.js',
+    '/assets/croppie.min.css',
+    '/assets/inter.css',
+    '/fonts/inter-cyrillic-ext.woff2',
+    '/fonts/inter-cyrillic.woff2',
+    '/fonts/inter-greek-ext.woff2',
+    '/fonts/inter-greek.woff2',
+    '/fonts/inter-vietnamese.woff2',
+    '/fonts/inter-latin-ext.woff2',
+    '/fonts/inter-latin.woff2'
+];
+
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    );
+});
+
+self.addEventListener('fetch', (event) => {
+    if (event.request.method !== 'GET') return;
+
+    event.respondWith(
+        (async () => {
+            try {
+                const networkResponse = await fetch(event.request);
+                return networkResponse;
+            } catch (error) {
+                const cachedResponse = await caches.match(event.request);
+                if (cachedResponse) {
+                    return cachedResponse;
+                }
+                throw error;
+            }
+        })()
+    );
+});
+"##;
+    ([(header::CONTENT_TYPE, "application/javascript")], sw)
+}
+
+pub(crate) async fn icon_svg() -> impl IntoResponse {
+    let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="128" ry="128" fill="#000000"/>
+    <circle cx="256" cy="256" r="180" fill="#6366f1" fill-opacity="0.15"/>
+    <circle cx="256" cy="256" r="140" fill="#6366f1" fill-opacity="0.3"/>
+    <circle cx="256" cy="256" r="100" fill="#6366f1"/>
+    <path d="M256 196a60 60 0 1 0 0 120 60 60 0 0 0 0-120z" fill="#ffffff"/>
+    <path d="M196 256a60 60 0 0 1 120 0" stroke="#ffffff" stroke-width="20" stroke-linecap="round"/>
+</svg>"##;
+    ([(header::CONTENT_TYPE, "image/svg+xml")], svg)
+}
+
+macro_rules! asset_route {
+    ($func:ident, $content_type:expr, $path:expr, str) => {
+        pub(crate) async fn $func() -> impl IntoResponse {
+            ([(header::CONTENT_TYPE, $content_type)], include_str!($path))
+        }
+    };
+    ($func:ident, $content_type:expr, $path:expr, bytes) => {
+        pub(crate) async fn $func() -> impl IntoResponse {
+            (
+                [(header::CONTENT_TYPE, $content_type)],
+                include_bytes!($path).as_slice(),
+            )
+        }
+    };
+}
+
+asset_route!(
+    tailwind_js,
+    "application/javascript",
+    "assets/tailwind.js",
+    str
+);
+asset_route!(
+    tailwind_config_js,
+    "application/javascript",
+    "assets/tailwind-config.js",
+    str
+);
+asset_route!(app_css, "text/css", "assets/app.css", str);
+asset_route!(
+    particles_js,
+    "application/javascript",
+    "assets/particles.js",
+    str
+);
+asset_route!(
+    croppie_js,
+    "application/javascript",
+    "assets/croppie.min.js",
+    str
+);
+asset_route!(croppie_css, "text/css", "assets/croppie.min.css", str);
+asset_route!(inter_css, "text/css", "assets/inter.css", str);
+asset_route!(
+    inter_cyrillic_ext_woff2,
+    "font/woff2",
+    "assets/fonts/inter-cyrillic-ext.woff2",
+    bytes
+);
+asset_route!(
+    inter_cyrillic_woff2,
+    "font/woff2",
+    "assets/fonts/inter-cyrillic.woff2",
+    bytes
+);
+asset_route!(
+    inter_greek_ext_woff2,
+    "font/woff2",
+    "assets/fonts/inter-greek-ext.woff2",
+    bytes
+);
+asset_route!(
+    inter_greek_woff2,
+    "font/woff2",
+    "assets/fonts/inter-greek.woff2",
+    bytes
+);
+asset_route!(
+    inter_vietnamese_woff2,
+    "font/woff2",
+    "assets/fonts/inter-vietnamese.woff2",
+    bytes
+);
+asset_route!(
+    inter_latin_ext_woff2,
+    "font/woff2",
+    "assets/fonts/inter-latin-ext.woff2",
+    bytes
+);
+asset_route!(
+    inter_latin_woff2,
+    "font/woff2",
+    "assets/fonts/inter-latin.woff2",
+    bytes
+);
+
+pub(crate) async fn app_js() -> impl IntoResponse {
+    let turn_url = std::env::var("TURN_URL").unwrap_or_default();
+    let turn_username = std::env::var("TURN_USERNAME").unwrap_or_default();
+    let turn_credential = std::env::var("TURN_CREDENTIAL").unwrap_or_default();
+    let javascript = concat!(
+        include_str!("assets/client/core.js"),
+        include_str!("assets/client/interface.js"),
+        include_str!("assets/client/connection.js"),
+        include_str!("assets/client/settings.js"),
+    )
+    .replace("{{TURN_URL}}", &turn_url)
+    .replace("{{TURN_USERNAME}}", &turn_username)
+    .replace("{{TURN_CREDENTIAL}}", &turn_credential);
+
+    (
+        [(header::CONTENT_TYPE, "application/javascript")],
+        javascript,
+    )
+}
+
+pub(crate) fn get_html_page() -> String {
+    include_str!("assets/index.html").to_owned()
+}

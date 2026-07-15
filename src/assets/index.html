@@ -1,0 +1,672 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>RustRooms</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <meta name="theme-color" content="#000000">
+    <script src="/assets/tailwind.js"></script>
+    <script src="/assets/tailwind-config.js"></script>
+    <link href="/assets/inter.css" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/app.css">
+
+    <link rel="stylesheet" href="/assets/croppie.min.css" />
+    <script src="/assets/croppie.min.js"></script>
+</head>
+<body class="flex flex-col overflow-hidden" style="background-color: var(--bg-primary);">
+
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <div id="roomSidebar">
+        <div class="sidebar-header">
+            <h2 id="sidebarTitle" class="text-xl font-bold text-white">Channels</h2>
+            <button id="btnCloseSidebar" onclick="toggleSidebar()" class="text-zinc-400 hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="sidebar-content">
+            <div id="sidebarActions">
+                <button onclick="createNewChannel()" class="w-full btn-primary py-3 mb-6 flex items-center justify-center gap-2 font-semibold">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Create New Channel
+                </button>
+            </div>
+            <div id="roomListContainer">
+
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <div id="userVolumeMenu" class="user-volume-menu"></div>
+
+    <div id="nameModal" class="modal-overlay">
+        <div class="modal-content text-center space-y-5">
+            <h3 id="modalTitle" class="text-xl font-bold text-white">Name Channel</h3>
+            <div class="space-y-4">
+                <input type="text" id="modalInput" placeholder="Enter name..." class="w-full rounded-xl px-4 py-3 text-white transition-all bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none" maxlength="32">
+                <div class="flex gap-3">
+                    <button onclick="closeNameModal()" class="btn-secondary flex-1 py-3 rounded-xl font-medium transition-all">Cancel</button>
+                    <button id="modalSubmit" class="btn-primary flex-1 py-3 rounded-xl font-medium transition-all">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="passwordModal" class="modal-overlay">
+        <div class="modal-content text-center space-y-5">
+            <h3 id="passwordModalTitle" class="text-xl font-bold text-white break-words">Password Required</h3>
+            <p id="passwordModalMessage" class="text-zinc-300 text-sm break-words"></p>
+            <div class="space-y-4">
+                <input type="password" id="passwordModalInput" placeholder="Enter password..." class="w-full rounded-xl px-4 py-3 text-white transition-all bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none" onkeydown="if(event.key==='Enter') document.getElementById('passwordModalSubmit').click()">
+                <div class="flex gap-3">
+                    <button onclick="closePasswordModal()" class="btn-secondary flex-1 py-3 rounded-xl font-medium transition-all">Cancel</button>
+                    <button id="passwordModalSubmit" class="btn-primary flex-1 py-3 rounded-xl font-medium transition-all">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="alertModal" class="modal-overlay">
+        <div class="modal-content text-center space-y-5">
+            <h3 id="alertTitle" class="text-xl font-bold text-white break-words">Alert</h3>
+            <p id="alertMessage" class="text-zinc-300 text-sm break-words"></p>
+            <button onclick="closeCustomAlert()" class="btn-primary w-full py-3 rounded-xl font-medium transition-all">OK</button>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-content text-center space-y-5">
+            <h3 id="confirmTitle" class="text-xl font-bold text-white break-words">Confirm</h3>
+            <p id="confirmMessage" class="text-zinc-300 text-sm break-words"></p>
+            <div class="flex gap-3">
+                <button onclick="closeCustomConfirm()" class="btn-secondary flex-1 py-3 rounded-xl font-medium transition-all">Cancel</button>
+                <button id="confirmSubmit" class="btn-primary flex-1 py-3 rounded-xl font-medium transition-all">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="kickModal" class="modal-overlay">
+        <div class="modal-content text-center space-y-5">
+            <h3 id="kickTitle" class="text-xl font-bold text-white break-words">Kick User</h3>
+            <p id="kickMessage" class="text-zinc-300 text-sm break-words"></p>
+            <div class="flex gap-3">
+                <button onclick="closeKickModal()" class="btn-secondary flex-1 py-3 rounded-xl font-medium transition-all">Cancel</button>
+                <button id="kickSubmit" class="btn-primary flex-1 py-3 rounded-xl font-medium transition-all" style="background: var(--danger);">Kick</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="welcomeOverlay" class="fixed inset-0 z-[70] flex flex-col items-center justify-center p-4" style="display: none; background: var(--bg-primary);">
+        <canvas id="particleCanvas"></canvas>
+        <div class="text-center space-y-8 max-w-md w-full relative z-10">
+            <div class="space-y-4" id="welcomeTitleContainer">
+                <h1 class="text-5xl md:text-7xl font-bold tracking-tight" style="color: #ffffff; font-weight: 800; letter-spacing: -0.05em; background: linear-gradient(135deg, #ffffff 0%, #f4f4f7 50%, #ffffff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Rust Rooms</h1>
+                <p style="color: var(--text-secondary);" class="text-base md:text-lg font-normal opacity-60">Simple, secure, and fast video conferencing.</p>
+            </div>
+
+            <div id="startActionContainer" class="relative min-h-[72px] flex justify-center items-center">
+                 <button id="btnStartRoom" onclick="createRoom()" class="btn-primary absolute w-full md:w-auto px-12 py-4 rounded-2xl font-semibold text-lg transition-all">
+                    Start Room
+                </button>
+
+                <div id="passwordInputContainer" class="absolute w-full max-w-xs transition-all duration-300 transform translate-y-4 opacity-0 pointer-events-none flex gap-2">
+                     <input type="password" id="roomPasswordInput" placeholder="Password required" class="flex-1 rounded-xl px-4 py-3 text-white bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] outline-none transition-all" onkeypress="if(event.key==='Enter') submitPassword()">
+                     <button onclick="submitPassword()" class="btn-primary px-5 py-3 rounded-xl font-medium transition-all flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="inviteWelcomeOverlay" class="fixed inset-0 z-[80] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: var(--bg-primary);">
+        <canvas id="particleCanvasInvite"></canvas>
+        <div class="glass-panel p-8 md:p-12 rounded-3xl max-w-lg w-full relative z-10 text-center space-y-8 overflow-hidden">
+            <div class="space-y-3">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                    </span>
+                    Live Call
+                </div>
+                <h1 id="inviteChannelName" class="text-3xl md:text-4xl font-bold tracking-tight text-white break-words"># General</h1>
+                <p id="inviteCallDuration" class="text-zinc-400 text-sm font-medium">Running for 00:00:00</p>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-widest text-left">Currently in call</h3>
+                <div id="inviteUserList" class="flex flex-wrap justify-center gap-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                    <!-- Users will be injected here -->
+                </div>
+            </div>
+
+            <div class="pt-4">
+                <button onclick="proceedToSetup()" class="btn-primary w-full py-4 rounded-2xl font-bold text-lg transition-all shadow-lg hover:shadow-indigo-500/20 group">
+                    Join Conversation
+                    <svg class="inline-block ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="configOverlay" class="fixed inset-0 z-[60] flex flex-col items-center justify-center p-4 transition-opacity duration-300 hidden opacity-0" style="background: var(--bg-primary);">
+        <canvas id="particleCanvasConfig" class="absolute inset-0 pointer-events-none" style="z-index: 1;"></canvas>
+        <div id="configPanel" class="glass-panel p-8 md:p-10 rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
+            <div class="text-center space-y-2 mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--text-primary);">Setup</h1>
+                <p style="color: var(--text-secondary);" class="text-sm font-normal opacity-80">Configure your camera and microphone.</p>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
+
+                <div class="lg:w-1/2 flex flex-col gap-4">
+                    <div class="relative aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] shadow-lg">
+                        <video id="previewVideo" autoplay playsinline muted class="w-full h-full object-contain"></video>
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none" id="previewPlaceholder" style="color: var(--text-muted);">
+                            <span>Camera Off</span>
+                        </div>
+                        <div class="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg text-xs font-medium bg-black/60 border border-[var(--border-subtle)]" style="color: var(--text-primary);">
+                            Preview
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button onclick="togglePreviewMic()" id="btnPreviewMic" disabled class="btn-secondary flex-1 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
+                            Mute
+                        </button>
+                        <button onclick="togglePreviewCam()" id="btnPreviewCam" disabled class="btn-secondary flex-1 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
+                            Stop Cam
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lg:w-1/2 space-y-4">
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="flex-shrink-0 flex justify-center sm:justify-start">
+                            <div class="text-center">
+                                <label class="label-text block mb-2">Avatar</label>
+                                <div onclick="document.getElementById('avatarInput').click()" class="w-20 h-20 rounded-lg cursor-pointer overflow-hidden flex items-center justify-center transition-all group relative mx-auto" style="background: var(--bg-secondary); border: 2px solid var(--border-subtle);">
+                                    <img id="avatarPreview" src="" class="hidden w-full h-full object-cover" draggable="false">
+                                    <span id="avatarPlaceholder" class="text-3xl" style="color: var(--text-muted);">👤</span>
+                                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold" style="background: rgba(0, 0, 0, 0.7); color: var(--text-primary);">Edit</div>
+                                </div>
+                                <button id="btnRemoveSetupAvatar" onclick="removeSetupAvatar()" class="hidden mt-1 text-xs font-medium px-2 py-0.5 rounded-lg transition-all" style="color: var(--text-muted); background: var(--bg-tertiary); border: 1px solid var(--border-subtle);" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">Remove</button>
+                                <div class="mt-1 text-center" style="font-size: 0.6rem; color: var(--text-muted); opacity: 0.7;">Images & GIFs</div>
+                                <input type="file" id="avatarInput" hidden accept="image/*" onchange="handleAvatarUpload(this)">
+                            </div>
+                        </div>
+
+                        <div class="flex-1">
+                            <label class="label-text block mb-2">Nickname</label>
+                            <input type="text" id="nicknameInput" placeholder="Enter your name" class="w-full rounded-lg px-4 py-2.5 text-white transition-all" style="font-size: 0.875rem;" maxlength="32">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3">
+                        <div>
+                            <label class="label-text block mb-2">Microphone</label>
+                            <select id="audioSource" onchange="startPreview()" class="w-full rounded-lg px-3 py-2.5 text-sm text-white transition-all">
+                                <option value="">Default</option>
+                            </select>
+                            <div class="mic-meter"><div id="setupMicBar" class="mic-bar"></div></div>
+                        </div>
+                        <div>
+                            <label class="label-text block mb-2">Speaker</label>
+                            <div class="flex gap-2">
+                                <select id="audioOutputSource" onchange="changeAudioOutput(this.value)" class="flex-1 min-w-0 rounded-lg px-3 py-2.5 text-sm text-white transition-all">
+                                    <option value="default">Default</option>
+                                </select>
+                                <button onclick="testSpeaker('audioOutputSource')" class="btn-icon-test p-2.5 rounded-lg transition-all" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-subtle);" title="Test Speaker">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="label-text block mb-2">Camera</label>
+                            <select id="videoSource" onchange="startPreview()" class="w-full rounded-lg px-3 py-2.5 text-sm text-white transition-all">
+                                <option value="">Default</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Connection & Quality Settings -->
+                    <div class="border-t border-[var(--border-subtle)] pt-4 mt-4 space-y-3 text-left">
+                        <div class="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-white">Low Bandwidth Mode</span>
+                                <span class="text-xs text-zinc-400">Reduces audio & video quality to save data</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="setupLowBandwidth" onchange="handleLowBandwidthChange(this.checked)" class="sr-only peer">
+                                <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:after:bg-white"></div>
+                            </label>
+                        </div>
+                        <div id="setupOnTheGoRow" class="hidden flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-semibold text-white">On the Go Mode</span>
+                                <span class="text-xs text-zinc-400">Simplify UI with big buttons and hide video</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="setupOnTheGo" onchange="handleOnTheGoChange(this.checked)" class="sr-only peer">
+                                <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:after:bg-white"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button id="btnJoin" onclick="joinRoom()" disabled class="btn-primary w-full py-3.5 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        Loading...
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsOverlay" class="fixed inset-0 z-[200] flex items-center justify-center p-4 hidden" style="background: var(--bg-primary);" onclick="if(event.target === this) closeSettings()">
+        <div class="glass-panel p-8 md:p-10 rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-y-auto relative z-10">
+             <button onclick="closeSettings()" class="absolute top-6 right-6 transition-all p-2 rounded-lg hover:bg-white/10" style="color: var(--text-muted);" title="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+
+            <div class="text-center space-y-2 mb-8">
+                <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--text-primary);">Settings</h2>
+                <p style="color: var(--text-secondary);" class="text-sm font-normal opacity-70">Update your profile and devices.</p>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
+
+                <div class="lg:w-1/2 space-y-4">
+                    <div class="flex flex-col items-center gap-5 p-6 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] shadow-md">
+                        <label class="label-text">Avatar</label>
+                        <div class="flex flex-col items-center gap-4">
+                            <div onclick="document.getElementById('settingsAvatarInput').click()" class="w-32 h-32 rounded-xl cursor-pointer overflow-hidden flex items-center justify-center transition-all relative bg-[var(--bg-tertiary)] border-2 border-[var(--border-subtle)] hover:border-[var(--accent)] group shadow-lg">
+                                <img id="settingsAvatarPreview" src="" class="hidden w-full h-full object-cover" draggable="false">
+                                <span id="settingsAvatarPlaceholder" class="text-6xl" style="color: var(--text-muted);">👤</span>
+                                <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-semibold bg-black/80" style="color: var(--text-primary);">Change</div>
+                            </div>
+                            <button id="btnRemoveSettingsAvatar" onclick="removeSettingsAvatar()" class="hidden text-xs font-medium px-3 py-1.5 rounded-lg transition-all bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-[var(--danger)]" style="color: var(--text-muted);" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">Remove Avatar</button>
+                            <div style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7;">Images & GIFs</div>
+                            <input type="file" id="settingsAvatarInput" hidden accept="image/*" onchange="handleSettingsAvatarUpload(this)">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="label-text block mb-2">Nickname</label>
+                        <input type="text" id="settingsNicknameInput" placeholder="Enter your name" class="w-full rounded-lg px-4 py-3 text-white transition-all" style="font-size: 0.875rem;" maxlength="32" oninput="handleSettingsNicknameInput()">
+                    </div>
+                </div>
+
+                <div class="lg:w-1/2 space-y-4">
+                    <div class="grid grid-cols-1 gap-4">
+                         <div>
+                            <label class="label-text block mb-2">Microphone</label>
+                            <select id="settingsAudioSource" onchange="handleSettingsMicChange(this.value)" class="w-full rounded-lg px-3 py-2.5 text-sm text-white transition-all">
+                            </select>
+                            <div class="mic-meter"><div id="settingsMicBar" class="mic-bar"></div></div>
+                        </div>
+                         <div>
+                            <label class="label-text block mb-2">Speaker</label>
+                            <div class="flex gap-2">
+                                <select id="settingsAudioOutputSource" onchange="changeAudioOutput(this.value)" class="flex-1 min-w-0 rounded-lg px-3 py-2.5 text-sm text-white transition-all">
+                                </select>
+                                <button onclick="testSpeaker('settingsAudioOutputSource')" class="btn-icon-test p-2.5 rounded-lg transition-all" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-subtle);" title="Test Speaker">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="label-text block mb-2">Camera</label>
+                            <select id="settingsVideoSource" onchange="handleSettingsCamChange(this.value)" class="w-full rounded-lg px-3 py-2.5 text-sm text-white transition-all">
+                            </select>
+                        </div>
+                        <div class="border-t border-[var(--border-subtle)] pt-4 mt-4 space-y-3 text-left">
+                            <div class="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-semibold text-white">Low Bandwidth Mode</span>
+                                    <span class="text-xs text-zinc-400">Reduces audio & video quality to save data</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="settingsLowBandwidth" onchange="handleLowBandwidthChange(this.checked)" class="sr-only peer">
+                                    <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:after:bg-white"></div>
+                                </label>
+                            </div>
+                            <div id="settingsOnTheGoRow" class="hidden flex items-center justify-between p-3 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-semibold text-white">On the Go Mode</span>
+                                    <span class="text-xs text-zinc-400">Simplify UI with big buttons and hide video</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="settingsOnTheGo" onchange="handleOnTheGoChange(this.checked)" class="sr-only peer">
+                                    <div class="switch-track w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500 peer-checked:after:bg-white"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-2 mt-2">
+                <button onclick="closeSettings()" class="btn-primary w-full py-3.5 rounded-lg font-semibold transition-all">
+                    Close Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- On-the-go Mode Overlay -->
+    <div id="onTheGoOverlay" class="fixed inset-0 z-[150] flex flex-col justify-between p-4 sm:p-6 gap-y-8 overflow-y-auto hidden" style="background: #000000;">
+        <!-- Orientation Warning Overlay (only visible in landscape mode on mobile/tablet) -->
+        <div id="otgOrientationWarning" class="fixed inset-0 z-[200] flex-col items-center justify-center p-6 bg-black text-center hidden">
+            <div class="mb-6 otg-rotate-anim">
+                <svg class="w-20 h-20 text-zinc-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-6 15h9" />
+                </svg>
+            </div>
+            <h2 class="text-xl font-bold text-white mb-2">Rotate to Portrait</h2>
+            <p class="text-zinc-500 text-sm max-w-xs mx-auto">On-the-go mode is optimized exclusively for portrait orientation. Please rotate your device.</p>
+        </div>
+
+        <!-- Top section: Status / Speaking Info -->
+        <div class="flex flex-col items-center text-center mt-4 sm:mt-8 space-y-4 flex-shrink-0">
+            <div class="status-pill-wrapper" id="onTheGoStatusPillWrapper">
+                <div class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center justify-center gap-2 md:gap-2.5 flex-shrink-0 h-8 md:h-10">
+                    <div id="onTheGoConnectionDot" class="connection-dot"></div>
+                    <!-- Orange lightning icon -->
+                    <svg id="onTheGoLowBandwidthLightning" class="w-4 h-4 text-amber-500 hidden animate-pulse" fill="currentColor" viewBox="0 0 24 24" style="color: #f59e0b;" title="Low Bandwidth Mode Active">
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span id="onTheGoStatusText" class="text-xs md:text-sm font-medium" style="color: var(--text-primary);">Connected</span>
+                    <button id="onTheGoBtnReconnect" onclick="event.stopPropagation(); retryConnection()" class="hidden ml-1 p-1 rounded-lg transition-all hover:bg-white/10" style="color: var(--text-muted);" title="Retry Connection">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                    </button>
+                    <div id="onTheGoPingContainer" class="ping-container hidden !ml-0 !pl-1.5 md:!ml-0 md:!pl-2 border-l !border-[var(--border-subtle)]">
+                        <span id="onTheGoPingText" class="tabular-nums shrink-0 mr-1 md:mr-1.5">0ms</span>
+                        <div id="onTheGoPingBars" class="ping-bars">
+                            <div class="ping-bar ping-bar-1"></div>
+                            <div class="ping-bar ping-bar-2"></div>
+                            <div class="ping-bar ping-bar-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col items-center space-y-3 pt-4 sm:pt-6">
+                <!-- Large voice activity / speaking avatar container -->
+                <div id="onTheGoAvatarWrapper" class="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center relative bg-zinc-800 border-2 border-zinc-700 shadow-2xl transition-all duration-300">
+                    <img id="onTheGoAvatar" src="" class="w-full h-full object-cover rounded-full hidden" draggable="false">
+                    <span id="onTheGoAvatarPlaceholder" class="text-5xl sm:text-6xl text-zinc-400">👤</span>
+                    <!-- Speaking indicator wave/glow -->
+                    <div id="onTheGoSpeakingGlow" class="absolute inset-0 rounded-full border-4 border-indigo-500 scale-100 opacity-0 transition-all duration-300"></div>
+                </div>
+                <div class="space-y-1">
+                    <h3 id="onTheGoSpeakingName" class="text-xl font-bold text-white">No one speaking</h3>
+                    <p class="text-zinc-500 text-sm">Tap buttons below to control</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom section: Big buttons taking up the whole lower portion of the screen -->
+        <div class="grid grid-cols-2 gap-3 mb-4 sm:mb-8 w-full max-w-md mx-auto flex-shrink-0">
+            <!-- Huge Mic Toggle Button -->
+            <button id="btnOnTheGoMic" onclick="toggleMic()" class="flex flex-col items-center justify-center text-center gap-1.5 py-4 px-2 rounded-2xl font-bold text-sm sm:text-base text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+                <div id="onTheGoMicIconWrapper">
+                    <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                </div>
+                <span id="onTheGoMicText" class="truncate w-full px-1">Mute</span>
+            </button>
+
+            <!-- Huge Deafen/Speaker Toggle Button -->
+            <button id="btnOnTheGoDeafen" onclick="toggleDeafen()" class="flex flex-col items-center justify-center text-center gap-1.5 py-4 px-2 rounded-2xl font-bold text-sm sm:text-base text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+                <div id="onTheGoDeafenIconWrapper">
+                    <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
+                </div>
+                <span id="onTheGoDeafenText" class="truncate w-full px-1">Deafen</span>
+            </button>
+
+            <!-- Huge Low Bandwidth Toggle Button -->
+            <button id="btnOnTheGoLowBandwidth" onclick="toggleOnTheGoLowBandwidth()" class="flex flex-col items-center justify-center text-center gap-1.5 py-4 px-2 rounded-2xl font-bold text-sm sm:text-base text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+                <div id="onTheGoLowBandwidthIconWrapper">
+                    <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </div>
+                <span id="onTheGoLowBandwidthText" class="truncate w-full px-1">Low Bandwidth Mode</span>
+            </button>
+
+            <!-- Huge Copy Invite Link Button -->
+            <button id="btnOnTheGoCopy" onclick="copyLink()" class="flex flex-col items-center justify-center text-center gap-1.5 py-4 px-2 rounded-2xl font-bold text-sm sm:text-base text-white transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+                <div id="onTheGoCopyIconWrapper">
+                    <svg class="w-7 h-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                </div>
+                <span id="onTheGoCopyText" class="truncate w-full px-1">Copy Invite Link</span>
+            </button>
+
+            <!-- Exit On-the-go -->
+            <button onclick="toggleOnTheGoMode(false)" class="flex flex-col items-center justify-center py-4 rounded-2xl font-bold text-sm text-zinc-300 transition-all bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-[0.98]">
+                <span>Exit On-the-go</span>
+            </button>
+
+            <!-- Leave Call -->
+            <button onclick="leaveRoom()" class="flex flex-col items-center justify-center py-4 rounded-2xl font-bold text-sm text-white transition-all bg-red-600 hover:bg-red-700 active:scale-[0.98] shadow-lg shadow-red-600/20">
+                <span>Leave Call</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="appLayout" class="hidden flex-col h-full w-full">
+        <div class="app-topbar flex-none p-3 sm:p-4 md:p-5 z-40 flex justify-between items-center gap-2 md:gap-4 pl-3 md:pl-4" style="background: rgba(0, 0, 0, 0.7); border-bottom: 1px solid var(--border-subtle); backdrop-filter: blur(32px) saturate(1.2); -webkit-backdrop-filter: blur(32px) saturate(1.2);">
+            <div class="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                <button id="sidebarToggle" onclick="toggleSidebar()" class="control-btn shadow-lg hidden !w-10 !h-10 md:!w-12 md:!h-12 flex-shrink-0" title="Channels">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <div id="currentChannelName" class="text-white font-semibold text-lg md:text-xl truncate min-w-0 drop-shadow-md"></div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 md:gap-3 flex-shrink-0">
+                <div class="status-pill-wrapper" id="statusPillWrapper">
+                    <div class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full flex items-center justify-center gap-2 md:gap-2.5 flex-shrink-0 h-8 md:h-10" onclick="toggleStatsWindow()">
+                        <div id="connectionDot" class="connection-dot"></div>
+                        <!-- Orange lightning icon -->
+                        <svg id="lowBandwidthLightning" class="w-4 h-4 text-amber-500 hidden animate-pulse" fill="currentColor" viewBox="0 0 24 24" style="color: #f59e0b;" title="Low Bandwidth Mode Active">
+                            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span id="statusText" class="text-xs md:text-sm font-medium hidden sm:inline-block" style="color: var(--text-primary);">Waiting...</span>
+                        <button id="btnReconnect" onclick="event.stopPropagation(); retryConnection()" class="hidden ml-1 p-1 rounded-lg transition-all hover:bg-white/10" style="color: var(--text-muted);" title="Retry Connection">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                        </button>
+                        <div id="pingContainer" class="ping-container hidden !ml-0 !pl-1.5 md:!ml-0 md:!pl-2 border-l !border-[var(--border-subtle)]">
+                            <span id="pingText" class="tabular-nums shrink-0 mr-1 md:mr-1.5">0ms</span>
+                            <div id="pingBars" class="ping-bars">
+                                <div class="ping-bar ping-bar-1"></div>
+                                <div class="ping-bar ping-bar-2"></div>
+                                <div class="ping-bar ping-bar-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="btnCopy" class="status-pill px-3 md:px-4 py-1.5 md:py-2 rounded-full cursor-pointer transition-all flex items-center justify-center gap-2 hover:border-opacity-30 flex-shrink-0 h-8 md:h-10" onclick="copyLink()" title="Invite Link">
+                    <span class="text-xs md:text-sm font-medium hidden md:inline-block" style="color: var(--text-primary);">Invite</span>
+                    <svg id="iconCopy" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                </div>
+            </div>
+        </div>
+
+        <main class="flex-1 w-full relative min-h-0">
+            <div class="absolute inset-0 pb-4 md:pb-5 px-4 pt-1 md:pt-2 overflow-y-auto flex justify-center">
+                 <div id="remoteGrid" class="grid gap-3 md:gap-4 w-full h-full max-w-[1600px] transition-all duration-500 grid-expand my-auto"></div>
+            </div>
+
+            <div id="emptyState" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                <div class="mb-6">
+                    <svg class="mx-auto h-20 w-20 empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="0.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </div>
+                <p class="text-lg font-semibold" style="color: var(--text-secondary);">Waiting for others to join...</p>
+                <p class="text-sm mt-2" style="color: var(--text-muted); opacity: 0.7;">Share the invite link to get started.</p>
+            </div>
+
+            <div class="pip-wrapper" id="localPipWrapper">
+                 <div class="w-full h-full relative flex flex-col">
+                    <div id="localAvatarLayer" class="absolute inset-0 z-20 flex items-center justify-center" style="display: none; background: var(--bg-secondary);">
+                        <img id="localAvatarImg" src="" class="absolute inset-0 w-full h-full object-cover blur-xl opacity-30 hidden" draggable="false">
+                        <div class="relative w-14 h-14 md:w-20 md:h-20 rounded-lg flex items-center justify-center overflow-hidden z-10" style="background: var(--bg-secondary); border: 2px solid var(--border-subtle);">
+                             <img id="localAvatarCenterImg" src="" class="w-full h-full object-cover hidden" draggable="false">
+                             <div id="localAvatarPlaceholder" class="text-2xl md:text-3xl flex items-center justify-center w-full h-full" style="color: var(--text-muted); line-height: 1;">👤</div>
+                        </div>
+                    </div>
+
+                    <video id="localVideo" autoplay playsinline muted class="w-full h-full object-cover z-10"></video>
+                    <div id="localLabel" class="name-tag absolute bottom-2 left-2 px-2.5 py-1 rounded-lg text-[10px] md:text-xs font-medium z-30" style="background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: var(--text-primary); border: 1px solid var(--border-subtle);">
+                        You
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="flex-none taskbar w-full z-50">
+            <div class="flex justify-center items-center py-4 md:py-5 gap-2 md:gap-2.5 px-4">
+                <button class="control-btn" id="btnMic" onclick="toggleMic()" title="Toggle Microphone">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                </button>
+                <button class="control-btn" id="btnDeafen" onclick="toggleDeafen()" title="Deafen (D)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
+                </button>
+                <button class="control-btn" id="btnCam" onclick="toggleCam()" title="Toggle Camera" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                </button>
+                <button class="control-btn hidden" id="btnSwitchCam" onclick="switchCamera()" title="Switch Camera">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><path d="m15 3-3 3 3 3"/><path d="m9 21 3-3-3-3"/></svg>
+                </button>
+                <button class="control-btn" id="btnShare" onclick="toggleScreen()" title="Share Screen">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+                </button>
+                <button class="control-btn hidden" id="btnOnTheGo" onclick="toggleOnTheGoMode(true)" title="On the Go">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                </button>
+                <button class="control-btn" onclick="openSettings()" title="Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </button>
+                <div class="w-px mx-2" style="background: var(--border-medium);"></div>
+                <button class="control-btn active-red" onclick="leaveRoom()" title="Leave Room">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => console.log('SW registered'))
+                .catch(err => console.log('SW error', err));
+        }
+    </script>
+    <script src="/assets/particles.js"></script>
+    <script src="/assets/app.js"></script>
+
+    <div id="cropModal" class="fixed inset-0 z-[250] flex items-center justify-center p-4 hidden" style="background: var(--bg-primary);">
+        <div class="glass-panel p-6 md:p-8 rounded-2xl w-full max-w-md max-h-[95vh] flex flex-col items-center relative z-10">
+            <h3 class="text-xl font-bold tracking-tight mb-4" style="color: var(--text-primary);">Crop Your Avatar</h3>
+            <div id="cropWrapper" class="w-full relative"></div>
+            <div class="flex gap-4 w-full mt-2">
+                <button onclick="closeCropModal()" class="btn-secondary flex-1 py-3 rounded-xl font-medium transition-all">Cancel</button>
+                <button onclick="applyCrop()" class="btn-primary flex-1 py-3 rounded-xl font-medium transition-all">Save Avatar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="statsWindow" class="stats-window" onclick="event.stopPropagation()">
+        <div class="stats-header">
+            <div class="stats-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                Connection Stats
+            </div>
+            <div class="stats-close" onclick="toggleStatsWindow()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </div>
+        </div>
+        <div class="stats-content">
+            <div class="stats-section">
+                <div class="stats-section-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></svg>
+                    Network
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">Ping</span>
+                        <span id="statPing" class="stat-value">--</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Jitter</span>
+                        <span id="statJitter" class="stat-value">--</span>
+                    </div>
+                </div>
+                <div class="stats-row mt-3">
+                    <span class="stats-row-label">Low Bandwidth Mode</span>
+                    <span id="statLowBandwidth" class="stats-row-value text-zinc-400 font-normal">Disabled</span>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="stats-section-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8.5 8.5v.01"/><path d="M15.5 8.5v.01"/><path d="M8.5 15.5v.01"/><path d="M15.5 15.5v.01"/><path d="M3 12h18"/><path d="M12 3v18"/></svg>
+                    Video
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Resolution</span>
+                    <span id="statVideoRes" class="stats-row-value">--</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Bitrate</span>
+                    <span id="statVideoBitrate" class="stats-row-value">--</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Codec</span>
+                    <span id="statVideoCodec" class="stats-row-value">--</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Frames</span>
+                    <span id="statVideoFrames" class="stats-row-value">--</span>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="stats-section-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6"/><path d="M12 2v10"/><path d="m8 8 4-4 4 4"/></svg>
+                    Audio
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Bitrate</span>
+                    <span id="statAudioBitrate" class="stats-row-value">--</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Codec</span>
+                    <span id="statAudioCodec" class="stats-row-value">--</span>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="stats-section-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Packets
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Sent</span>
+                    <span id="statPacketsSent" class="stats-row-value">--</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Received</span>
+                    <span id="statPacketsReceived" class="stats-row-value">--</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-row-label">Lost</span>
+                    <span id="statPacketsLost" class="stats-row-value">--</span>
+                </div>
+            </div>
+        </div>
+        <div class="stats-refresh">Updates every 2 seconds</div>
+    </div>
+</body>
+</html>
