@@ -5,6 +5,8 @@
             --bg-tertiary: #000000;
             --bg-elevated: #000000;
             --bg-elevated-strong: #000000;
+            --bg-interactive-hover: #151515;
+            --bg-interactive-active: #202020;
 
             --border-subtle: #222222;
             --border-medium: #222222;
@@ -29,8 +31,12 @@
             --accent-yellow: #ffcc00;
 
             --success: #00ff66;
+            --success-hover: #00dc58;
+            --success-active: #00c94f;
             --success-glow: rgba(0, 255, 102, 0.35);
             --danger: #ff453a;
+            --danger-hover: #e63e34;
+            --danger-active: #cc372f;
             --danger-glow: rgba(255, 69, 58, 0.35);
             --warning: #ffcc00;
             --warning-glow: transparent;
@@ -232,29 +238,30 @@
             overflow: hidden;
             position: relative;
             box-shadow: var(--shadow-sm);
+            -webkit-tap-highlight-color: transparent;
         }
 
         @media (hover: hover) {
             .control-btn:hover {
-                background: var(--accent);
-                color: #ffffff;
-                border-color: var(--accent);
+                background: var(--bg-interactive-hover);
+                color: var(--text-primary);
+                border-color: var(--border-strong);
                 transform: none;
-                box-shadow: 0 0 10px 3px var(--accent-glow);
+                box-shadow: none;
             }
             .control-btn.active-red:hover {
-                background: var(--bg-primary);
-                color: var(--accent-red);
-                border-color: var(--accent-red);
+                background: var(--danger-hover);
+                color: #ffffff;
+                border-color: var(--danger-hover);
                 transform: none;
-                box-shadow: 0 0 10px 3px var(--danger-glow);
+                box-shadow: 0 0 14px 4px var(--danger-glow);
             }
             .control-btn.active-green:hover {
-                background: var(--bg-primary);
-                color: var(--accent-green);
-                border-color: var(--accent-green);
+                background: var(--success-hover);
+                color: var(--bg-primary);
+                border-color: var(--success-hover);
                 transform: none;
-                box-shadow: 0 0 10px 3px var(--success-glow);
+                box-shadow: 0 0 14px 4px var(--success-glow);
             }
             .control-btn:disabled:hover {
                 background: var(--bg-elevated);
@@ -270,10 +277,12 @@
         .control-btn:active {
             transform: scale(0.98);
             transition: transform 0.1s ease;
+            background: var(--bg-interactive-active);
         }
 
         .control-btn.active-red:active {
-            background: var(--danger);
+            background: var(--danger-active);
+            border-color: var(--danger-active);
         }
 
         .control-btn.active-red {
@@ -291,7 +300,21 @@
         }
 
         .control-btn.active-green:active {
-            background: var(--success);
+            background: var(--success-active);
+            border-color: var(--success-active);
+        }
+
+        .control-btn:focus-visible {
+            outline: 2px solid var(--text-secondary);
+            outline-offset: 3px;
+        }
+
+        .control-btn.active-red:focus-visible {
+            outline-color: var(--danger);
+        }
+
+        .control-btn.active-green:focus-visible {
+            outline-color: var(--success);
         }
 
         .control-btn:disabled {
@@ -899,6 +922,7 @@
             font-size: 11px;
             letter-spacing: 0.08em;
             font-weight: 700;
+            -webkit-tap-highlight-color: transparent;
         }
         @media (hover: hover) {
             .btn-primary:hover {
@@ -908,11 +932,37 @@
                 transform: none;
                 box-shadow: 0 0 14px 4px var(--accent-glow);
             }
+
+            .btn-primary.btn-danger:hover {
+                background: var(--danger-hover);
+                border-color: var(--danger-hover);
+                box-shadow: 0 0 14px 4px var(--danger-glow);
+            }
+        }
+
+        .btn-primary.btn-danger {
+            background: var(--danger);
+            border-color: var(--danger);
+            box-shadow: 0 0 6px 2px var(--danger-glow);
         }
 
         .btn-primary:active {
             transform: scale(0.98);
             transition: transform 0.1s ease;
+        }
+
+        .btn-primary.btn-danger:active {
+            background: var(--danger-active);
+            border-color: var(--danger-active);
+        }
+
+        .btn-primary:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 3px;
+        }
+
+        .btn-primary.btn-danger:focus-visible {
+            outline-color: var(--danger);
         }
 
         .btn-secondary {
@@ -934,32 +984,38 @@
         }
         @media (hover: hover) {
             .btn-secondary:hover {
-                background: var(--accent);
-                color: #ffffff;
-                border-color: var(--accent);
+                background: var(--bg-interactive-hover);
+                color: var(--text-primary);
+                border-color: var(--border-strong);
                 transform: none;
-                box-shadow: 0 0 10px 3px var(--accent-glow);
+                box-shadow: none;
             }
         }
-        .btn-secondary:focus {
+        .btn-secondary:focus:not(:focus-visible) {
             outline: none;
+        }
+        .btn-secondary:focus-visible {
+            outline: 2px solid var(--text-secondary);
+            outline-offset: 3px;
         }
         .btn-secondary:active, .btn-secondary.is-pressed {
             transform: scale(0.98);
             transition: transform 0.1s ease;
+            background: var(--bg-interactive-active);
+            border-color: var(--border-strong);
         }
         @media (hover: none) {
             .btn-secondary:active, .btn-secondary.is-pressed {
-                background: var(--bg-primary);
-                border-color: var(--border-subtle);
+                background: var(--bg-interactive-active);
+                border-color: var(--border-strong);
                 transform: scale(0.98);
                 box-shadow: none;
             }
             .btn-secondary.active-red:active, .btn-secondary.active-red.is-pressed {
-                background: var(--danger);
-                border-color: var(--danger);
+                background: var(--danger-active);
+                border-color: var(--danger-active);
                 transform: scale(0.98);
-                box-shadow: none;
+                box-shadow: 0 0 10px 3px var(--danger-glow);
             }
         }
 
@@ -970,19 +1026,50 @@
             box-shadow: 0 0 10px 3px var(--danger-glow);
         }
 
+        .btn-secondary.active-red:focus-visible {
+            outline-color: var(--danger);
+        }
+
+        .btn-icon-test {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-subtle);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        @media (hover: hover) {
+            .btn-icon-test:hover {
+                background: var(--bg-interactive-hover);
+                border-color: var(--border-strong);
+            }
+        }
+
+        .btn-icon-test:focus-visible {
+            outline: 2px solid var(--text-secondary);
+            outline-offset: 3px;
+        }
+
         .btn-icon-test:active, .btn-icon-test.is-pressed {
+            background: var(--bg-interactive-active);
+            border-color: var(--border-strong);
             transform: scale(0.98);
             transition: transform 0.1s ease;
         }
 
         @media (hover: hover) {
             .btn-secondary.active-red:hover {
-                background: var(--bg-primary);
-                color: var(--danger);
-                border-color: var(--danger);
+                background: var(--danger-hover);
+                color: #ffffff;
+                border-color: var(--danger-hover);
                 transform: none;
-                box-shadow: none;
+                box-shadow: 0 0 14px 4px var(--danger-glow);
             }
+        }
+
+        .btn-secondary.active-red:active,
+        .btn-secondary.active-red.is-pressed {
+            background: var(--danger-active);
+            border-color: var(--danger-active);
         }
 
         .status-pill {
