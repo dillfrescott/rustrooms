@@ -765,7 +765,7 @@
             const draggedRid = roomDragState.draggedRid;
             if (draggedRid === targetRid) return;
 
-            let order = JSON.parse(localStorage.getItem('rustrooms_room_order_' + roomId) || '[]');
+            let order = getStoredRoomOrder();
             const currentRids = Object.keys(globalRoomList);
             if (order.length === 0) order = currentRids.sort();
 
@@ -780,8 +780,26 @@
             }
         }
 
+        function getStoredRoomOrder() {
+            try {
+                const value = JSON.parse(localStorage.getItem('rustrooms_room_order_' + roomId) || '[]');
+                return Array.isArray(value) ? value.filter(item => typeof item === 'string') : [];
+            } catch (error) {
+                console.warn('Ignoring invalid saved channel order:', error);
+                return [];
+            }
+        }
+
         async function createNewRoom() {
             showNameModal("Start New Room", "Enter room name (optional)", (name) => {
+                if ([...name].length > 64) {
+                    showCustomAlert("Name Too Long", "Room names can be at most 64 characters.");
+                    return;
+                }
+                if (/[\\/]/.test(name)) {
+                    showCustomAlert("Invalid Name", "Room names cannot contain slashes.");
+                    return;
+                }
                 window.location.href = `/${name ? encodeURIComponent(name) : crypto.randomUUID()}`;
             });
         }
@@ -789,11 +807,20 @@
         async function createNewChannel() {
             showNameModal("Create New Channel", "Enter channel name", (name) => {
                 if (!name) return;
+                if ([...name].length > 32) {
+                    showCustomAlert("Name Too Long", "Channel names can be at most 32 characters.");
+                    return;
+                }
+                if (/[\\/]/.test(name)) {
+                    showCustomAlert("Invalid Name", "Channel names cannot contain slashes.");
+                    return;
+                }
                 performChannelSwitch(roomId, name);
             });
         }
 
         async function performChannelSwitch(newRoomId, newChannelId) {
+            newChannelId = newChannelId.trim();
             if (newChannelId && newChannelId.toLowerCase() === 'general') {
                 newChannelId = 'General';
             }
@@ -829,12 +856,12 @@
                 channelNameEl.innerText = `# ${channelId}`;
             }
 
-            const newUrl = `/${roomId}${channelId && channelId.toLowerCase() !== 'general' ? '/' + encodeURIComponent(channelId) : ''}`;
+            const newUrl = `/${encodeURIComponent(roomId)}${channelId && channelId.toLowerCase() !== 'general' ? '/' + encodeURIComponent(channelId) : ''}`;
             if (window.location.pathname !== newUrl) {
                 history.pushState({ roomId, channelId }, "", newUrl);
             }
 
-            wsUrl = `${wsProtocol}//${window.location.host}/ws/${roomId}/${encodeURIComponent(channelId)}`;
+            wsUrl = `${wsProtocol}//${window.location.host}/ws/${encodeURIComponent(roomId)}/${encodeURIComponent(channelId)}`;
             updateStatus('connecting', 'Connecting...');
 
             if (typeof updateRoomListUI === 'function') updateRoomListUI();
@@ -856,8 +883,8 @@
 
         window.onpopstate = function(event) {
             const parts = window.location.pathname.split('/').filter(p => p !== '');
-            const newRoomId = parts[0] || '';
-            const newChannelId = decodeURIComponent(parts[1] || '') || (newRoomId ? 'General' : '');
+            const newRoomId = decodePathSegment(parts[0] || '');
+            const newChannelId = decodePathSegment(parts[1] || '').trim() || (newRoomId ? 'General' : '');
 
             if (newRoomId && (newRoomId !== roomId || newChannelId !== channelId)) {
                 performChannelSwitch(newRoomId, newChannelId);
@@ -882,6 +909,14 @@
 
             showNameModal("Rename Channel", "Enter new name", (newName) => {
                 if (!newName) return;
+                if ([...newName].length > 32) {
+                    showCustomAlert("Name Too Long", "Channel names can be at most 32 characters.");
+                    return;
+                }
+                if (/[\\/]/.test(newName)) {
+                    showCustomAlert("Invalid Name", "Channel names cannot contain slashes.");
+                    return;
+                }
                 const normalizedNewName = newName.toLowerCase() === 'general' ? 'General' : newName;
                 if (globalRoomList[normalizedNewName]) {
                     showCustomAlert("Channel Exists", `A channel named "${normalizedNewName}" already exists.`);
@@ -926,7 +961,7 @@
 
             container.innerHTML = '';
 
-            let order = JSON.parse(localStorage.getItem('rustrooms_room_order_' + roomId) || '[]');
+            let order = getStoredRoomOrder();
             const currentRids = Object.keys(globalRoomList);
 
             order = order.filter(rid => currentRids.includes(rid));
@@ -1000,7 +1035,7 @@
 
                 roomEl.innerHTML = `
                     <div class="room-name pointer-events-none">
-                        <span class="truncate pr-2">${roomInfo.name}</span>
+                        <span class="truncate pr-2">${escapeHtml(roomInfo.name)}</span>
                         <div class="flex items-center gap-2">
                              <span class="channel-timer text-[10px] text-zinc-500 font-medium" data-created-at="${roomInfo.created_at || 0}">
                                 ${formatDuration(roomInfo.created_at)}
@@ -1100,7 +1135,7 @@
             if (sessionStorage.getItem('rustrooms_welcomed') === 'true') return;
             
             try {
-                const res = await fetch(`/${roomId}/${encodeURIComponent(channelId)}/status`);
+                const res = await fetch(`/${encodeURIComponent(roomId)}/${encodeURIComponent(channelId)}/status`);
                 if (!res.ok) return;
                 
                 const data = await res.json();

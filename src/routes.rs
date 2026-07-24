@@ -6,20 +6,39 @@ use axum::{
 };
 use std::collections::HashMap;
 use uuid::Uuid;
+
+fn request_host(headers: &axum::http::HeaderMap) -> Option<String> {
+    headers
+        .get(header::HOST)?
+        .to_str()
+        .ok()?
+        .parse::<axum::http::uri::Authority>()
+        .ok()
+        .map(|authority| authority.host().to_lowercase())
+}
+
+fn host_is_allowed(headers: &axum::http::HeaderMap, allowed_host: &str) -> bool {
+    request_host(headers).is_some_and(|host| host.eq_ignore_ascii_case(allowed_host))
+}
+
+fn origin_matches_request_host(headers: &axum::http::HeaderMap) -> bool {
+    let origin_host = headers
+        .get(header::ORIGIN)
+        .and_then(|origin| origin.to_str().ok())
+        .and_then(|value| url::Url::parse(value).ok())
+        .and_then(|url| url.host_str().map(str::to_lowercase));
+    origin_host == request_host(headers)
+}
+
 pub(crate) async fn new_room(
     State(state): State<AppState>,
     headers: axum::http::HeaderMap,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Redirect, (axum::http::StatusCode, &'static str)> {
-    if let Some(ref allowed_url) = state.allowed_url {
-        let host = headers
-            .get("host")
-            .and_then(|v| v.to_str().ok())
-            .map(|h| h.split(':').next().unwrap_or(h));
-        match host {
-            Some(h) if h == allowed_url => {}
-            _ => return Err((axum::http::StatusCode::FORBIDDEN, "Forbidden")),
-        }
+    if let Some(ref allowed_url) = state.allowed_url
+        && !host_is_allowed(&headers, allowed_url)
+    {
+        return Err((axum::http::StatusCode::FORBIDDEN, "Forbidden"));
     }
     if let Some(ref required_pass) = state.room_creation_password {
         match params.get("password") {
@@ -78,15 +97,10 @@ pub(crate) async fn index(
     State(state): State<AppState>,
     headers: axum::http::HeaderMap,
 ) -> axum::response::Response {
-    if let Some(ref allowed_url) = state.allowed_url {
-        let host = headers
-            .get("host")
-            .and_then(|v| v.to_str().ok())
-            .map(|h| h.split(':').next().unwrap_or(h));
-        match host {
-            Some(h) if h == allowed_url => {}
-            _ => return (axum::http::StatusCode::FORBIDDEN, "Forbidden").into_response(),
-        }
+    if let Some(ref allowed_url) = state.allowed_url
+        && !host_is_allowed(&headers, allowed_url)
+    {
+        return (axum::http::StatusCode::FORBIDDEN, "Forbidden").into_response();
     }
 
     let html = get_html_page();
@@ -110,44 +124,19 @@ pub(crate) async fn ws_handler(
     headers: axum::http::HeaderMap,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let mut channel_id = channel_id
-        .chars()
-        .take(MAX_CHANNEL_ID_LEN)
-        .collect::<String>();
-    if channel_id.eq_ignore_ascii_case("general") {
-        channel_id = "General".to_string();
+    if !is_valid_room_id(&room_id) {
+        return (axum::http::StatusCode::BAD_REQUEST, "Invalid room ID").into_response();
     }
-    if room_id.len() > MAX_ROOM_ID_LEN {
-        return (axum::http::StatusCode::BAD_REQUEST, "Room ID too long").into_response();
+    let Some(channel_id) = normalize_channel_id(&channel_id) else {
+        return (axum::http::StatusCode::BAD_REQUEST, "Invalid channel ID").into_response();
+    };
+    if let Some(ref allowed_url) = state.allowed_url
+        && !host_is_allowed(&headers, allowed_url)
+    {
+        return (axum::http::StatusCode::FORBIDDEN, "Forbidden").into_response();
     }
-    if let Some(ref allowed_url) = state.allowed_url {
-        let host = headers
-            .get("host")
-            .and_then(|v| v.to_str().ok())
-            .map(|h| h.split(':').next().unwrap_or(h));
-        match host {
-            Some(h) if h == allowed_url => {}
-            _ => return (axum::http::StatusCode::FORBIDDEN, "Forbidden").into_response(),
-        }
-    }
-    if let (Some(origin), Some(host)) = (headers.get("origin"), headers.get("host")) {
-        if let (Ok(origin_str), Ok(host_str)) = (origin.to_str(), host.to_str()) {
-            // Prevent bypass: "evil-example.com" must not match "example.com"
-            let origin_host = origin_str
-                .strip_prefix("https://")
-                .or_else(|| origin_str.strip_prefix("http://"))
-                .unwrap_or(origin_str)
-                .split('/')
-                .next()
-                .unwrap_or(origin_str)
-                .split(':')
-                .next()
-                .unwrap_or(origin_str);
-            let host_base = host_str.split(':').next().unwrap_or(host_str);
-            if origin_host != host_base && !origin_host.ends_with(&format!(".{}", host_base)) {
-                return (axum::http::StatusCode::FORBIDDEN, "Forbidden Origin").into_response();
-            }
-        }
+    if headers.contains_key(header::ORIGIN) && !origin_matches_request_host(&headers) {
+        return (axum::http::StatusCode::FORBIDDEN, "Forbidden Origin").into_response();
     }
 
     let mut client_ip = String::new();
@@ -166,4 +155,20 @@ pub(crate) async fn ws_handler(
 
     ws.max_message_size(32 * 1024 * 1024)
         .on_upgrade(move |socket| handle_socket(socket, room_id, channel_id, state, client_ip))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn websocket_origin_must_match_the_request_host_exactly() {
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(header::HOST, "example.com".parse().unwrap());
+        headers.insert(header::ORIGIN, "https://example.com".parse().unwrap());
+        assert!(origin_matches_request_host(&headers));
+
+        headers.insert(header::ORIGIN, "https://sub.example.com".parse().unwrap());
+        assert!(!origin_matches_request_host(&headers));
+    }
 }

@@ -40,10 +40,10 @@ pub(crate) async fn handle_socket(
 
     tokio::spawn(async move {
         while let Some(result) = rx.recv().await {
-            if let Ok(msg) = result {
-                if user_ws_tx.send(msg).await.is_err() {
-                    break;
-                }
+            if let Ok(msg) = result
+                && user_ws_tx.send(msg).await.is_err()
+            {
+                break;
             }
         }
     });
@@ -104,14 +104,13 @@ pub(crate) async fn handle_socket(
 
                     if !is_joined {
                         if parsed.msg_type == "join" {
-                            user_id = if let Some(ref data) = parsed.data {
-                                data.get("userId")
-                                    .and_then(|v| v.as_str())
-                                    .map(|s| s.to_string())
-                                    .unwrap_or_else(|| Uuid::new_v4().to_string())
-                            } else {
-                                Uuid::new_v4().to_string()
-                            };
+                            user_id = normalize_user_id(
+                                parsed
+                                    .data
+                                    .as_ref()
+                                    .and_then(|data| data.get("userId"))
+                                    .and_then(|value| value.as_str()),
+                            );
 
                             let nickname = parsed
                                 .data
@@ -165,10 +164,35 @@ pub(crate) async fn handle_socket(
                                 .and_then(|v| v.as_bool())
                                 .unwrap_or(false);
 
-                            if let Some(ref a) = avatar {
-                                if a.len() > 25_000_000 {
-                                    avatar = None;
-                                }
+                            let cam_enabled = parsed
+                                .data
+                                .as_ref()
+                                .and_then(|d| d.get("camEnabled"))
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+                            let screen_has_audio = parsed
+                                .data
+                                .as_ref()
+                                .and_then(|d| d.get("screenAudio"))
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+                            let mic_track_id = parsed
+                                .data
+                                .as_ref()
+                                .and_then(|d| d.get("micTrackId"))
+                                .and_then(|v| v.as_str())
+                                .filter(|value| value.len() <= 256);
+                            let screen_audio_track_id = parsed
+                                .data
+                                .as_ref()
+                                .and_then(|d| d.get("screenAudioTrackId"))
+                                .and_then(|v| v.as_str())
+                                .filter(|value| value.len() <= 256);
+
+                            if let Some(ref a) = avatar
+                                && a.len() > 25_000_000
+                            {
+                                avatar = None;
                             }
 
                             let is_gif = parsed
@@ -244,18 +268,12 @@ pub(crate) async fn handle_socket(
                                     let mut times = state.channel_creation_times.lock().await;
                                     let room_times =
                                         times.entry(room_id.clone()).or_insert_with(HashMap::new);
-                                    room_times.entry("General".to_string()).or_insert_with(|| {
-                                        std::time::SystemTime::now()
-                                            .duration_since(std::time::UNIX_EPOCH)
-                                            .unwrap()
-                                            .as_secs()
-                                    });
-                                    room_times.entry(channel_id.clone()).or_insert_with(|| {
-                                        std::time::SystemTime::now()
-                                            .duration_since(std::time::UNIX_EPOCH)
-                                            .unwrap()
-                                            .as_secs()
-                                    });
+                                    room_times
+                                        .entry("General".to_string())
+                                        .or_insert_with(current_unix_secs);
+                                    room_times
+                                        .entry(channel_id.clone())
+                                        .or_insert_with(current_unix_secs);
                                 }
 
                                 if channel.contains_key(&user_id) {
@@ -325,11 +343,12 @@ pub(crate) async fn handle_socket(
                                 seen_ids.insert(user_id.clone());
                                 {
                                     let rooms_lock = rooms.lock().await;
-                                    if let Some(room) = rooms_lock.get(&room_id) {
-                                        if let Some(channel) = room.get(&channel_id) {
-                                            for (uid, (_, status)) in channel.iter() {
-                                                if seen_ids.insert(uid.clone()) {
-                                                    existing_users.push(serde_json::json!({
+                                    if let Some(room) = rooms_lock.get(&room_id)
+                                        && let Some(channel) = room.get(&channel_id)
+                                    {
+                                        for (uid, (_, status)) in channel.iter() {
+                                            if seen_ids.insert(uid.clone()) {
+                                                existing_users.push(serde_json::json!({
                                                         "id": uid,
                                                         "status": {
                                                             "nickname": status.nickname,
@@ -343,18 +362,18 @@ pub(crate) async fn handle_socket(
                                                             "isOnTheGoMode": status.is_on_the_go_mode
                                                         }
                                                     }));
-                                                }
                                             }
                                         }
                                     }
                                 }
                                 {
                                     let remote_lock = remote_users.lock().await;
-                                    if let Some(remote_room) = remote_lock.get(&room_id) {
-                                        if let Some(remote_channel) = remote_room.get(&channel_id) {
-                                            for (uid, status) in remote_channel.iter() {
-                                                if seen_ids.insert(uid.clone()) {
-                                                    existing_users.push(serde_json::json!({
+                                    if let Some(remote_room) = remote_lock.get(&room_id)
+                                        && let Some(remote_channel) = remote_room.get(&channel_id)
+                                    {
+                                        for (uid, status) in remote_channel.iter() {
+                                            if seen_ids.insert(uid.clone()) {
+                                                existing_users.push(serde_json::json!({
                                                         "id": uid,
                                                         "status": {
                                                             "nickname": status.nickname,
@@ -368,7 +387,6 @@ pub(crate) async fn handle_socket(
                                                             "isOnTheGoMode": status.is_on_the_go_mode
                                                         }
                                                     }));
-                                                }
                                             }
                                         }
                                     }
@@ -383,15 +401,23 @@ pub(crate) async fn handle_socket(
                                 let _ = tx.try_send(Ok(Message::Text(existing_users_msg.into())));
                             }
 
-                            let mut notify_data = parsed.data.clone();
-                            if let Some(serde_json::Value::Object(ref mut map)) = notify_data {
-                                if let Some(serde_json::Value::String(avatar)) = map.get("avatar") {
-                                    if avatar.len() > 25_000_000 {
-                                        map.remove("avatar");
-                                    }
-                                }
-                                map.remove("userId");
-                            }
+                            // Only forward the validated public profile fields. In particular, the
+                            // room-creation password must never be relayed to peers or cluster nodes.
+                            let notify_data = Some(serde_json::json!({
+                                "nickname": nickname,
+                                "avatar": avatar,
+                                "isGif": is_gif,
+                                "staticFrame": static_frame,
+                                "isMuted": is_muted,
+                                "isDeafened": is_deafened,
+                                "camEnabled": cam_enabled,
+                                "screenEnabled": is_screen_sharing,
+                                "screenAudio": screen_has_audio,
+                                "micTrackId": mic_track_id,
+                                "screenAudioTrackId": screen_audio_track_id,
+                                "isLowBandwidthMode": is_low_bandwidth_mode,
+                                "isOnTheGoMode": is_on_the_go_mode
+                            }));
 
                             let notify_msg = serde_json::to_string(&SignalMessage {
                                 msg_type: "user-joined".into(),
@@ -403,14 +429,14 @@ pub(crate) async fn handle_socket(
 
                             {
                                 let rooms_lock = rooms.lock().await;
-                                if let Some(room) = rooms_lock.get(&room_id) {
-                                    if let Some(channel) = room.get(&channel_id) {
-                                        for (uid, (tx, _)) in channel.iter() {
-                                            if *uid != user_id {
-                                                let _ = tx.try_send(Ok(Message::Text(
-                                                    notify_msg.clone().into(),
-                                                )));
-                                            }
+                                if let Some(room) = rooms_lock.get(&room_id)
+                                    && let Some(channel) = room.get(&channel_id)
+                                {
+                                    for (uid, (tx, _)) in channel.iter() {
+                                        if *uid != user_id {
+                                            let _ = tx.try_send(Ok(Message::Text(
+                                                notify_msg.clone().into(),
+                                            )));
                                         }
                                     }
                                 }
@@ -453,108 +479,107 @@ pub(crate) async fn handle_socket(
                             let mut full_status = None;
                             {
                                 let mut rooms_lock = rooms.lock().await;
-                                if let Some(room) = rooms_lock.get_mut(&room_id) {
-                                    if let Some(channel) = room.get_mut(&channel_id) {
-                                        if let Some((_, status)) = channel.get_mut(&user_id) {
-                                            if let Some(d) = data {
-                                                if let Some(n) =
-                                                    d.get("nickname").and_then(|v| v.as_str())
+                                if let Some(room) = rooms_lock.get_mut(&room_id)
+                                    && let Some(channel) = room.get_mut(&channel_id)
+                                {
+                                    if let Some((_, status)) = channel.get_mut(&user_id) {
+                                        if let Some(d) = data {
+                                            if let Some(n) =
+                                                d.get("nickname").and_then(|v| v.as_str())
+                                            {
+                                                status.nickname =
+                                                    n.chars().take(MAX_NICKNAME_LEN).collect();
+                                            }
+                                            if let Some(a) = d.get("avatar") {
+                                                if a.is_null() {
+                                                    status.avatar = None;
+                                                    status.is_gif = false;
+                                                    status.static_frame = None;
+                                                } else if let Some(a_str) = a.as_str()
+                                                    && a_str.len() <= 25_000_000
                                                 {
-                                                    status.nickname =
-                                                        n.chars().take(MAX_NICKNAME_LEN).collect();
-                                                }
-                                                if let Some(a) = d.get("avatar") {
-                                                    if a.is_null() {
-                                                        status.avatar = None;
-                                                        status.is_gif = false;
-                                                        status.static_frame = None;
-                                                    } else if let Some(a_str) = a.as_str() {
-                                                        if a_str.len() <= 25_000_000 {
-                                                            status.avatar = Some(a_str.to_string());
-                                                        }
-                                                    }
-                                                }
-                                                if let Some(g) =
-                                                    d.get("isGif").and_then(|v| v.as_bool())
-                                                {
-                                                    status.is_gif = g;
-                                                }
-                                                if d.contains_key("staticFrame") {
-                                                    let sf = d
-                                                        .get("staticFrame")
-                                                        .and_then(|v| v.as_str())
-                                                        .filter(|s| s.len() <= 25_000_000)
-                                                        .map(|s| s.to_string());
-                                                    if sf.is_some() {
-                                                        status.static_frame = sf;
-                                                    } else if d
-                                                        .get("staticFrame")
-                                                        .map_or(false, |v| v.is_null())
-                                                    {
-                                                        status.static_frame = None;
-                                                    }
-                                                }
-                                                if let Some(m) =
-                                                    d.get("isMuted").and_then(|v| v.as_bool())
-                                                {
-                                                    status.is_muted = m;
-                                                }
-                                                if let Some(d) =
-                                                    d.get("isDeafened").and_then(|v| v.as_bool())
-                                                {
-                                                    status.is_deafened = d;
-                                                }
-                                                if let Some(lbm) = d
-                                                    .get("isLowBandwidthMode")
-                                                    .and_then(|v| v.as_bool())
-                                                {
-                                                    status.is_low_bandwidth_mode = lbm;
-                                                }
-                                                if let Some(otg) =
-                                                    d.get("isOnTheGoMode").and_then(|v| v.as_bool())
-                                                {
-                                                    status.is_on_the_go_mode = otg;
+                                                    status.avatar = Some(a_str.to_string());
                                                 }
                                             }
-                                            full_status = Some(status.clone());
-                                        }
-
-                                        if let Some(ref status) = full_status {
-                                            let full_data = serde_json::to_value(&status).unwrap();
-
-                                            let notify_msg =
-                                                serde_json::to_string(&SignalMessage {
-                                                    msg_type: "user-update".into(),
-                                                    user_id: Some(user_id.clone()),
-                                                    target: None,
-                                                    data: Some(full_data),
-                                                })
-                                                .unwrap();
-
-                                            for (uid, (tx, _)) in channel.iter() {
-                                                if *uid != user_id {
-                                                    let _ = tx.try_send(Ok(Message::Text(
-                                                        notify_msg.clone().into(),
-                                                    )));
+                                            if let Some(g) =
+                                                d.get("isGif").and_then(|v| v.as_bool())
+                                            {
+                                                status.is_gif = g;
+                                            }
+                                            if d.contains_key("staticFrame") {
+                                                let sf = d
+                                                    .get("staticFrame")
+                                                    .and_then(|v| v.as_str())
+                                                    .filter(|s| s.len() <= 25_000_000)
+                                                    .map(|s| s.to_string());
+                                                if sf.is_some() {
+                                                    status.static_frame = sf;
+                                                } else if d
+                                                    .get("staticFrame")
+                                                    .is_some_and(|v| v.is_null())
+                                                {
+                                                    status.static_frame = None;
                                                 }
                                             }
+                                            if let Some(m) =
+                                                d.get("isMuted").and_then(|v| v.as_bool())
+                                            {
+                                                status.is_muted = m;
+                                            }
+                                            if let Some(d) =
+                                                d.get("isDeafened").and_then(|v| v.as_bool())
+                                            {
+                                                status.is_deafened = d;
+                                            }
+                                            if let Some(lbm) = d
+                                                .get("isLowBandwidthMode")
+                                                .and_then(|v| v.as_bool())
+                                            {
+                                                status.is_low_bandwidth_mode = lbm;
+                                            }
+                                            if let Some(otg) =
+                                                d.get("isOnTheGoMode").and_then(|v| v.as_bool())
+                                            {
+                                                status.is_on_the_go_mode = otg;
+                                            }
                                         }
+                                        full_status = Some(status.clone());
+                                    }
 
-                                        if let Some(ref status) = full_status {
-                                            cluster_broadcast(
-                                                &cluster_tx,
-                                                &ClusterMessage {
-                                                    msg_type: "user-update".into(),
-                                                    room_id: room_id.clone(),
-                                                    channel_id: channel_id.clone(),
-                                                    user_id: user_id.clone(),
-                                                    msg_id: Uuid::new_v4().to_string(),
-                                                    status: Some(status.clone()),
-                                                    data: None,
-                                                    signal_msg: None,
-                                                },
-                                            );
+                                    if let Some(ref status) = full_status {
+                                        let full_data = serde_json::to_value(status).unwrap();
+
+                                        let notify_msg = serde_json::to_string(&SignalMessage {
+                                            msg_type: "user-update".into(),
+                                            user_id: Some(user_id.clone()),
+                                            target: None,
+                                            data: Some(full_data),
+                                        })
+                                        .unwrap();
+
+                                        for (uid, (tx, _)) in channel.iter() {
+                                            if *uid != user_id {
+                                                let _ = tx.try_send(Ok(Message::Text(
+                                                    notify_msg.clone().into(),
+                                                )));
+                                            }
                                         }
+                                    }
+
+                                    if let Some(ref status) = full_status {
+                                        cluster_broadcast(
+                                            &cluster_tx,
+                                            &ClusterMessage {
+                                                msg_type: "user-update".into(),
+                                                room_id: room_id.clone(),
+                                                channel_id: channel_id.clone(),
+                                                user_id: user_id.clone(),
+                                                msg_id: Uuid::new_v4().to_string(),
+                                                status: Some(status.clone()),
+                                                data: None,
+                                                signal_msg: None,
+                                            },
+                                        );
                                     }
                                 }
                             }
@@ -567,22 +592,21 @@ pub(crate) async fn handle_socket(
                             .await;
                         } else if parsed.msg_type == "cam-toggle" {
                             let rooms_lock = rooms.lock().await;
-                            if let Some(room) = rooms_lock.get(&room_id) {
-                                if let Some(channel) = room.get(&channel_id) {
-                                    let notify_msg = serde_json::to_string(&SignalMessage {
-                                        msg_type: "cam-toggle".into(),
-                                        user_id: Some(user_id.clone()),
-                                        target: None,
-                                        data: parsed.data.clone(),
-                                    })
-                                    .unwrap();
+                            if let Some(room) = rooms_lock.get(&room_id)
+                                && let Some(channel) = room.get(&channel_id)
+                            {
+                                let notify_msg = serde_json::to_string(&SignalMessage {
+                                    msg_type: "cam-toggle".into(),
+                                    user_id: Some(user_id.clone()),
+                                    target: None,
+                                    data: parsed.data.clone(),
+                                })
+                                .unwrap();
 
-                                    for (uid, (tx, _)) in channel.iter() {
-                                        if *uid != user_id {
-                                            let _ = tx.try_send(Ok(Message::Text(
-                                                notify_msg.clone().into(),
-                                            )));
-                                        }
+                                for (uid, (tx, _)) in channel.iter() {
+                                    if *uid != user_id {
+                                        let _ = tx
+                                            .try_send(Ok(Message::Text(notify_msg.clone().into())));
                                     }
                                 }
                             }
@@ -602,33 +626,32 @@ pub(crate) async fn handle_socket(
                         } else if parsed.msg_type == "screen-toggle" {
                             {
                                 let mut rooms_lock = rooms.lock().await;
-                                if let Some(room) = rooms_lock.get_mut(&room_id) {
-                                    if let Some(channel) = room.get_mut(&channel_id) {
-                                        if let Some((_, status)) = channel.get_mut(&user_id) {
-                                            if let Some(enabled) = parsed
-                                                .data
-                                                .as_ref()
-                                                .and_then(|d| d.get("enabled"))
-                                                .and_then(|v| v.as_bool())
-                                            {
-                                                status.is_screen_sharing = enabled;
-                                            }
-                                        }
+                                if let Some(room) = rooms_lock.get_mut(&room_id)
+                                    && let Some(channel) = room.get_mut(&channel_id)
+                                {
+                                    if let Some((_, status)) = channel.get_mut(&user_id)
+                                        && let Some(enabled) = parsed
+                                            .data
+                                            .as_ref()
+                                            .and_then(|d| d.get("enabled"))
+                                            .and_then(|v| v.as_bool())
+                                    {
+                                        status.is_screen_sharing = enabled;
+                                    }
 
-                                        let notify_msg = serde_json::to_string(&SignalMessage {
-                                            msg_type: "screen-toggle".into(),
-                                            user_id: Some(user_id.clone()),
-                                            target: None,
-                                            data: parsed.data.clone(),
-                                        })
-                                        .unwrap();
+                                    let notify_msg = serde_json::to_string(&SignalMessage {
+                                        msg_type: "screen-toggle".into(),
+                                        user_id: Some(user_id.clone()),
+                                        target: None,
+                                        data: parsed.data.clone(),
+                                    })
+                                    .unwrap();
 
-                                        for (uid, (tx, _)) in channel.iter() {
-                                            if *uid != user_id {
-                                                let _ = tx.try_send(Ok(Message::Text(
-                                                    notify_msg.clone().into(),
-                                                )));
-                                            }
+                                    for (uid, (tx, _)) in channel.iter() {
+                                        if *uid != user_id {
+                                            let _ = tx.try_send(Ok(Message::Text(
+                                                notify_msg.clone().into(),
+                                            )));
                                         }
                                     }
                                 }
@@ -667,13 +690,12 @@ pub(crate) async fn handle_socket(
                                 let mut kicked = false;
                                 let mut kicked_tx = None;
 
-                                if let Some(room) = rooms_lock.get_mut(&room_id) {
-                                    if let Some(channel) = room.get_mut(&channel_id) {
-                                        if let Some((tx, _)) = channel.remove(&kick_uid) {
-                                            kicked = true;
-                                            kicked_tx = Some(tx);
-                                        }
-                                    }
+                                if let Some(room) = rooms_lock.get_mut(&room_id)
+                                    && let Some(channel) = room.get_mut(&channel_id)
+                                    && let Some((tx, _)) = channel.remove(&kick_uid)
+                                {
+                                    kicked = true;
+                                    kicked_tx = Some(tx);
                                 }
 
                                 if kicked {
@@ -685,13 +707,13 @@ pub(crate) async fn handle_socket(
                                     })
                                     .unwrap();
 
-                                    if let Some(room) = rooms_lock.get(&room_id) {
-                                        if let Some(channel) = room.get(&channel_id) {
-                                            for (_uid, (tx, _)) in channel.iter() {
-                                                let _ = tx.try_send(Ok(Message::Text(
-                                                    kick_notify_msg.clone().into(),
-                                                )));
-                                            }
+                                    if let Some(room) = rooms_lock.get(&room_id)
+                                        && let Some(channel) = room.get(&channel_id)
+                                    {
+                                        for (_uid, (tx, _)) in channel.iter() {
+                                            let _ = tx.try_send(Ok(Message::Text(
+                                                kick_notify_msg.clone().into(),
+                                            )));
                                         }
                                     }
 
@@ -745,13 +767,9 @@ pub(crate) async fn handle_socket(
                                     .as_ref()
                                     .and_then(|d| d.get("newName"))
                                     .and_then(|v| v.as_str())
-                                    .map(|s| s.to_string());
+                                    .and_then(normalize_channel_id);
 
-                                if let Some(mut new_name_str) = new_name {
-                                    if new_name_str.eq_ignore_ascii_case("general") {
-                                        new_name_str = "General".to_string();
-                                    }
-
+                                if let Some(new_name_str) = new_name {
                                     let mut rooms_lock = rooms.lock().await;
 
                                     let can_rename = if let Some(room) = rooms_lock.get(&room_id) {
@@ -766,10 +784,10 @@ pub(crate) async fn handle_socket(
                                     };
 
                                     if can_rename {
-                                        if let Some(room) = rooms_lock.get_mut(&room_id) {
-                                            if let Some(channel) = room.remove(&target_channel_id) {
-                                                room.insert(new_name_str.clone(), channel);
-                                            }
+                                        if let Some(room) = rooms_lock.get_mut(&room_id)
+                                            && let Some(channel) = room.remove(&target_channel_id)
+                                        {
+                                            room.insert(new_name_str.clone(), channel);
                                         }
 
                                         // Broadcast rename-channel to local users in this room
@@ -797,15 +815,25 @@ pub(crate) async fn handle_socket(
 
                                         drop(rooms_lock);
 
+                                        {
+                                            let mut times =
+                                                state.channel_creation_times.lock().await;
+                                            if let Some(room_times) = times.get_mut(&room_id)
+                                                && let Some(created_at) =
+                                                    room_times.remove(&target_channel_id)
+                                            {
+                                                room_times.insert(new_name_str.clone(), created_at);
+                                            }
+                                        }
+
                                         // Also rename in remote_users so signal routing stays consistent
                                         {
                                             let mut rl = remote_users.lock().await;
-                                            if let Some(room) = rl.get_mut(&room_id) {
-                                                if let Some(channel_data) =
+                                            if let Some(room) = rl.get_mut(&room_id)
+                                                && let Some(channel_data) =
                                                     room.remove(&target_channel_id)
-                                                {
-                                                    room.insert(new_name_str.clone(), channel_data);
-                                                }
+                                            {
+                                                room.insert(new_name_str.clone(), channel_data);
                                             }
                                         }
 
@@ -866,6 +894,13 @@ pub(crate) async fn handle_socket(
                                     }
                                     drop(rooms_lock);
 
+                                    {
+                                        let mut times = state.channel_creation_times.lock().await;
+                                        if let Some(room_times) = times.get_mut(&room_id) {
+                                            room_times.remove(&target_channel_id);
+                                        }
+                                    }
+
                                     cluster_broadcast(
                                         &cluster_tx,
                                         &ClusterMessage {
@@ -892,18 +927,17 @@ pub(crate) async fn handle_socket(
                             let mut found = false;
                             {
                                 let rooms_lock = rooms.lock().await;
-                                if let Some(room) = rooms_lock.get(&room_id) {
-                                    if let Some(channel) = room.get(&channel_id) {
-                                        if let Some((target_tx, _)) = channel.get(target_id) {
-                                            let mut forwarded_msg = parsed.clone();
-                                            forwarded_msg.user_id = Some(user_id.clone());
-                                            let forwarded_text =
-                                                serde_json::to_string(&forwarded_msg).unwrap();
-                                            let _ = target_tx
-                                                .try_send(Ok(Message::Text(forwarded_text.into())));
-                                            found = true;
-                                        }
-                                    }
+                                if let Some(room) = rooms_lock.get(&room_id)
+                                    && let Some(channel) = room.get(&channel_id)
+                                    && let Some((target_tx, _)) = channel.get(target_id)
+                                {
+                                    let mut forwarded_msg = parsed.clone();
+                                    forwarded_msg.user_id = Some(user_id.clone());
+                                    let forwarded_text =
+                                        serde_json::to_string(&forwarded_msg).unwrap();
+                                    let _ = target_tx
+                                        .try_send(Ok(Message::Text(forwarded_text.into())));
+                                    found = true;
                                 }
                             }
 
@@ -954,65 +988,60 @@ pub(crate) async fn handle_socket(
     {
         let mut rooms_lock = rooms.lock().await;
 
-        if is_joined {
-            if let Some(room) = rooms_lock.get_mut(&room_id) {
-                let mut removed = false;
+        if is_joined && let Some(room) = rooms_lock.get_mut(&room_id) {
+            let mut removed = false;
 
-                if let Some(channel) = room.get_mut(&channel_id) {
-                    if let Some((stored_tx, _)) = channel.get(&user_id) {
-                        if stored_tx.same_channel(&tx) {
-                            channel.remove(&user_id);
-                            removed = true;
+            if let Some(channel) = room.get_mut(&channel_id)
+                && let Some((stored_tx, _)) = channel.get(&user_id)
+                && stored_tx.same_channel(&tx)
+            {
+                channel.remove(&user_id);
+                removed = true;
 
-                            if !channel.is_empty() {
-                                let notify_msg = serde_json::to_string(&SignalMessage {
-                                    msg_type: "user-left".into(),
-                                    user_id: Some(user_id.clone()),
-                                    target: None,
-                                    data: None,
-                                })
-                                .unwrap();
+                if !channel.is_empty() {
+                    let notify_msg = serde_json::to_string(&SignalMessage {
+                        msg_type: "user-left".into(),
+                        user_id: Some(user_id.clone()),
+                        target: None,
+                        data: None,
+                    })
+                    .unwrap();
 
-                                for (_, (tx, _)) in channel.iter() {
-                                    let _ =
-                                        tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
-                                }
-                            }
-                        }
+                    for (_, (tx, _)) in channel.iter() {
+                        let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
                     }
                 }
+            }
 
-                if !removed {
-                    for (_, channel) in room.iter_mut() {
-                        if let Some((stored_tx, _)) = channel.get(&user_id) {
-                            if stored_tx.same_channel(&tx) {
-                                channel.remove(&user_id);
-                                removed = true;
+            if !removed {
+                for (_, channel) in room.iter_mut() {
+                    if let Some((stored_tx, _)) = channel.get(&user_id)
+                        && stored_tx.same_channel(&tx)
+                    {
+                        channel.remove(&user_id);
+                        removed = true;
 
-                                if !channel.is_empty() {
-                                    let notify_msg = serde_json::to_string(&SignalMessage {
-                                        msg_type: "user-left".into(),
-                                        user_id: Some(user_id.clone()),
-                                        target: None,
-                                        data: None,
-                                    })
-                                    .unwrap();
+                        if !channel.is_empty() {
+                            let notify_msg = serde_json::to_string(&SignalMessage {
+                                msg_type: "user-left".into(),
+                                user_id: Some(user_id.clone()),
+                                target: None,
+                                data: None,
+                            })
+                            .unwrap();
 
-                                    for (_, (tx, _)) in channel.iter() {
-                                        let _ = tx
-                                            .try_send(Ok(Message::Text(notify_msg.clone().into())));
-                                    }
-                                }
-                                break;
+                            for (_, (tx, _)) in channel.iter() {
+                                let _ = tx.try_send(Ok(Message::Text(notify_msg.clone().into())));
                             }
                         }
+                        break;
                     }
                 }
+            }
 
-                if removed {
-                    actually_removed = true;
-                    schedule_room_cleanup = room.values().all(|c| c.is_empty());
-                }
+            if removed {
+                actually_removed = true;
+                schedule_room_cleanup = room.values().all(|c| c.is_empty());
             }
         }
     }
@@ -1060,6 +1089,7 @@ pub(crate) async fn handle_socket(
         let rooms_clone = rooms.clone();
         let cleanup_clone = room_cleanup_generations.clone();
         let remote_users_clone = remote_users.clone();
+        let times_clone = state.channel_creation_times.clone();
         let room_id_clone = room_id.clone();
         tokio::spawn(async move {
             tokio::time::sleep(std::time::Duration::from_secs(ROOM_EMPTY_GRACE_SECS)).await;
@@ -1100,6 +1130,7 @@ pub(crate) async fn handle_socket(
             };
 
             if removed_room {
+                times_clone.lock().await.remove(&room_id_clone);
                 let mut cleanup_lock = cleanup_clone.lock().await;
                 if cleanup_lock.get(&room_id_clone).copied() == Some(next_generation) {
                     cleanup_lock.remove(&room_id_clone);
@@ -1117,6 +1148,7 @@ pub(crate) async fn handle_socket(
                     let rooms_retry = rooms_clone.clone();
                     let cleanup_retry = cleanup_clone.clone();
                     let remote_retry = remote_users_clone.clone();
+                    let times_retry = times_clone.clone();
                     let rid_retry = room_id_clone.clone();
                     tokio::spawn(async move {
                         tokio::time::sleep(std::time::Duration::from_secs(ROOM_EMPTY_GRACE_SECS))
@@ -1154,6 +1186,7 @@ pub(crate) async fn handle_socket(
                             }
                         };
                         if removed {
+                            times_retry.lock().await.remove(&rid_retry);
                             let mut cl = cleanup_retry.lock().await;
                             if cl.get(&rid_retry).copied() == Some(next_gen) {
                                 cl.remove(&rid_retry);
@@ -1191,19 +1224,19 @@ pub(crate) async fn channel_status(
 
     let mut users_map = HashMap::new();
 
-    if let Some(room) = rooms_lock.get(&room_id) {
-        if let Some(channel) = room.get(&channel_id) {
-            for (uid, (_, status)) in channel.iter() {
-                users_map.insert(uid.clone(), status.clone());
-            }
+    if let Some(room) = rooms_lock.get(&room_id)
+        && let Some(channel) = room.get(&channel_id)
+    {
+        for (uid, (_, status)) in channel.iter() {
+            users_map.insert(uid.clone(), status.clone());
         }
     }
 
-    if let Some(remote_room) = remote_lock.get(&room_id) {
-        if let Some(remote_channel) = remote_room.get(&channel_id) {
-            for (uid, status) in remote_channel.iter() {
-                users_map.insert(uid.clone(), status.clone());
-            }
+    if let Some(remote_room) = remote_lock.get(&room_id)
+        && let Some(remote_channel) = remote_room.get(&channel_id)
+    {
+        for (uid, status) in remote_channel.iter() {
+            users_map.insert(uid.clone(), status.clone());
         }
     }
 

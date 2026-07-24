@@ -1,7 +1,16 @@
 
+        function decodePathSegment(value) {
+            try {
+                return decodeURIComponent(value);
+            } catch (error) {
+                console.warn('Ignoring malformed URL encoding:', error);
+                return value;
+            }
+        }
+
         let parts = window.location.pathname.split('/').filter(p => p !== '');
-        let roomId = parts[0] || '';
-        let channelId = decodeURIComponent(parts[1] || '') || (roomId ? 'General' : '');
+        let roomId = decodePathSegment(parts[0] || '');
+        let channelId = decodePathSegment(parts[1] || '').trim() || (roomId ? 'General' : '');
         if (channelId.toLowerCase() === 'general') {
             channelId = 'General';
         }
@@ -21,13 +30,13 @@
         }
 
         const currentPath = window.location.pathname;
-        const newPath = `/${roomId}${channelId && channelId.toLowerCase() !== 'general' ? '/' + encodeURIComponent(channelId) : ''}`;
+        const newPath = `/${encodeURIComponent(roomId)}${channelId && channelId.toLowerCase() !== 'general' ? '/' + encodeURIComponent(channelId) : ''}`;
         if (currentPath !== newPath && roomId) {
             window.history.replaceState({ roomId, channelId }, "", newPath);
         }
 
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        let wsUrl = roomId ? `${wsProtocol}//${window.location.host}/ws/${roomId}/${encodeURIComponent(channelId)}` : '';
+        let wsUrl = roomId ? `${wsProtocol}//${window.location.host}/ws/${encodeURIComponent(roomId)}/${encodeURIComponent(channelId)}` : '';
 
         const isIOS = (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         let ws;
@@ -715,9 +724,9 @@
         const rtcConfig = {
             iceServers: [
                 {
-                    urls: "{{TURN_URL}}",
-                    username: "{{TURN_USERNAME}}",
-                    credential: "{{TURN_CREDENTIAL}}"
+                    urls: {{TURN_URL}},
+                    username: {{TURN_USERNAME}},
+                    credential: {{TURN_CREDENTIAL}}
                 }
             ]
         };

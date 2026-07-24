@@ -45,6 +45,8 @@ pub(crate) type RoomMap = Arc<Mutex<HashMap<String, ChannelMap>>>;
 pub(crate) type RoomCleanupMap = Arc<Mutex<HashMap<String, u64>>>;
 pub(crate) type RemoteUsersMap =
     Arc<Mutex<HashMap<String, HashMap<String, HashMap<String, UserStatus>>>>>;
+pub(crate) type RemoteUserSourcesMap =
+    Arc<Mutex<HashMap<(String, String, String), HashSet<String>>>>;
 pub(crate) type ChannelCreationTimesMap = Arc<Mutex<HashMap<String, HashMap<String, u64>>>>;
 pub(crate) const ROOM_EMPTY_GRACE_SECS: u64 = 120;
 pub(crate) const MAX_ROOM_ID_LEN: usize = 64;
@@ -74,6 +76,7 @@ pub(crate) struct AppState {
     pub(crate) room_creation_password: Option<String>,
     pub(crate) cluster_tx: tokio::sync::broadcast::Sender<String>,
     pub(crate) remote_users: RemoteUsersMap,
+    pub(crate) remote_user_sources: RemoteUserSourcesMap,
     pub(crate) channel_creation_times: ChannelCreationTimesMap,
     pub(crate) cluster_key: Option<String>,
     pub(crate) cluster_scheme: String,
@@ -82,4 +85,104 @@ pub(crate) struct AppState {
     pub recent_cluster_msg_ids: Arc<Mutex<HashSet<String>>>,
     pub cluster_msg_history: Arc<Mutex<VecDeque<String>>>,
     pub(crate) node_id: String,
+}
+
+pub(crate) fn normalize_channel_id(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty()
+        || trimmed.chars().count() > MAX_CHANNEL_ID_LEN
+        || trimmed.chars().any(char::is_control)
+        || trimmed.contains(['/', '\\'])
+    {
+        return None;
+    }
+
+    if trimmed.eq_ignore_ascii_case("general") {
+        Some("General".to_string())
+    } else {
+        Some(trimmed.to_string())
+    }
+}
+
+pub(crate) fn is_valid_room_id(value: &str) -> bool {
+    !value.is_empty()
+        && value.chars().count() <= MAX_ROOM_ID_LEN
+        && !value.chars().any(char::is_control)
+        && !value.contains(['/', '\\'])
+}
+
+pub(crate) fn normalize_user_id(value: Option<&str>) -> String {
+    value
+        .and_then(|id| uuid::Uuid::parse_str(id).ok())
+        .map(|id| id.to_string())
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
+}
+
+pub(crate) fn current_unix_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+}
+
+pub(crate) fn normalize_configured_host(value: &str) -> Option<String> {
+    let value = value.trim();
+    if value.is_empty() {
+        return None;
+    }
+    let with_scheme = if value.contains("://") {
+        value.to_string()
+    } else {
+        format!("http://{value}")
+    };
+    url::Url::parse(&with_scheme)
+        .ok()?
+        .host_str()
+        .map(str::to_lowercase)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn channel_ids_are_trimmed_and_general_is_canonicalized() {
+        assert_eq!(
+            normalize_channel_id("  lounge  ").as_deref(),
+            Some("lounge")
+        );
+        assert_eq!(normalize_channel_id("gEnErAl").as_deref(), Some("General"));
+    }
+
+    #[test]
+    fn invalid_channel_ids_are_rejected() {
+        assert!(normalize_channel_id("   ").is_none());
+        assert!(normalize_channel_id("line\nbreak").is_none());
+        assert!(normalize_channel_id("path/segment").is_none());
+        assert!(normalize_channel_id(&"a".repeat(MAX_CHANNEL_ID_LEN + 1)).is_none());
+    }
+
+    #[test]
+    fn invalid_user_ids_are_replaced_with_uuids() {
+        let normalized = normalize_user_id(Some("not-a-uuid"));
+        assert!(uuid::Uuid::parse_str(&normalized).is_ok());
+
+        let original = uuid::Uuid::new_v4();
+        assert_eq!(
+            normalize_user_id(Some(&original.to_string())),
+            original.to_string()
+        );
+    }
+
+    #[test]
+    fn configured_hosts_are_normalized_without_losing_ipv6() {
+        assert_eq!(
+            normalize_configured_host("https://Example.COM:8443/path").as_deref(),
+            Some("example.com")
+        );
+        assert_eq!(
+            normalize_configured_host("[::1]:3000").as_deref(),
+            Some("[::1]")
+        );
+    }
 }

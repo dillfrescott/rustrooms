@@ -192,6 +192,11 @@ pub(crate) async fn app_js() -> impl IntoResponse {
     let turn_url = std::env::var("TURN_URL").unwrap_or_default();
     let turn_username = std::env::var("TURN_USERNAME").unwrap_or_default();
     let turn_credential = std::env::var("TURN_CREDENTIAL").unwrap_or_default();
+    let turn_url = serde_json::to_string(&turn_url).unwrap_or_else(|_| "\"\"".to_string());
+    let turn_username =
+        serde_json::to_string(&turn_username).unwrap_or_else(|_| "\"\"".to_string());
+    let turn_credential =
+        serde_json::to_string(&turn_credential).unwrap_or_else(|_| "\"\"".to_string());
     let javascript = concat!(
         include_str!("assets/client/core.js"),
         include_str!("assets/client/interface.js"),

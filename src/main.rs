@@ -37,20 +37,10 @@ async fn main() {
         .unwrap_or_else(|| "ws".to_string());
     let allowed_url = std::env::var("URL")
         .ok()
-        .map(|u| {
-            let u = u.trim();
-            let without_scheme = u
-                .strip_prefix("https://")
-                .or_else(|| u.strip_prefix("http://"))
-                .unwrap_or(u);
-            let host = without_scheme.trim_end_matches('/');
-            let host = host.split('/').next().unwrap_or(host);
-            let host = host.split(':').next().unwrap_or(host);
-            host.to_string()
-        })
-        .filter(|s| !s.is_empty());
+        .and_then(|url| normalize_configured_host(&url));
     let (cluster_tx, _) = tokio::sync::broadcast::channel::<String>(10000);
     let remote_users: RemoteUsersMap = Arc::new(Mutex::new(HashMap::new()));
+    let remote_user_sources: RemoteUserSourcesMap = Arc::new(Mutex::new(HashMap::new()));
 
     if cluster_key.is_some() {
         println!(
@@ -80,6 +70,7 @@ async fn main() {
         room_creation_password,
         cluster_tx,
         remote_users,
+        remote_user_sources,
         channel_creation_times,
         cluster_key,
         cluster_scheme,
