@@ -52,6 +52,17 @@ pub(crate) const ROOM_EMPTY_GRACE_SECS: u64 = 120;
 pub(crate) const MAX_ROOM_ID_LEN: usize = 64;
 pub(crate) const MAX_CHANNEL_ID_LEN: usize = 32;
 pub(crate) const MAX_NICKNAME_LEN: usize = 32;
+// A 10 MiB GIF expands to roughly 13.34 MiB when represented as a base64 data URL.
+pub(crate) const MAX_AVATAR_DATA_LEN: usize = 14 * 1024 * 1024;
+pub(crate) const MAX_STATIC_FRAME_DATA_LEN: usize = 512 * 1024;
+pub(crate) const CLIENT_WS_MAX_MESSAGE_SIZE: usize = 16 * 1024 * 1024;
+// Cluster join messages contain the profile in both status and signaling data.
+pub(crate) const CLUSTER_WS_MAX_MESSAGE_SIZE: usize = 32 * 1024 * 1024;
+pub(crate) const OUTBOUND_QUEUE_CAPACITY: usize = 32;
+pub(crate) const CLUSTER_BROADCAST_CAPACITY: usize = 64;
+pub(crate) const MESSAGE_RATE_WINDOW_SECS: u64 = 10;
+pub(crate) const MAX_MESSAGES_PER_RATE_WINDOW: u32 = 240;
+pub(crate) const PROFILE_IMAGE_UPDATE_COOLDOWN_SECS: u64 = 5;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct ClusterMessage {
@@ -118,6 +129,13 @@ pub(crate) fn normalize_user_id(value: Option<&str>) -> String {
         .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
 }
 
+pub(crate) fn unique_user_id(mut candidate: String, is_occupied: impl Fn(&str) -> bool) -> String {
+    while is_occupied(&candidate) {
+        candidate = uuid::Uuid::new_v4().to_string();
+    }
+    candidate
+}
+
 pub(crate) fn current_unix_secs() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -172,6 +190,15 @@ mod tests {
             normalize_user_id(Some(&original.to_string())),
             original.to_string()
         );
+    }
+
+    #[test]
+    fn occupied_user_ids_are_replaced_without_reusing_the_active_identity() {
+        let occupied = uuid::Uuid::new_v4().to_string();
+        let replacement = unique_user_id(occupied.clone(), |id| id == occupied);
+
+        assert_ne!(replacement, occupied);
+        assert!(uuid::Uuid::parse_str(&replacement).is_ok());
     }
 
     #[test]

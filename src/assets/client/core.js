@@ -11,6 +11,8 @@
         let parts = window.location.pathname.split('/').filter(p => p !== '');
         let roomId = decodePathSegment(parts[0] || '');
         let channelId = decodePathSegment(parts[1] || '').trim() || (roomId ? 'General' : '');
+        const MAX_IMAGE_UPLOAD_FILE_BYTES = 15 * 1024 * 1024;
+        const MAX_GIF_AVATAR_FILE_BYTES = 10 * 1024 * 1024;
         if (channelId.toLowerCase() === 'general') {
             channelId = 'General';
         }
@@ -2036,8 +2038,13 @@
             const file = input.files[0];
             if (!file) return;
 
-            if (file.size > 15 * 1024 * 1024) {
-                alert("File is too large! Maximum allowed size is 15MB.");
+            const maxFileBytes = file.type === 'image/gif'
+                ? MAX_GIF_AVATAR_FILE_BYTES
+                : MAX_IMAGE_UPLOAD_FILE_BYTES;
+            if (file.size > maxFileBytes) {
+                alert(file.type === 'image/gif'
+                    ? "GIF is too large! Maximum allowed size is 10MB."
+                    : "File is too large! Maximum allowed size is 15MB.");
                 input.value = '';
                 return;
             }
@@ -2050,7 +2057,7 @@
                     userAvatarIsGif = true;
                     extractGifFirstFrame(gifDataUrl).then(staticFrame => {
                         userAvatarStaticFrame = staticFrame;
-                        avatarPreview.src = staticFrame;
+                        avatarPreview.src = staticFrame || gifDataUrl;
                         avatarPreview.classList.remove('hidden');
                         avatarPlaceholder.classList.add('hidden');
                         const removeBtn = document.getElementById('btnRemoveSetupAvatar');
@@ -2095,15 +2102,27 @@
             return new Promise((resolve) => {
                 const img = new Image();
                 img.onload = function() {
+                    const MAX_DIM = 400;
+                    let width = img.naturalWidth;
+                    let height = img.naturalHeight;
+                    if (width > MAX_DIM || height > MAX_DIM) {
+                        if (width > height) {
+                            height = Math.round(height * MAX_DIM / width);
+                            width = MAX_DIM;
+                        } else {
+                            width = Math.round(width * MAX_DIM / height);
+                            height = MAX_DIM;
+                        }
+                    }
                     const canvas = document.createElement('canvas');
-                    canvas.width = img.naturalWidth;
-                    canvas.height = img.naturalHeight;
+                    canvas.width = width;
+                    canvas.height = height;
                     const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    resolve(canvas.toDataURL('image/png'));
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
                 };
                 img.onerror = function() {
-                    resolve(gifDataUrl);
+                    resolve(null);
                 };
                 img.src = gifDataUrl;
             });

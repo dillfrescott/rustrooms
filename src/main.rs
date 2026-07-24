@@ -38,7 +38,7 @@ async fn main() {
     let allowed_url = std::env::var("URL")
         .ok()
         .and_then(|url| normalize_configured_host(&url));
-    let (cluster_tx, _) = tokio::sync::broadcast::channel::<String>(10000);
+    let (cluster_tx, _) = tokio::sync::broadcast::channel::<String>(CLUSTER_BROADCAST_CAPACITY);
     let remote_users: RemoteUsersMap = Arc::new(Mutex::new(HashMap::new()));
     let remote_user_sources: RemoteUserSourcesMap = Arc::new(Mutex::new(HashMap::new()));
 

@@ -36,14 +36,15 @@ pub(crate) async fn cluster_ws_handler(
     {
         return (axum::http::StatusCode::BAD_REQUEST, "Self connection").into_response();
     }
-    ws.max_message_size(32 * 1024 * 1024)
+    ws.max_frame_size(CLUSTER_WS_MAX_MESSAGE_SIZE)
+        .max_message_size(CLUSTER_WS_MAX_MESSAGE_SIZE)
         .on_upgrade(move |socket| handle_inbound_cluster(socket, state))
 }
 
 async fn handle_inbound_cluster(socket: WebSocket, state: AppState) {
     let source_id = Uuid::new_v4().to_string();
     let (mut ws_tx, mut ws_rx) = socket.split();
-    let (write_tx, mut write_rx) = tokio::sync::mpsc::channel::<String>(5000);
+    let (write_tx, mut write_rx) = tokio::sync::mpsc::channel::<String>(OUTBOUND_QUEUE_CAPACITY);
 
     let writer = tokio::spawn(async move {
         while let Some(msg) = write_rx.recv().await {
@@ -90,9 +91,15 @@ async fn handle_inbound_cluster(socket: WebSocket, state: AppState) {
 
     let write_tx_fwd = write_tx.clone();
     let forwarder = tokio::spawn(async move {
-        while let Ok(msg) = cluster_rx.recv().await {
-            if write_tx_fwd.send(msg).await.is_err() {
-                break;
+        loop {
+            match cluster_rx.recv().await {
+                Ok(msg) => {
+                    if write_tx_fwd.send(msg).await.is_err() {
+                        break;
+                    }
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
             }
         }
     });
@@ -286,7 +293,7 @@ async fn connect_to_peer(
     println!("CLUSTER: Connected to peer {}", url);
 
     let (mut write, mut read) = ws_stream.split();
-    let (write_tx, mut write_rx) = tokio::sync::mpsc::channel::<String>(5000);
+    let (write_tx, mut write_rx) = tokio::sync::mpsc::channel::<String>(OUTBOUND_QUEUE_CAPACITY);
 
     let writer = tokio::spawn(async move {
         while let Some(msg) = write_rx.recv().await {
@@ -333,9 +340,15 @@ async fn connect_to_peer(
 
     let write_tx_fwd = write_tx.clone();
     let forwarder = tokio::spawn(async move {
-        while let Ok(msg) = cluster_rx.recv().await {
-            if write_tx_fwd.send(msg).await.is_err() {
-                break;
+        loop {
+            match cluster_rx.recv().await {
+                Ok(msg) => {
+                    if write_tx_fwd.send(msg).await.is_err() {
+                        break;
+                    }
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
             }
         }
     });
@@ -382,6 +395,17 @@ fn is_valid_cluster_message(msg: &ClusterMessage) -> bool {
         && normalize_channel_id(&msg.channel_id).as_deref() == Some(msg.channel_id.as_str())
         && Uuid::parse_str(&msg.user_id).is_ok()
         && Uuid::parse_str(&msg.msg_id).is_ok()
+        && msg.status.as_ref().is_none_or(|status| {
+            status.nickname.chars().count() <= MAX_NICKNAME_LEN
+                && status
+                    .avatar
+                    .as_ref()
+                    .is_none_or(|avatar| avatar.len() <= MAX_AVATAR_DATA_LEN)
+                && status
+                    .static_frame
+                    .as_ref()
+                    .is_none_or(|frame| frame.len() <= MAX_STATIC_FRAME_DATA_LEN)
+        })
 }
 
 async fn track_peer_message(
@@ -1031,6 +1055,48 @@ pub(crate) async fn broadcast_channel_list(
 mod tests {
     use super::*;
 
+    fn test_cluster_message(status: UserStatus) -> ClusterMessage {
+        ClusterMessage {
+            msg_type: "user-joined".to_string(),
+            room_id: "room".to_string(),
+            channel_id: "General".to_string(),
+            user_id: Uuid::new_v4().to_string(),
+            msg_id: Uuid::new_v4().to_string(),
+            status: Some(status),
+            data: None,
+            signal_msg: None,
+        }
+    }
+
+    fn test_user_status() -> UserStatus {
+        UserStatus {
+            nickname: "Guest".to_string(),
+            avatar: None,
+            is_gif: false,
+            static_frame: None,
+            is_muted: false,
+            is_deafened: false,
+            is_screen_sharing: false,
+            is_low_bandwidth_mode: false,
+            is_on_the_go_mode: false,
+        }
+    }
+
+    #[test]
+    fn cluster_messages_reject_oversized_profile_images() {
+        let mut status = test_user_status();
+        assert!(is_valid_cluster_message(&test_cluster_message(
+            status.clone()
+        )));
+
+        status.avatar = Some("x".repeat(MAX_AVATAR_DATA_LEN + 1));
+        assert!(!is_valid_cluster_message(&test_cluster_message(status)));
+
+        let mut status = test_user_status();
+        status.static_frame = Some("x".repeat(MAX_STATIC_FRAME_DATA_LEN + 1));
+        assert!(!is_valid_cluster_message(&test_cluster_message(status)));
+    }
+
     #[test]
     fn removing_the_last_remote_user_prunes_empty_parents() {
         let mut remote_users = HashMap::new();
@@ -1039,20 +1105,7 @@ mod tests {
             .or_insert_with(HashMap::new)
             .entry("General".to_string())
             .or_insert_with(HashMap::new)
-            .insert(
-                Uuid::nil().to_string(),
-                UserStatus {
-                    nickname: "Guest".to_string(),
-                    avatar: None,
-                    is_gif: false,
-                    static_frame: None,
-                    is_muted: false,
-                    is_deafened: false,
-                    is_screen_sharing: false,
-                    is_low_bandwidth_mode: false,
-                    is_on_the_go_mode: false,
-                },
-            );
+            .insert(Uuid::nil().to_string(), test_user_status());
 
         assert!(remove_remote_user(
             &mut remote_users,

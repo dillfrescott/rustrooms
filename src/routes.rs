@@ -153,7 +153,8 @@ pub(crate) async fn ws_handler(
             .to_string();
     }
 
-    ws.max_message_size(32 * 1024 * 1024)
+    ws.max_frame_size(CLIENT_WS_MAX_MESSAGE_SIZE)
+        .max_message_size(CLIENT_WS_MAX_MESSAGE_SIZE)
         .on_upgrade(move |socket| handle_socket(socket, room_id, channel_id, state, client_ip))
 }
 

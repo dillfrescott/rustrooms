@@ -27,10 +27,13 @@ pub(crate) async fn handle_socket(
     let cluster_tx = state.cluster_tx.clone(); // Added cluster_tx clone
     let room_cleanup_generations = state.room_cleanup_generations.clone();
     let (mut user_ws_tx, mut user_ws_rx) = socket.split();
-    let (tx, mut rx) = tokio::sync::mpsc::channel(5000);
+    let (tx, mut rx) = tokio::sync::mpsc::channel(OUTBOUND_QUEUE_CAPACITY);
 
     let mut user_id = String::new();
     let mut is_joined = false;
+    let mut message_window_started = std::time::Instant::now();
+    let mut messages_in_window = 0u32;
+    let mut last_profile_image_update: Option<std::time::Instant> = None;
 
     // Server-side ping to detect dead iOS Safari connections
     let tx_ping = tx.clone();
@@ -89,7 +92,41 @@ pub(crate) async fn handle_socket(
         *last_activity_writer.lock().await = std::time::Instant::now();
         if let Ok(msg) = result {
             if let Message::Text(text) = msg {
+                let now = std::time::Instant::now();
+                if now.duration_since(message_window_started)
+                    >= std::time::Duration::from_secs(MESSAGE_RATE_WINDOW_SECS)
+                {
+                    message_window_started = now;
+                    messages_in_window = 0;
+                }
+                messages_in_window += 1;
+                if messages_in_window > MAX_MESSAGES_PER_RATE_WINDOW {
+                    let _ = tx.try_send(Ok(Message::Close(Some(CloseFrame {
+                        code: 4008,
+                        reason: "Message rate limit exceeded".into(),
+                    }))));
+                    break;
+                }
+
                 if let Ok(parsed) = serde_json::from_str::<SignalMessage>(&text) {
+                    if is_joined {
+                        let is_current_connection = {
+                            let rooms_lock = rooms.lock().await;
+                            rooms_lock
+                                .get(&room_id)
+                                .and_then(|room| room.get(&channel_id))
+                                .and_then(|channel| channel.get(&user_id))
+                                .is_some_and(|(stored_tx, _)| stored_tx.same_channel(&tx))
+                        };
+                        if !is_current_connection {
+                            let _ = tx.try_send(Ok(Message::Close(Some(CloseFrame {
+                                code: 4002,
+                                reason: "User identity is active on another connection".into(),
+                            }))));
+                            break;
+                        }
+                    }
+
                     if parsed.msg_type == "ping" {
                         let pong_msg = serde_json::to_string(&SignalMessage {
                             msg_type: "pong".into(),
@@ -122,11 +159,12 @@ pub(crate) async fn handle_socket(
                                 .take(MAX_NICKNAME_LEN)
                                 .collect::<String>();
 
-                            let mut avatar = parsed
+                            let avatar = parsed
                                 .data
                                 .as_ref()
                                 .and_then(|d| d.get("avatar"))
                                 .and_then(|v| v.as_str())
+                                .filter(|value| value.len() <= MAX_AVATAR_DATA_LEN)
                                 .map(|s| s.to_string());
 
                             let is_muted = parsed
@@ -189,26 +227,25 @@ pub(crate) async fn handle_socket(
                                 .and_then(|v| v.as_str())
                                 .filter(|value| value.len() <= 256);
 
-                            if let Some(ref a) = avatar
-                                && a.len() > 25_000_000
-                            {
-                                avatar = None;
-                            }
-
-                            let is_gif = parsed
+                            let mut is_gif = parsed
                                 .data
                                 .as_ref()
                                 .and_then(|d| d.get("isGif"))
                                 .and_then(|v| v.as_bool())
                                 .unwrap_or(false);
 
-                            let static_frame = parsed
+                            let mut static_frame = parsed
                                 .data
                                 .as_ref()
                                 .and_then(|d| d.get("staticFrame"))
                                 .and_then(|v| v.as_str())
-                                .filter(|s| s.len() <= 25_000_000)
+                                .filter(|s| s.len() <= MAX_STATIC_FRAME_DATA_LEN)
                                 .map(|s| s.to_string());
+
+                            if avatar.is_none() {
+                                is_gif = false;
+                                static_frame = None;
+                            }
 
                             {
                                 let room_needs_password = if let Some(ref required_pass) =
@@ -254,6 +291,14 @@ pub(crate) async fn handle_socket(
                                     return;
                                 }
 
+                                let occupied_remote_ids: HashSet<String> = remote_users
+                                    .lock()
+                                    .await
+                                    .get(&room_id)
+                                    .and_then(|room| room.get(&channel_id))
+                                    .map(|channel| channel.keys().cloned().collect())
+                                    .unwrap_or_default();
+
                                 let mut rooms_lock = rooms.lock().await;
 
                                 let room = rooms_lock
@@ -263,6 +308,11 @@ pub(crate) async fn handle_socket(
                                     .or_insert_with(HashMap::new);
                                 let channel =
                                     room.entry(channel_id.clone()).or_insert_with(HashMap::new);
+
+                                user_id = unique_user_id(user_id, |candidate| {
+                                    channel.contains_key(candidate)
+                                        || occupied_remote_ids.contains(candidate)
+                                });
 
                                 {
                                     let mut times = state.channel_creation_times.lock().await;
@@ -274,25 +324,6 @@ pub(crate) async fn handle_socket(
                                     room_times
                                         .entry(channel_id.clone())
                                         .or_insert_with(current_unix_secs);
-                                }
-
-                                if channel.contains_key(&user_id) {
-                                    let leave_msg = serde_json::to_string(&SignalMessage {
-                                        msg_type: "user-left".into(),
-                                        user_id: Some(user_id.clone()),
-                                        target: None,
-                                        data: None,
-                                    })
-                                    .unwrap();
-
-                                    for (uid, (tx, _)) in channel.iter() {
-                                        if *uid != user_id {
-                                            let _ = tx.try_send(Ok(Message::Text(
-                                                leave_msg.clone().into(),
-                                            )));
-                                        }
-                                    }
-                                    channel.remove(&user_id);
                                 }
 
                                 channel.insert(
@@ -475,6 +506,21 @@ pub(crate) async fn handle_socket(
                     } else {
                         if parsed.msg_type == "update-user" {
                             let data = parsed.data.as_ref().and_then(|d| d.as_object());
+                            let contains_profile_image = data.is_some_and(|data| {
+                                data.contains_key("avatar") || data.contains_key("staticFrame")
+                            });
+                            if contains_profile_image {
+                                let now = std::time::Instant::now();
+                                if last_profile_image_update.is_some_and(|last| {
+                                    now.duration_since(last)
+                                        < std::time::Duration::from_secs(
+                                            PROFILE_IMAGE_UPDATE_COOLDOWN_SECS,
+                                        )
+                                }) {
+                                    continue;
+                                }
+                                last_profile_image_update = Some(now);
+                            }
 
                             let mut full_status = None;
                             {
@@ -496,7 +542,7 @@ pub(crate) async fn handle_socket(
                                                     status.is_gif = false;
                                                     status.static_frame = None;
                                                 } else if let Some(a_str) = a.as_str()
-                                                    && a_str.len() <= 25_000_000
+                                                    && a_str.len() <= MAX_AVATAR_DATA_LEN
                                                 {
                                                     status.avatar = Some(a_str.to_string());
                                                 }
@@ -510,7 +556,9 @@ pub(crate) async fn handle_socket(
                                                 let sf = d
                                                     .get("staticFrame")
                                                     .and_then(|v| v.as_str())
-                                                    .filter(|s| s.len() <= 25_000_000)
+                                                    .filter(|s| {
+                                                        s.len() <= MAX_STATIC_FRAME_DATA_LEN
+                                                    })
                                                     .map(|s| s.to_string());
                                                 if sf.is_some() {
                                                     status.static_frame = sf;
@@ -541,6 +589,10 @@ pub(crate) async fn handle_socket(
                                                 d.get("isOnTheGoMode").and_then(|v| v.as_bool())
                                             {
                                                 status.is_on_the_go_mode = otg;
+                                            }
+                                            if status.avatar.is_none() {
+                                                status.is_gif = false;
+                                                status.static_frame = None;
                                             }
                                         }
                                         full_status = Some(status.clone());

@@ -92,8 +92,13 @@
             const file = input.files[0];
             if (!file) return;
 
-            if (file.size > 15 * 1024 * 1024) {
-                alert("File is too large! Maximum allowed size is 15MB.");
+            const maxFileBytes = file.type === 'image/gif'
+                ? MAX_GIF_AVATAR_FILE_BYTES
+                : MAX_IMAGE_UPLOAD_FILE_BYTES;
+            if (file.size > maxFileBytes) {
+                alert(file.type === 'image/gif'
+                    ? "GIF is too large! Maximum allowed size is 10MB."
+                    : "File is too large! Maximum allowed size is 15MB.");
                 input.value = '';
                 return;
             }
@@ -106,7 +111,7 @@
                     newAvatarCandidateIsGif = true;
                     extractGifFirstFrame(gifDataUrl).then(staticFrame => {
                         newAvatarCandidateStaticFrame = staticFrame;
-                        settingsAvatarPreview.src = staticFrame;
+                        settingsAvatarPreview.src = staticFrame || gifDataUrl;
                         settingsAvatarPreview.classList.remove('hidden');
                         settingsAvatarPlaceholder.classList.add('hidden');
                         const removeBtn = document.getElementById('btnRemoveSettingsAvatar');
